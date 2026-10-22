@@ -213,13 +213,13 @@ export type CabinetPost =
 
 /** 阁僚职位中文名 */
 export const CABINET_POST_LABELS: Record<CabinetPost, string> = {
-  prime_minister: '首相',
-  chief_secretary: '官房长官',
-  finance_minister: '财务大臣',
-  foreign_minister: '外务大臣',
-  defense_minister: '防卫大臣',
-  health_minister: '厚生劳动大臣',
-  economy_minister: '经济产业大臣',
+  prime_minister: 'Prime Minister',
+  chief_secretary: 'Deputy Prime Minister',
+  finance_minister: 'Chancellor of the Exchequer',
+  foreign_minister: 'Foreign Secretary',
+  defense_minister: 'Defence Secretary',
+  health_minister: 'Health and Social Care Secretary',
+  economy_minister: 'Business and Trade Secretary',
 };
 
 /** 阁僚 */
