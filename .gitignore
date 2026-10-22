@@ -1,0 +1,36 @@
+# Large binary files
+*.apk
+*.aab
+*.dex
+
+# Node modules
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# Decompiled APK outputs (huge generated files)
+apk_decompile/jadx_output/
+apk_decompile/extracted/
+apk_decompile/apktool_output/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Expo env (contains secrets)
+.expo-shared/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Temp
+tmp/
+temp/

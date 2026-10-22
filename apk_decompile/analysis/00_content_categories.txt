@@ -1,0 +1,38 @@
+=== CONTENT CATEGORIES ===
+
+other: 4166 (84.1%)
+  Samples:
+    Line 1: A British farmer is right to ask why the British beef industry was visible by its absence. Symbolism matters; so do British producers. Number 10 made the choice; the President noticed; British beef wi
+    Line 2: By the word I used, yes. Crossings have not stopped, and pretending otherwise would be worse than accepting the verbatim test. The returns agreement, the processing reform, and the gang enforcement ar
+    Line 5: At the processing rate we inherited, the honest answer is around four years, which is not acceptable. The current rate has been doubled since the spring through additional caseworkers and streamlined 
+
+js_code: 357 (7.2%)
+  Samples:
+    Line 236: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+    Line 442: var t=Uint8Array,n=Uint16Array,r=Int32Array,e=new t([0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0,0,0,0]),i=new t([0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13,0,0]
+    Line 488: for(var e="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",t="undefined"==typeof Uint8Array?[]:new Uint8Array(256),a=0;a<64;a++)t[e.charCodeAt(a)]=a;var n=function(t){var a,n=new Uin
+
+css: 280 (5.7%)
+  Samples:
+    Line 11: 16px
+    Line 19: display: flex;
+    Line 20: align-items: center;
+
+dialogue: 101 (2.0%)
+  Samples:
+    Line 3: "Prime Minister. I am hearing reports that Britain is considering unilateral recognition of a Palestinian state. I need you to hear this clearly: any such move would be the most serious rupture in the
+    Line 4: "Prime Minister, I have seen your Foreign Secretary's statement on freedom of navigation in the Taiwan Strait. I want to be direct: what you call freedom of navigation we regard as a provocation. Chin
+    Line 6: Pieter van der Berg is calling. "Prime Minister, I want to speak frankly. Several allies have asked me to raise the UK's defence spending trajectory. At current projections you will fall below 2% by n
+
+json_like: 43 (0.9%)
+  Samples:
+    Line 77: [00011]
+    Line 168: [00012]
+    Line 246: [00026]
+
+html: 7 (0.1%)
+  Samples:
+    Line 3527: <div class="video-outer svelte-1r0umk2"><div class="video-media svelte-1r0umk2"><div class="video-clip"><!></div> <svg class="video-deco svelte-1r0umk2" width="100%" height="100%"><defs><clipPath><!><
+    Line 3683: <div class="rc-checkout-container svelte-zfhfge"><!> <!> <form data-testid="payment-form" class="rc-checkout-form svelte-zfhfge"><div><div class="rc-elements-container svelte-zfhfge"><!></div> <div><!
+    Line 3684: <div class="rc-simulated-store-modal-overlay svelte-17914yi"><div class="rc-simulated-store-modal svelte-17914yi"><div class="rc-simulated-store-modal-content svelte-17914yi"><h2 class="rc-simulated-s
+

@@ -1,0 +1,1120 @@
+=== UNLOCKS / GATING ===
+Total matches: 1062
+
+
+--- Pattern: "unlock" (164 matches) ---
+[000245] unlocksBeat
+[006040] Agree to liberalise UK visa access for Indian professionals to unlock the deal.
+[006095] Duty on legal cannabis sales. Unlocked by cannabis legalisation.
+[006507] Annual % of unimproved land value. Unlocked by the Land Value Tax Bill.
+[007374] Levy on energy company profits above threshold. Unlocked by windfall tax bill.
+[008664] Build-to-rent schemes need long-term institutional investment. What reforms will unlock pension fund capital for housing?
+[008709] Land-value levy on commercial property. Unlocked by the Business Rates Reform Bill.
+[009315] iap_unlock_fired
+[011909] UNLOCK_GAME
+[011910] LOCK_GAME_IF_UNLOCKED
+[011913] UNLOCK_INSIGHTS
+[011914] LOCK_INSIGHTS_IF_UNLOCKED
+[011918] UNLOCK_RANDOM_EVENTS
+[011919] LOCK_RANDOM_EVENTS_IF_UNLOCKED
+[012860] Relax planning rules on greenbelt to unlock 40,000 plots
+[016915] I will. The surplus in that Budget was the discipline that has unlocked every investment since. The trajectory has held.
+[021403] Pass planning reform to unlock housing, GP surgeries and infrastructure.
+[021486] Pay-per-mile road charge replacing VED. Unlocked by the Road Pricing Bill.
+[022148] Prime Minister, the {BILL_TITLE} was meant to unlock housing supply at scale. {WEEKS_AGO} weeks on, ONS housing starts are flat. Has the legislation worked, or has it not?
+[025191] Tax on imports by carbon content. Unlocked by carbon border bill.
+[026194] The UK's seizure unlocks a G7 coordinated programme. Canada, the US and France each announce equivalent actions within six weeks. Ukraine receives its first tranche; Kyiv issues a personal statement thanking the PM.
+[027228] The same communities that bore the disruption are now seeing the connectivity, the property-value uplift, and the regional investment that the {PROJECT_NAME} unlocked. The full picture matters.
+[029333] Without the mandatory biodiversity-gain requirement, the HBF reports 15,000 previously stalled plots unlock. Housing completions rise; the Environment Agency notes little observable change to SSSI condition.
+[031335] eu_funds_unlock
+[033577] Annual tax on net assets above £10m. Unlocked by wealth tax bill.
+[033974] Business investment has been too low for too long. We are fixing planning, skills, and R&D — the three levers that unlock it.
+[034589] Direct the Pensions Regulator to back a more generous USS valuation — unlocks the dispute
+[035239] Housebuilders welcome decision — 15,000 plots unlock in six months
+[035488] Include nuclear power in the UK Green Taxonomy — unlocks £30bn pension fund investment
+[035556] Institutional investment follows supply — without planning reform, no pension fund is going to write the cheque. The real unlock is the planning bill, not the pension rules.
+[035767] Levy on bank balance sheets over £25bn. Unlocked by bank levy bill.
+[035809] MPs voted 340-285 to establish the joint consultative mechanism, unlocking the £12bn contract path.
+[036274] Overhauls the planning system — a presumption in favour of sustainable development, faster approvals, and unlocked land for housing, GP surgeries and infrastructure. NIMBY backlash in the shires; builders and first-time buyers cheer.
+[036651] Planted — universal-coverage + unlock-applications framing.
+[037199] Rail-franchise extension — operator investment unlocked
+[037383] Release £150m from the Bus Recovery Grant to unlock local settlements
+[037791] Steel sector diversifies — electric arc furnace investment unlocks anyway
+[038081] The NICE annual review finds the 90-day appraisal has unlocked several therapies at prices significantly above modelled cost-effectiveness thresholds. The NHS drug budget overruns by £600m; the OBR flags the pressure.
+[038228] The accelerated target unlocks a wave of institutional investment. Three major pension funds commit £20bn to offshore wind, heat pumps and grid infrastructure, citing the long-term policy certainty. The City broadly welcomes the clarity.
+[038717] The right measure is value, not just cost — the jobs, the capacity, the regional growth the {PROJECT_NAME} unlocks. I will defend both sides of that ledger.
+[038839] The £4bn hydrogen-HGV mandate has unlocked the first JCB hydrogen-engine plant near Stoke. 1,800 manufacturing jobs secured. Hydrogen UK reports international interest in the UK regulatory framework as a model for export.
+[039207] Universal 5G unlocks the next wave of industrial use cases — smart factories in the Midlands, precision farming in East Anglia, remote-monitoring healthcare across the rural Highlands. The infrastructure is now in place; the applications follow.
+[040903] unlock
+[040904] unlocks
+[041736] isCachedUnlocked
+[043047] saveSaidUnlocked
+[045266] reviewUnlockWeek
+[046431] onTapUnlock
+[046709] freemiumUnlocked
+[046898] UNLOCKED
+[047110] IAP_UNLOCK_FIRED
+[047461] isCachedInsightsUnlocked
+[048059] scenarioPackUnlocked
+[050490] randomEventsPackUnlocked
+[053758] BILL_UNLOCKED_TAXES
+[053760] BILL_UNLOCK_EVENTS
+[054918] randomEventsUnlocked
+[055160] insightsUnlocked
+[055499] AFTER_FIRST_UNLOCK
+[055500] AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY
+[055559] WHEN_UNLOCKED
+[055560] WHEN_UNLOCKED_THIS_DEVICE_ONLY
+[055616] synchronizableUnlock
+[056692] _unlocksBillId
+[056693] unlocksBill
+[059550] __qaWipeFullGameUnlockCache
+[059848] isCachedRandomEventsUnlocked
+[061120] baseUnlocked
+[061189] billUnlockFiresThisTerm
+[063108] freemium_unlocked
+[063109] unlockedBills
+[063136] unlockAchievement
+[064289] pressUnlock
+[064609] pressQuestionUnlock
+[065371] unlockBills
+[065372] unlockBtn
+[065373] unlockHint
+[065374] unlockedBy
+[065375] unlockedFutureEvents
+[065376] unlockedTaxes
+[065377] unlockedWeek
+[067705] handleForceUnlock
+[067706] UnlockIcon
+[067890] : unlocked by the referendum result
+[068428] loadPendingUnlocks
+[068987] Unlock
+[070243] setRandomEventsUnlockCache
+[070614] Unlock Your Spad Insights Pack for
+[070990] UNLOCK_MANIFESTO
+[071058] savePendingUnlocks
+[071104] ACHIEVEMENT UNLOCKED
+[072040] _drainPendingUnlocks
+[072041] drainPendingUnlocks
+[072042] Unlocks the full game, Insights, and random events without a purchase. Preview/dev builds only.
+[072096] setInsightsUnlockCache
+[072491] setUnlockCache
+[073089] unlocked
+[077490] total. Tracker unlocks again when you call a snap election or a campaign starts.
+[078190] synchronizableUnlock should never be called in JSWorklets.
+[079232] Opens the unlock screen for the full game
+[079275] Full game not unlocked on this device.
+[079276] unlocked on this device.
+[081320] function gorhom_BottomSheetRefreshControlAndroidTsx1(){const{animatedScrollableState,SCROLLABLE_STATUS}=this.__closure;return{enabled:animatedScrollableState.value===SCROLLABLE_STATUS.UNLOCKED};}
+[081437] enqueuePendingUnlock
+[081438] Unlock the planning and procurement barriers that have delayed three new prisons. Fund and build.
+[082161] applyBillUnlock
+[082162] Unlock the full game
+[082188] applyReferendumFalloutUnlocks
+[083994] full_game_unlock
+[083995] _unlockAchievement
+[085081] Unlock the Special Adviser pack
+[085334] Unlock full game for
+[086009] Everything unlocked
+[086011] Your campaign manifesto is unlocked
+[086012] pm_iap_insights_unlocked
+[086013] insights_unlock
+[086014] pm_iap_random_events_unlocked
+[091089] Black Swan unlocked. Every term, the crisis you didn't see coming.
+[091817] CBI warns industrial strategy needs clearer signal to unlock investment
+[092578] Clears the local unlock cache and owner marker so the freemium wall fires. Preview and dev builds only.
+[093154] Preview builds only. Locks the save + wipes the unlock cache, then reloads to test the boot-resolve.
+[094854] Force unlock everything (QA)
+[094855] Force unlock everything, QA
+[095004] Full game already unlocked. Tap to (re)unlock Insights + random events too.
+[095005] Full game unlocked. Carry on, Prime Minister.
+[099086] LucideUnlock
+[099087] LucideUnlockKeyhole
+[099088] UnlockKeyhole
+[099089] UnlockKeyholeIcon
+[102114] Minister briefs come back with tighter ranges; complex bill responses unlock better outcomes. Higher intellect is precision.
+[102772] Optional add-on packs. Tap a row to unlock; toggle to enable / disable in your saves once owned.
+[103214] Wipes the local unlock cache and writes a locked save, then reloads to test the boot-resolve. Preview builds only.
+[106449] This feature is part of the full game. Unlock now or keep playing your trial for up to 8 in-game weeks.
+[106450] Unlock
+[107182] With Insights unlocked, the exact stat movements behind each campaign-moment and aftermath-stage response are revealed. Without it you still see which way each choice pushes, just not the precise figures.
+[107399] Your Spad is on the case. Helpers unlocked across the game.
+[110258] pm_iap_unlocked
+[111295] Full game unlocked ✓
+[111412] ACHIEVEMENTS UNLOCKED —
+[111613] Unlock —
+[111735] Achievements unlocked —
+[111789] Unlock full game —
+[112438] Already unlocked on this Apple ID? Tap above — you won't be charged again.
+[112803] Britain will not open a new 18-year fossil-fuel commitment in 2026. The licence is refused. The £42bn will be replaced by the green-economy investment this decision unlocks.
+[113632] Full game unlock revoked — your purchase was refunded.
+[114084] Judge the fit from the stats below — unlock Insights to see the exact suitability breakdown.
+[115059] Preview/dev builds only. Unlocks full game + Insights + random events — no purchase needed.
+[115060] Preview/dev only. Clears the unlock cache + owner marker → genuine non-owner so the wall fires. Toggle with Force unlock; Restore re-unlocks.
+[115639] Tap to unlock →
+[115997] The merger unlocks the next phase — pension contributions integrated into the same single-levy structure, capital gains aligned with the working-income rate over time. Tax simplification is a multi-year programme. This was the foundational step.
+[116683] Writes a LOCKED copy of your current save, wipes the local unlock cache, and reloads. With the boot-resolve fix you should land back in the game with NO paywall flash — RC re-confirms the (sandbox) entitlement at boot. Best tested on a save at week ≥ 8.
+[116707] You've led Britain for your trial period. To keep governing — and see how your story ends — unlock the full game.
+[116718] Your SpAd has the exact % and per-pitch projections · tap to unlock
+[116739] Your special adviser breaks the forecast down factor by factor — approval, loyalty, pledges, debt, scandals and more, each signed. Tap to unlock.
+[116740] Your special adviser reads the likely impact of each option — relationships, the odds on a hard line, who you'd cross. Tap to unlock.
+[116741] Your special adviser reads the likely impact of each response — who you'd warm, who you'd cross, what it costs. Tap to unlock.
+[00056] Streamlines planning approval for housing developments above the local plan, restricts the grounds for objection, sets statutory decision deadlines. Unlocks supply; rural and NIMBY constituencies object. Treasury and BoE celebrate the disinflationary impact.
+[00290] For every family on a waiting list, the gap between the target and the build is a missed house and a missed home. The policy is the right one; the implementation has to match the ambition, and the planning-reform Bill is the unlock for that. I take the criticism on the chin and own the delivery.
+[00322] Government co-investment in 5G mast rollout to cover all towns and major roads, ending mobile not-spots that afflict 20% of the UK's geography. The programme mandates open-access infrastructure sharing to prevent monopolistic duplication. A full 5G network unlocks smart manufacturing, precision agriculture, and remote healthcare delivery.
+[00907] The gap is a combination of market leverage and prioritisation, and both are addressable. The trade pipeline this year includes CPTPP implementation, the Gulf Cooperation Council deal in final stages, a goods and services deal with India, and an SPS-focused agreement with the EU that unlocks about 12% of trade by itself. The Department for Business has been restructured around deal completion rather than scoping.
+[00932] The honest answer is that the cap has been promised, unlocked, locked, delayed and re-promised under three administrations, and the people paying for that instability have been pensioners who have had to sell family homes while politicians briefed out the latest implementation timetable. I apologise for the fact that those families have been left in that position, and the commencement date is being fixed in statute so the instability stops.
+[02698] function gorhom_createBottomSheetScrollableComponentTsx1(){const{SCROLLABLE_DECELERATION_RATE_MAPPER,animatedScrollableState,showsVerticalScrollIndicator,SCROLLABLE_STATUS}=this.__closure;return{decelerationRate:SCROLLABLE_DECELERATION_RATE_MAPPER[animatedScrollableState.value],showsVerticalScrollIndicator:showsVerticalScrollIndicator?animatedScrollableState.value===SCROLLABLE_STATUS.UNLOCKED:showsVerticalScrollIndicator};}
+[02719] Outcomes: most calls shift a trade relationship, defence posture, or soft-power score. Some calls unlock economic events (trade deals, market access) that feed into your growth numbers. Others are primarily about managing threats (hostile nuclear posture, sanctions).
+[02793] function gorhom_useScrollableTs1(){const{enableContentPanningGesture,SCROLLABLE_STATUS,animatedSheetState,SHEET_STATE,animatedKeyboardState,KEYBOARD_STATUS,animatedAnimationState,ANIMATION_STATUS}=this.__closure;if(!enableContentPanningGesture){return SCROLLABLE_STATUS.UNLOCKED;}if(animatedSheetState.value===SHEET_STATE.FILL_PARENT){return SCROLLABLE_STATUS.UNLOCKED;}if(animatedSheetState.value===SHEET_STATE.EXTENDED){return SCROLLABLE_STATUS.UNLOCKED;}if(animatedKeyboardState.get().status===KEYBOARD_STATUS.SHOWN&&animatedAnimationState.get().status===ANIMATION_STATUS.RUNNING){return SCROLLABLE_STATUS.UNLOCKED;}return SCROLLABLE_STATUS.LOCKED;}
+
+--- Pattern: "premium" (58 matches) ---
+[004762] A rural healthcare premium on GP partner contracts, mobile diagnostic fleets serving fifty of the most underserved areas by next spring, and guaranteed minimum staffing at rural cottage hospitals. Published next month with costings.
+[006070] Agricultural market access for UK premium exports
+[007134] BAND_PREMIUM_PER_POINT
+[009238] Carer's Allowance is one element of a broader support package that includes pension credits, carer premiums, and access to respite and practical support. The headline rate is not the only measure of how the state values unpaid care.
+[013241] Direct emergency LNG procurement and additional storage; pay premium prices for security.
+[016406] I am offering an above-inflation pay rise, fully funded, and a recruitment premium for shortage specialties. That is a credible offer.
+[017247] Insurance premiums for cars and homes are up 40% in two years. This is a tax on just existing. What are you doing?
+[018224] Lobbies for tariff review on UK premium exports
+[018742] Mexican luxury and agave exports to UK premium market
+[023529] Require insurers to flag better deals at renewal and cap the renewal premium uplift.
+[025202] Teacher recruitment is a function of the wider graduate labour market, and the post-pandemic pattern has seen graduate wage premiums rise faster in other sectors than the profession can match. The question implies a dial the government alone controls.
+[027000] The party opposite crashed the gilt market inside a single month and lectured no one afterwards. We took the premium they left behind and brought it down. They are the last people who should ask what a yield of {BOND_YIELD}% costs.
+[027138] The pupil premium budget continues, the Education Endowment Foundation is embedded in school decision-making, and the National Tutoring Programme has been maintained. The package of interventions is comprehensive and the expenditure is sustained.
+[027855] Triple R&D tax credit ceilings; signal long-term innovation premium for inward investors.
+[028405] UK opens premium food and beverage market to Brazilian exports
+[028406] UK opens premium market for Mexican agave and food exports
+[028407] UK opens premium market for South African wine and exports
+[029569] insurance_premiums_stable
+[035560] Insurance sector — premium stability preserved
+[035561] Insurers caught hiking premiums for loyal customers — "£2bn loyalty penalty"
+[037770] Statutory Spending Cap: in force — your risk premium is halved, saving about £
+[038594] The party opposite crashed the gilt market and left a premium baked into every mortgage in the country — families are still paying the surcharge for their recklessness. At {BASE_RATE}%, the honourable member is asking about a bill their own side wrote.
+[039258] War-risk premiums spike — Gulf shipping costs jump
+[039302] Welcome it, but on ordinary commercial terms — no premium for the "resilience" framing.
+[042730] premium
+[042983] pupilPremiumFundingBn
+[046275] flattenPremiumBn
+[047721] bondRiskPremium
+[048055] pay_premium_premium_transparency
+[053100] oilPremiumArmed
+[055371] oilPremiumBriefing
+[056709] pay_premium_premium_tax_rise
+[060307] premiumWeeksLeft
+[063728] shouldFireOilPremium
+[064061] maybeInjectOilPremiumBriefing
+[071622] kate_oil_premium_t
+[071735] premium_transparency
+[073727] a barrel, and that is pushing up petrol, heating and the wider cost of living. While the conflict runs hot the premium holds. Winding the conflict down is what brings it back off.
+[075789] OIL_WAR_PREMIUM_EQ
+[076016] OIL_PREMIUM_BRIEFING_FLOOR
+[076934] RESTRUCTURE_PREMIUM_WEEKS
+[079387] pay_premium
+[079388] premium_tax_rise
+[081241] PREMIUM FEATURE
+[081919] Risk premium
+[102952] Pay the premium, roll out immediately
+[107901] bn over your own cap. The budget stands, but you take an integrity hit, the gilt market reacts, and the cap's premium relief is suspended.
+[110874] ceasefire takes hold — markets unwind the risk premium
+[111606] ceasefire collapses — the risk premium snaps back
+[111612] ceasefire is brokered — risk premium starts to unwind
+[111940] +£200m domestic procurement premium
+[113260] Delegate to schools with existing pupil premium — no new national programme.
+[116666] With no fresh escalation, the risk premium stays compressed — a modest tailwind for sterling and the inflation outlook.
+[00599] Recruitment has been genuinely difficult but the retention bursaries, the levelling-up premium and the teacher training bursary programme are all starting to move the numbers in specific shortage subjects. The trajectory is improving even if the headline target has been challenging.
+[00713] The Department for Education has issued updated guidance on school uniform costs, pupil premium funding supports the most disadvantaged, and the Household Support Fund is available through local authorities for families in immediate difficulty. The tools exist.
+[00723] The FCA is being instructed to launch a market study into price-walking and claims inflation. Insurance Premium Tax is being frozen for the duration of this parliament, and we are legislating to require insurers to publish their underwriting cost drivers. Market transparency is the lever that actually works.
+[00777] The Levelling-Up Premium for early-career teachers and the Priority Education Investment Areas framework both target the regional distribution the NEU and NASUWT describe. {TEACHER_VACANCIES} is the national headline; the regional uplift is the published response to where the gap concentrates.
+[01113] Twelve months after blocking the mandatory flood-insurance framework, ABI reports household premium inflation has held below CPI. Three major insurers have committed to expanded UK underwriting capacity. The market-failure scenario critics warned about has not materialised.
+
+--- Pattern: "insights" (65 matches) ---
+[011913] UNLOCK_INSIGHTS
+[011914] LOCK_INSIGHTS_IF_UNLOCKED
+[031513] insights_toggled
+[042277] choiceOptionInsights
+[042278] onInsightsChange
+[044403] formatImpactInsights
+[044404] InsightsPaywallScreen
+[045719] insightsLabel
+[046816] insightsActive
+[046956] briefInsightsExtra
+[047112] INSIGHTS_TOGGLED
+[047461] isCachedInsightsUnlocked
+[048339] insightsLockTitle
+[048452] insightsRow
+[048643] insightsExtra
+[048644] insights_paywall
+[049580] insightsBody
+[049601] insightsHighlight
+[049707] insightsCard
+[050061] insightsBlock
+[050320] appliedInsightScaling
+[051208] insightsEyebrow
+[053213] insightsLock
+[053214] insightsLockBody
+[054189] hadInsightsCache
+[054247] insightsPurchased
+[054930] showInsights
+[055160] insightsUnlocked
+[056816] insights
+[062948] fetchInsightsProduct
+[064827] purchaseInsightsPack
+[070614] Unlock Your Spad Insights Pack for
+[070789] io.innovateapps.pmsim.insights
+[071164] INSIGHTS_ENTITLEMENT_ID
+[071167] INSIGHTS_PRODUCT_ID
+[071211] SET_INSIGHTS_ENABLED
+[072042] Unlocks the full game, Insights, and random events without a purchase. Preview/dev builds only.
+[072096] setInsightsUnlockCache
+[073273] recovered_full_and_insights
+[075592] _fetchInsightsProduct
+[077317] Restore previous Insights Pack purchase
+[077630] Insights Pack
+[077631] Insights Pack not available from store yet
+[078455] [Insights]
+[079593] fetch_insights
+[083819] [IAP] fetchInsightsProduct failed:
+[085246] cos_insights_pitch
+[085381] _purchaseInsightsPack
+[086012] pm_iap_insights_unlocked
+[086013] insights_unlock
+[091093] recovered_insights_only
+[095004] Full game already unlocked. Tap to (re)unlock Insights + random events too.
+[102379] No Insights purchase found
+[107010] We couldn't find a previous Insights Pack purchase on this account.
+[107182] With Insights unlocked, the exact stat movements behind each campaign-moment and aftermath-stage response are revealed. Without it you still see which way each choice pushes, just not the precise figures.
+[107393] Your Spad can read the room and reveal the likely impact of each choice. Tap to see the Insights Pack.
+[107394] Your Spad can read the room and reveal the likely impact of each response. Tap to see the Insights Pack.
+[107395] Your Spad can reveal the seat-forecast breakdown. Tap to see the Insights Pack.
+[107396] Your Spad has stepped back. Re-enable Insights in Settings to see exactly what's moving your seat forecast.
+[109067] ifInsights
+[109122] insightsEntitlementActive
+[111632] Insights Pack ·
+[114046] Insights Pack revoked — your purchase was refunded.
+[114084] Judge the fit from the stats below — unlock Insights to see the exact suitability breakdown.
+[115059] Preview/dev builds only. Unlocks full game + Insights + random events — no purchase needed.
+
+--- Pattern: "entitlement" (64 matches) ---
+[001379] entitlement_heal_skipped
+[004889] A transition commission, chaired by a former Lord Speaker, is working through the personal entitlements case by case. I am not going to pre-empt their work from this podium.
+[006288] Among parents who have secured a place, the entitlement is delivering exactly the financial support that was promised. The headline figure on uptake should be read in that context.
+[009166] Cap statutory entitlements at affordable level. Confront the entitlement growth directly.
+[009559] Childcare (Universal Entitlement) Bill
+[012004] SET_ENTITLEMENT_RESOLVED
+[022284] entitlement_heal_fired
+[024562] entitlement_activated
+[026150] The Supreme Court has ruled unanimously that delivery-app riders for two named platforms are workers, not self-employed. Holiday pay and minimum-wage entitlement is now automatic. The platforms warn 12% headline price rises will follow.
+[026315] The cap is forward-looking. Families already with three or more children keep their entitlement. We are reinforcing support via universal credit transitional protections and free school meal access.
+[026323] The capacity programme is now funded, scaled to deliver fifteen thousand additional places by the end of the next academic year. The shortfall is real and the response is sized to it. The entitlement holds.
+[026391] The cost to taxpayers of the uncapped system is significant. We are running a deficit. Unlimited benefit entitlements for an unlimited number of children were never sustainable.
+[026934] The opposition presided over fifteen years of childcare being unaffordable. This government legislated for an entitlement; the capacity question is now the one the opposition is asking, having created the problem in the first place.
+[027506] These are unelected peers who voted on legislation for the rest of their lives without ever facing a ballot. I am not going to apologise for ending that arrangement. Service is not the same as entitlement.
+[033357] Accept that the welfare system has gaps — then point to the expanded household support fund, the new childcare entitlements, and the in-work progression pilots.
+[036501] Pensioner poverty from underclaimed entitlements — specific and measurable.
+[041761] requiredEntitlementIdentifier
+[042591] entitlementResolved
+[042658] entitlementVerificationMode
+[042675] entitlement_state
+[042768] entitlements
+[043855] onEntitlementChange
+[045005] ENTITLEMENT_VERIFICATION_MODE
+[046864] ENTITLEMENT_ACTIVATED
+[046875] ENTITLEMENT_HEAL_FIRED
+[047083] ENTITLEMENT_HEAL_SKIPPED
+[061147] beginRefundRequestForActiveEntitlement
+[061148] beginRefundRequestForEntitlement
+[061149] beginRefundRequestForEntitlementId
+[064859] reconcileServerEntitlement
+[064864] refreshEntitlement
+[068592] entitlementActive
+[068727] entitlement_gate
+[071164] INSIGHTS_ENTITLEMENT_ID
+[071165] ENTITLEMENT_ID
+[071200] RANDOM_EVENTS_ENTITLEMENT_ID
+[071786] Request failed signature verification. Please see https://rev.cat/trusted-entitlements for more info.
+[075513] recordEntitlementTransactions
+[075644] no_entitlement
+[076647] DEV_RESET_ENTITLEMENT_NON_OWNER
+[077039] https://analytics.innovateapps.io/entitlement
+[078993] Simulate entitlement desync, QA
+[078994] QA: simulate entitlement desync
+[085077] Remove entitlement, reset to non-owner, QA
+[085434] _reconcileServerEntitlement
+[085439] _refreshEntitlement
+[093213] Could not find entitlement product in subscriptions or non-subscriptions.
+[103295] Prime Minister, the Universal Childcare Entitlement is now operational in every English local authority. Working-parent take-up has reached 78%. Will the PM commit to indexing the funding settlement to wage growth so the policy doesn't erode?
+[104328] Simulate entitlement desync (QA)
+[107658] _defaultServerEntitlementCheck
+[107659] defaultServerEntitlementCheck
+[109014] handleRemoveEntitlement
+[109122] insightsEntitlementActive
+[110024] randomEventsEntitlementActive
+[113470] Entitlement removed — non-owner
+[114882] Planted — universal entitlement + workforce participation + sector resilience framing.
+[116683] Writes a LOCKED copy of your current save, wipes the local unlock cache, and reloads. With the boot-resolve fix you should land back in the game with NO paywall flash — RC re-confirms the (sandbox) entitlement at boot. Best tested on a save at week ≥ 8.
+[118047] 🔒 Remove entitlement → non-owner (QA)
+[00180] Brenda, I'm genuinely sorry for what your family has been through, and I'll take that away. There has to be a system that checks entitlement fairly, but it should never feel like an accusation, and for your son it clearly has. We're committed to longer award periods for lifelong conditions so families aren't dragged back through this again and again.
+[00576] Prime Minister, the universal childcare entitlement is now in force. The Early Years Alliance reports that uptake is being held back by a nursery-capacity crisis the government was warned about. How does the entitlement become a real one for parents who can't find a place?
+[00687] The 900,000 figure combines several definitions of poverty that do not all map onto actual free school meal entitlement, and the number used in political debate is not the number in the departmental data. The policy question is genuine but the statistic is not quite what the question implies.
+[01067] The warning came in and the response has been slower than it should have been. For a working parent, an entitlement that doesn't turn into a place at a nursery they can reach is words. I am committing to that being fixed this academic year, with named milestones.
+[02584] I am grateful to my honourable Friend. The Childcare Ratios Act is in force. The 1:5 ratio for two-year-olds applies. The nursery sector has the operational flexibility to deliver the free childcare entitlement. The safeguarding framework is preserved through enhanced qualification and training requirements. The free childcare programme is sustainable rather than precarious.
+[03165] Prime Minister, the Universal Childcare Entitlement has been live for nine months and the nursery sector is in open revolt. Closure notices in the south-east are up 41%. The pledge that was sold as free childcare for everyone has become a nursery in walking distance for no one. What is the plan?
+
+--- Pattern: "subscription" (63 matches) ---
+[030526] ^(?:\s*)(query|mutation|subscription)(?:\s*)(\w+)(?:\s*)[{(]
+[030527] ^(?:\s*)(query|mutation|subscription)(?:\s*)[{(]
+[031329] ensureUpdateSubscriptionExists
+[032090] updateSubscription
+[033337] Abolishes the £169.50/year TV licence fee and transitions the BBC to a commercial and subscription funding model over three years, removing the criminal sanction for non-payment.
+[042320] @@nativeEmitterSubscription@@
+[043320] BackendInvalidAppleSubscriptionKey
+[043321] InvalidAppleSubscriptionKeyError
+[044192] NON_RENEWABLE_SUBSCRIPTION
+[044193] SUBSCRIPTIONS_UPDATE
+[044224] showManageSubscriptions
+[045880] subscriptionPeriod
+[046822] removeSubscription
+[048449] payment_entry_page.trial_subscription_terms_info
+[050410] PaymentEntryPageSubscriptionTermsInfo
+[050436] defaultSubscriptionOption
+[050918] nonSubscriptionTransactions
+[050932] non_subscriptions
+[050933] _subscriptions
+[050934] subscriptions
+[050935] subscriptionsByProductIdentifier
+[051115] NON_SUBSCRIPTION
+[051116] PREPAID_SUBSCRIPTION
+[053052] INVALID_APPLE_SUBSCRIPTION_KEY_ERROR
+[053102] PRODUCT_DISCOUNT_MISSING_SUBSCRIPTION_GROUP_IDENTIFIER_ERROR
+[053126] AUTO_RENEWABLE_SUBSCRIPTION
+[053127] SUBSCRIPTION
+[053128] SUBSCRIPTIONS
+[053129] SUBSCRIPTIONS_ON_VR
+[054220] _subscriptionKeyboardDidShow
+[054223] _subscriptionKeyboardWillShow
+[054277] subscriptionOption
+[054278] subscriptionOptions
+[055552] UNKNOWN_SUBSCRIPTION_UPGRADE_DOWNGRADE_POLICY
+[055892] subscription
+[056689] Subscription
+[058741] defaultNonSubscriptionOption
+[058744] purchaseSubscriptionOption
+[058776] PaymentEntryPageSubscriptionInfo
+[058781] PaymentEntryPageTrialSubscriptionTermsInfo
+[059687] _clearSubscriptions
+[059751] _eventSubscription
+[059870] payment_entry_page.subscription_info
+[060215] _subscriptionKeyboardDidHide
+[060217] _subscriptionKeyboardWillHide
+[060383] addSubscription
+[060803] activeSubscriptions
+[061643] buildStripeExpressCheckoutOptionsForSubscription
+[063541] payment_entry_page.subscription_terms_info
+[070167] setupRouterSubscription
+[073142] has no subscription options. Ignoring.
+[077012] get subscriptionOption
+[079344] _ensureUpdateSubscriptionExists2
+[080315] Subscription renews automatically. Cancel anytime.
+[080501] End the licence fee; BBC funded by direct subscription only.
+[086247] has no default subscription option. Ignoring.
+[090506] Apple Subscription Key is invalid or not present. In order to provide subscription offers, you must first generate a subscription key. Please see https://docs.revenuecat.com/docs/ios-subscription-offers for more info.
+[093213] Could not find entitlement product in subscriptions or non-subscriptions.
+[102131] Missing base phase for subscription option. Ignoring.
+[102132] Missing base price for non-subscription option. Ignoring.
+[102685] One-time purchase. No subscription, no auto-renewal. Works across all your saves on this Apple ID.
+[106271] The subscription price was updated to include tax based on your billing address. Free trial still applies. Review and try again.
+[116206] There's one available — one-time, no subscription. Settings → Your Spad: Special Adviser.
+
+--- Pattern: "purchase" (444 matches) ---
+[000284] Monetary financing reviewheat_subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000317] onetary financing reviewheat_subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000403] netary financing reviewheat_subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000405] etary financing reviewheat_subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000426] tary financing reviewheat_subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000435] ary financing reviewheat_subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000445] ry financing reviewheat_subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000447] y financing reviewheat_subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000487] financing reviewheat_subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000490] financing reviewheat_subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000524] inancing reviewheat_subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000534] nancing reviewheat_subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000546] ancing reviewheat_subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000566] ncing reviewheat_subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000595] cing reviewheat_subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000635] ing reviewheat_subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000637] ng reviewheat_subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000651] g reviewheat_subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000673] reviewheat_subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000676] reviewheat_subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000698] eviewheat_subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000726] viewheat_subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000762] iewheat_subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000763] ewheat_subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000779] wheat_subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000794] heat_subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000845] eat_subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000849] at_subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000894] t_subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000907] _subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000912] subsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000917] ubsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000953] bsidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000966] sidy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[000986] idy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[001014] dy_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[001019] y_crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[001058] _crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[001110] crisisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[001114] risisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[001295] isisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[001327] sisArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[001347] isArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[001348] sArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[001373] ArrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[001387] rrayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[001392] rayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[001400] ayBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[001443] yBuffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[001450] Buffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[001507] uffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[001519] ffergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[001550] fergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[001624] ergba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[001628] rgba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[001751] gba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[001974] ba(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[002150] a(255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[002250] (255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[002477] 255,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[002532] 55,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[002534] 5,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[002539] ,255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[002555] 255,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[002581] 55,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[002606] 5,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[002608] ,255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[002625] 255,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[002658] 55,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[002662] 5,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[002666] ,0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[002779] 0.04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[003084] .04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[003184] 04)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[003219] House Purchase
+[003220] Purchase made while scheme was still in parliamentary process
+[003241] 4)NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[003314] )NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[003453] NO WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[003503] O WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[003976] WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004043] WINSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004090] INSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004150] NSUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004155] SUFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004160] UFFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004161] FFICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004170] FICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004175] ICIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004184] CIENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004185] IENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004189] ENT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004202] NT_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004203] T_SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004206] _SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004207] SPACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004215] PACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004222] ACE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004225] CE_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004233] E_ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004237] _ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004242] ON_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004262] A binding zero-emission vehicle sales mandate, a national charging-network rollout, and purchase incentives. Accelerates EV adoption; the motor lobby resists.
+[004278] N_RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004287] _RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004291] RESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004293] ESOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004295] SOURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004296] OURCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004299] URCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004303] RCEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004317] CEmergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004324] Emergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004325] mergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004342] ergency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004344] rgency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004351] gency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004381] ency council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004384] ncy council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004388] cy council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004391] y council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004405] council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004458] council bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004467] ouncil bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004484] uncil bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004539] ncil bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004542] cil bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004551] il bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004565] l bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004622] bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004650] bailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004656] ailoutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004660] iloutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004679] loutHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004693] outHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004731] utHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004750] tHooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004763] Hooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004782] ooks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004793] oks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004806] ks[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004860] s[RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004886] [RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004906] RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[004913] evenueCat] Native module (RNPurchases) not found. This can happen if:
+[004915] venueCat] Native module (RNPurchases) not found. This can happen if:
+[004922] enueCat] Native module (RNPurchases) not found. This can happen if:
+[004924] nueCat] Native module (RNPurchases) not found. This can happen if:
+[004926] ueCat] Native module (RNPurchases) not found. This can happen if:
+[004930] eCat] Native module (RNPurchases) not found. This can happen if:
+[004963] Cat] Native module (RNPurchases) not found. This can happen if:
+[005007] at] Native module (RNPurchases) not found. This can happen if:
+[005313] t] Native module (RNPurchases) not found. This can happen if:
+[005318] ] Native module (RNPurchases) not found. This can happen if:
+[005319] Native module (RNPurchases) not found. This can happen if:
+[005320] Native module (RNPurchases) not found. This can happen if:
+[005321] ative module (RNPurchases) not found. This can happen if:
+[005859] tive module (RNPurchases) not found. This can happen if:
+[006170] ive module (RNPurchases) not found. This can happen if:
+[006273] ve module (RNPurchases) not found. This can happen if:
+[006298] e module (RNPurchases) not found. This can happen if:
+[006311] module (RNPurchases) not found. This can happen if:
+[006321] module (RNPurchases) not found. This can happen if:
+[006327] odule (RNPurchases) not found. This can happen if:
+[006329] dule (RNPurchases) not found. This can happen if:
+[006331] ule (RNPurchases) not found. This can happen if:
+[006332] le (RNPurchases) not found. This can happen if:
+[006334] e (RNPurchases) not found. This can happen if:
+[006540] (RNPurchases) not found. This can happen if:
+[006618] (RNPurchases) not found. This can happen if:
+[006626] RNPurchases) not found. This can happen if:
+[006765] NPurchases) not found. This can happen if:
+[007085] Purchases) not found. This can happen if:
+[008052] Brings the five major UK clearing banks into public ownership through compulsory purchase at book value, placing retail banking under democratic control.
+[008325] Minister purchased property using government scheme they personally designed
+[014548] spad_purchased
+[015590] Government-backed forward purchase guarantees for developers; de-risk speculative builds.
+[017651] Joint statement; consider temporary Bank gilt purchases under financial-stability remit.
+[018367] Zero-VAT new EV purchases for 24 months to accelerate transition
+[020098] Open a Treasury review of central-bank purchases of new debt; signal willingness to monetise if markets seize up.
+[022441] the house purchase affair
+[023292] Reintroduces the right for council tenants to purchase their homes at a 40% discount after five years' tenancy, with a replacement fund requiring councils to build two new social homes for every one sold.
+[025980] The Prime Minister found room on the red benches for a donor and no room at all for an explanation. Was that peerage earned by public service, or simply purchased by party donation?
+[027488] There is no formal supply-and-confidence agreement with the DUP. Individual votes reflect individual judgements on the merits of each measure, and framing the abstentions as purchased support is not how parliamentary arithmetic operates.
+[035920] Ministerial credit card used for personal purchases — receipts obtained
+[037661] Something briefly interrupted the store. Your progress and any purchase are completely safe — tap below to reload it and try again.
+[041130] purchaseOption
+[041131] purchaseOptionToUse
+[041318] restorePurchases
+[041372] makeDeferredPurchase
+[042054] purchasePackage
+[042055] purchasePackageWithWinBackOffer
+[042479] purchase
+[042735] originalPurchaseDate
+[042736] originalPurchaseDateMillis
+[043731] isPurchasesAreCompletedByMyApp
+[043734] purchasesErrorCode
+[043803] latestPurchaseDate
+[043804] latestPurchaseDateMillis
+[044083] loadSimulatedPurchaseData
+[044374] showSimulatedPurchaseAlert
+[044412] original_purchase_date
+[044413] purchase_date
+[044639] purchased
+[044727] workflowPurchaseContext
+[044790] TestStoreSimulatedPurchaseError
+[045384] randomEventsPackPurchased
+[045613] ensurePurchasesConfigured
+[045853] syncObserverModeAmazonPurchase
+[045854] onPurchaseError
+[045965] onRestorePurchasesClicked
+[046150] SuccessPagePurchaseSuccessful
+[046260] success_page.purchase_successful
+[047246] SPAD_PURCHASED
+[047262] PURCHASE_BELONGS_TO_OTHER_USER
+[047323] recordPurchase
+[047324] recordPurchaseForProductID
+[047405] allPurchasedProductIdentifiers
+[047408] purchaseOperationHelper
+[047431] PURCHASES_ARE_COMPLETED_BY_TYPE
+[047446] purchasesAreCompletedBy
+[047631] onFailedPurchase
+[047808] defaultPurchaseOption
+[047915] CheckoutPurchaseSuccessfulDismiss
+[049027] purchaseDiscountedProduct
+[049177] oneOffPurchase
+[049203] PURCHASES_ERROR_CODE
+[050076] syncPurchases
+[050077] syncPurchasesForResult
+[050167] purchases
+[050238] performPaddlePurchase
+[050322] isWebPurchaseRedemptionURL
+[051006] displayPurchaseFlowErrorCode
+[051209] browserNativeModuleRNPurchases
+[051210] RNPurchases
+[051211] PurchasesHybridMappings
+[051459] express_purchase_button
+[051460] purchase_button
+[051670] purchaseProduct
+[051671] purchaseProductWithWinBackOffer
+[051727] updatePurchase
+[051977] PURCHASE_TYPE
+[052772] allPurchaseDates
+[052773] allPurchaseDatesByProduct
+[052946] redeemWebPurchase
+[053097] PRODUCT_ALREADY_PURCHASED_ERROR
+[053098] PURCHASED
+[053106] PRODUCT_NOT_AVAILABLE_FOR_PURCHASE_ERROR
+[053110] PURCHASE_CANCELLED_ERROR
+[053116] PURCHASE_INVALID_ERROR
+[053117] PURCHASE_NOT_ALLOWED_ERROR
+[053131] TEST_STORE_SIMULATED_PURCHASE_ERROR
+[053637] ProductAlreadyPurchasedError
+[053638] AlreadyPurchased
+[053639] AlreadyPurchasedError
+[054199] onValidPurchase
+[054247] insightsPurchased
+[054391] firstPurchaseSku
+[054642] purchaseHtmlTarget
+[055268] default_purchase_option_id
+[055383] CheckoutPurchaseSuccessfulImpression
+[056624] convertPurchaseFlowErrorCodeToErrorCode
+[056992] error_page.error_message_already_purchased
+[057144] on_purchase_press
+[057409] findPackageToPurchase
+[057567] BackendCannotTransferPurchase
+[057568] PurchaseInvalidError
+[057591] BackendPurchaseCannotBeCompleted
+[057720] ErrorPageErrorMessageAlreadyPurchased
+[058352] ErrorPageErrorMessageErrorSettingUpPurchase
+[058353] ErrorSettingUpPurchase
+[058354] PurchaseNotAllowedError
+[058362] ErrorPageErrorTitleAlreadyPurchased
+[058744] purchaseSubscriptionOption
+[058749] selectedPurchaseOption
+[058788] unmountPaddlePurchaseUi
+[058885] purchaseDiscountedPackage
+[058890] purchaseStoreProduct
+[058899] ProductNotAvailableForPurchaseError
+[058904] PurchasesCommon
+[058905] setupPurchases
+[058978] purchaseDate
+[058979] purchaseDateMillis
+[059208] performStripePurchase
+[059261] performWebBillingPurchase
+[059321] UninitializedPurchasesError
+[059391] parseAsWebPurchaseRedemption
+[059392] WebPurchaseRedemptionResultType
+[060014] purchase_options
+[060056] error_page.error_message_error_setting_up_purchase
+[060057] _purchaseSimulatedStorePackage
+[060678] addShouldPurchasePromoProductListener
+[060838] allPurchaseDatesMillis
+[062022] clearPurchaseInProgress
+[062434] createNativePurchaseParams
+[062456] syncAmazonPurchase
+[062457] onPurchase
+[062458] onPurchaseClicked
+[062883] error_page.error_title_already_purchased
+[063028] removeShouldPurchasePromoProductListener
+[063127] fromPurchasesError
+[063202] purchaseSimulatedPackage
+[063217] getForPurchasesFlowError
+[063303] isMakePurchaseResult
+[063498] presentExpressPurchaseButton
+[063762] isPurchasesOffering
+[063763] isPurchasesOfferings
+[063764] isPurchasesVirtualCurrencies
+[064520] pollCurrentPurchaseForCompletion
+[064826] purchaseFullGame
+[064827] purchaseInsightsPack
+[064828] purchaseToken
+[064829] purchasesContext
+[066536] get purchaseOption
+[066537] get purchaseOptionToUse
+[066662] _restorePurchases
+[066663] Purchases is already initialized. You normally should only configure Purchases once. Creating and returning new instance.
+[066710] Purchase failed
+[067220] Purchase
+[067374] post-purchase
+[069022] Restore purchase
+[069023] Restore purchases
+[070608] [Purchases]
+[071177] get purchaseOperationHelper
+[071210] Restore a saved game backup or a previous purchase, or get your diagnostic ID
+[071231] Warning: You should provide the specific StoreKit version you're using in your implementation when configuring PURCHASES_ARE_COMPLETED_BY_TYPE.MY_APP, and not rely on the DEFAULT.
+[071232] PURCHASES
+[071256] Warning: The storeKitVersion in purchasesAreCompletedBy does not match the function's storeKitVersion parameter. We will use the value found in purchasesAreCompletedBy.
+[071382] Purchase finished
+[072042] Unlocks the full game, Insights, and random events without a purchase. Preview/dev builds only.
+[072454] Restore a previous purchase
+[072580] Purchase restored
+[073333] Test Failed Purchase
+[073334] Purchases resources are loading. Waiting.
+[073429] Purchase taking too long
+[073695] checkout_purchase_successful_dismiss
+[074548] Purchases resources are loaded. Skipping.
+[075875] Purchases not configured. Call configure() first.
+[076315] handleFailedPurchase
+[076316] Purchases-ShouldPurchasePromoProduct
+[076862] Email is required to complete the purchase.
+[076893] Purchase not started due to an error (error code: {{errorCode}}).
+[077317] Restore previous Insights Pack purchase
+[078213] User cancelled purchase.
+[078605] Initializing Purchases SDK with RC Test store API Key.
+[080042] Error presenting express purchase button
+[080344] Purchase cancelled by user
+[080589] Purchased was already completed
+[081127] Error configuring Purchases:
+[081221] Failed to complete purchase
+[081235] Purchases
+[081236] PurchasesCommon is not configured. Call setupPurchases first.
+[081274] Error performing purchase
+[081385] Purchase was cancelled.
+[081414] Purchases must be configured before calling getInstance
+[081449] PurchasesError(code:
+[081636] Initializing Purchases SDK with Web billing sandbox API Key
+[081779] pm_iap_purchase_pending
+[082109] addShouldPurchasePromoProductListener needs a function
+[082146] Test Purchase
+[082147] Test Purchase Error
+[084139] MakePurchaseResult
+[084195] restore_purchases
+[084196] purchases-js
+[084380] htmlTarget is required for presentExpressPurchaseButton
+[084419] Max attempts reached trying to get successful purchase status
+[084457] isPurchaseOrigin
+[084461] markPurchaseOrigin
+[084592] PurchasesOffering
+[084593] PurchasesOfferings
+[084594] PurchasesVirtualCurrencies
+[085380] _purchaseFullGame
+[085381] _purchaseInsightsPack
+[085382] Restore previous purchases
+[085576] Request coordinated gilt purchases by the Bank of England to stabilise the market.
+[085655] There is no singleton instance. Make sure you configure Purchases before trying to get the default instance. More info here: https://errors.rev.cat/configuring-sdk
+[086018] checkout_purchase_successful_impression
+[086245] has no default purchase option. Ignoring.
+[086249] has no purchase options. Ignoring.
+[086880] %. Every week prices fall, businesses delay investment, consumers delay purchases, debt servicing rises against falling revenues. This is harder to escape than inflation was.
+[090501] App does not have sufficient permissions to make purchases.
+[090921] consumePurchasePending
+[093211] Could not complete the purchase. Try again.
+[094302] Failed to flush paywall events after purchase:
+[096018] I have not purchased
+[096348] If you're having trouble accessing your purchase, reach out to support on
+[096349] If your saved game or your purchase isn't showing, you can recover them here.
+[102379] No Insights purchase found
+[102488] No purchase found
+[102489] No purchase in progress
+[102490] No purchase started
+[102685] One-time purchase. No subscription, no auto-renewal. Works across all your saves on this Apple ID.
+[102872] Paddle purchase failed:
+[102964] Payment will be charged to your Google Play account at confirmation of purchase. The purchase can be restored on other devices signed into the same Google account.
+[103190] Presenting purchase form for package
+[103357] Product ID was not set before purchase.
+[103472] [Test store] Purchase failure simulated successfully in Test Store.
+[103473] Purchase failure simulated successfully in Test Store.
+[103475] Test Valid Purchase
+[103476] Purchases-CustomerInfoUpdated
+[103477] _handlePurchase
+[103478] handlePurchase
+[103479] Purchases-DebugEvent
+[103481] _handleRestorePurchase
+[103483] handleRestorePurchase
+[103484] Purchases-LogHandlerEvent
+[103485] Purchases-TrackedEvent
+[103486] PurchasesCommon.configure() called more than once. Previous configuration will be overwritten.
+[103915] Restore previous purchase
+[103916] Restore previous purchase?
+[104816] Test purchase failure: no real transaction occurred
+[104969] The Express Purchase button is only available with Web Billing API Keys.
+[105505] The device or user is not allowed to make the purchase.
+[106066] The product is not available for purchase.
+[106085] The purchase failed because the Stripe app lacks a required permission. In production, purchases will work without taxes applied.
+[106086] The purchase failed because the tax origin address is invalid. In production, purchases will work without taxes applied.
+[106624] Trying to close a Purchases instance that is not the current instance. Ignoring.
+[106828] Unknown error preparing purchase:
+[106829] Unknown error starting purchase:
+[107009] We could not find a previous purchase on this Apple/Google account. If you believe this is wrong, contact support with your diagnostic ID.
+[107010] We couldn't find a previous Insights Pack purchase on this account.
+[107011] We couldn't find a previous purchase of the full game on this Apple ID.
+[107012] We couldn't find a previous purchase on this account.
+[107264] You already purchased {{productTitle}}
+[107292] You can't purchase this product again.
+[107428] Your full-game purchase has been restored on this device.
+[107526] [Test store] Performing test purchase. This purchase won't appear in production.
+[108235] clearPurchasePending
+[109215] isPurchasePending
+[110041] markPurchaseIntent
+[110042] markPurchasePending
+[110049] matchesPurchaseIntent
+[110256] pm_iap_purchase_origin_txns
+[110974] ⚠️ This is a test purchase and should only be used during development. In production, use an Apple/Google API key from RevenueCat.
+[112658] Black Swan revoked — your purchase was refunded.
+[113632] Full game unlock revoked — your purchase was refunded.
+[114046] Insights Pack revoked — your purchase was refunded.
+[115059] Preview/dev builds only. Unlocks full game + Insights + random events — no purchase needed.
+[116081] The purchase failed because Stripe Tax isn’t enabled. In production, purchases will work without taxes applied.
+[116458] We couldn’t download Stripe params for this purchase. Please try again.
+[01098] Three of the override-consented brownfield sites have been halted after contamination surveys revealed hazardous waste under planned residential blocks. Two purchasers in Kent have sued the developer. The LGA has issued a critical report on the override framework. Press uniformly hostile.
+[02518] [RevenueCat] Native module (RNPurchases) not found. This can happen if:
+[02880] <div class="rc-simulated-store-modal-overlay svelte-17914yi"><div class="rc-simulated-store-modal svelte-17914yi"><div class="rc-simulated-store-modal-content svelte-17914yi"><h2 class="rc-simulated-store-modal-title svelte-17914yi">Test Store Purchase</h2> <div class="rc-simulated-store-modal-details svelte-17914yi"><div><p class="svelte-17914yi"><strong>Product:</strong> </p> <p class="svelte-17914yi"><strong>Type:</strong> </p> <p class="svelte-17914yi"><strong>Price:</strong> </p> <!> <!> <!></div></div> <div class="rc-simulated-store-modal-buttons svelte-17914yi"><button type="button" class="rc-simulated-store-modal-button rc-simulated-store-modal-button-primary svelte-17914yi">Test valid purchase</button> <button type="button" class="rc-simulated-store-modal-button rc-simulated-store-modal-button-secondary svelte-17914yi">Test failed purchase</button> <button type="button" class="rc-simulated-store-modal-button rc-simulated-store-modal-button-cancel svelte-17914yi">Cancel</button></div></div></div></div>
+[03133] President Sokolov has threatened to halt gas flows through European transit pipelines unless NATO withdraws troops from eastern member states. British energy companies are exposed through spot market purchases. The DESNZ says the UK has 8 weeks of strategic reserve.
+
+--- Pattern: "paywall" (51 matches) ---
+[014390] paywall_declined
+[025209] paywall_seen
+[031784] paywall_converted
+[042091] paywallRcPublicId
+[042415] paywall_variables.sub_relative_discount
+[043463] PAYWALL_CONVERTED
+[043718] paywall_rc_public_id
+[043918] paywallData
+[044404] InsightsPaywallScreen
+[046007] paywallComponents
+[046631] trackPaywallEvent
+[047186] PAYWALL_DECLINED
+[047420] PAYWALL_RESULT
+[048644] insights_paywall
+[049083] paywall_first_seen_approval
+[050522] paywall_id
+[050683] PAYWALL_SEEN
+[050995] PaywallVariablesTotalPriceAndPerMonth
+[051500] paywallEverSeen
+[052060] paywall_components
+[052473] presentPaywall
+[052474] PaywallVariablesPricePerPeriod
+[053337] paywall_variables.price_per_period
+[057045] has_seen_paywall
+[057046] paywall
+[058785] PaywallVariablesSubRelativeDiscount
+[063403] paywall_variables.total_price_and_per_month
+[064387] paywallId
+[064388] paywallRevision
+[064389] paywall_revision
+[065318] trackCustomPaywallImpression
+[067280] RevCatPaywall-
+[068018] paywall-content-scroll
+[068829] paywall_cancel
+[076978] Could not generate a mount point for the paywall widget
+[081360] Error presenting paywall:
+[081448] Error while tracking paywall event
+[082657] paywall blur
+[083025] paywall_close
+[085273] web_paywall_link
+[085589] paywall.restore
+[089479] <div><!> <div class="paywall-content svelte-ox0uei"><!> <!></div></div> <!>
+[094302] Failed to flush paywall events after purchase:
+[094303] Failed to flush paywall events on close:
+[102965] Paywall context not found
+[106474] This offering doesn't have a paywall attached.
+[107517] [PaywallEvent] Payload:
+[107518] [PaywallEvent] Queuing
+[110199] paywall_impression
+[116683] Writes a LOCKED copy of your current save, wipes the local unlock cache, and reloads. With the boot-resolve fix you should land back in the game with NO paywall flash — RC re-confirms the (sandbox) entitlement at boot. Best tested on a save at week ≥ 8.
+[02539] .paywall.svelte-ox0uei {position:relative;display:flex;flex-direction:column;align-items:stretch;height:100%;transition-property:filter, transform;transition-duration:0.1s;transition-timing-function:ease-in-out;transform-origin:center;&.blur {filter:blur(10px) brightness(0.8);transform:scale(1.045);}}.header-wrapper.svelte-ox0uei {position:sticky;top:0;width:100%;}.paywall-content.svelte-ox0uei {width:100%;flex:1;display:flex;flex-direction:column;min-height:0;& > .paywall-content-scroll {flex-grow:1;min-height:0;overflow-y:auto;}}
+
+--- Pattern: "restricted" (9 matches) ---
+[008301] British arms exports restricted to Turkey
+[062540] unrestricted double
+[065388] unrestricted float
+[069604] restricted
+[103925] Restricted access
+[114723] Palestine protests block Whitehall — Downing Street access restricted
+[00666] Tens of thousands have blocked Whitehall, and access to Downing Street itself is now restricted. The Prime Minister's own foreign policy has put protest on the doorstep of Number 10. Will the PM finally give this House a straight answer on arms export licences?
+[02991] Foreign Secretary: The Council of Europe has suspended the UK's voting rights. The EU has formally restricted prisoner-transfer agreements. The US has refused to extradite three suspects on Eighth Amendment grounds. Three Royal Visit invitations have been cancelled. International isolation is real.
+[03030] I am grateful to my honourable Friend. Planning acceleration is law. Statutory decision deadlines bind every local authority. The grounds for objection are restricted to substantive material considerations. Housing starts above the local plan are unblocked. The Treasury's own inflation forecast reflects the supply-side benefit. This was a bill the country needed.
+
+--- Pattern: "limited" (85 matches) ---
+[003755] 94% of nurses voted for unlimited strike action. 94%. Has the Prime Minister spoken directly to the General Secretary of the RCN this week? Yes or no?
+[003991] 94% of nurses voted for unlimited strike action. The junior doctors are next. The consultants have already walked. Have you spoken to the General Secretary of the RCN this week?
+[003994] 94% of the Royal College of Nursing voted for unlimited strike action. The Prime Minister has not picked up the phone to the General Secretary once.
+[004590] A limited devolution package
+[005216] Accept a limited exemption for pastoral one-to-ones only
+[005971] After negotiation, Royal Mail's owner accepts a reduced USO requiring 5-day delivery rather than 6. Ofcom and Postmasters Federation both accept the compromise; rural anger is limited.
+[010773] Concede limited bilateral leverage
+[010778] Concede limited shift + reframe to deterrence
+[010779] Concede limited, worth it
+[011659] Post Office Limited has notified the Department of Business that 420 rural sub-post offices are no longer commercially viable. The Country Land and Business Association is asking for a statutory rural-services guarantee.
+[017213] Inheritance tax is a small share of revenue. Closing other reliefs raises more. The headline is noise, the actual fiscal impact is limited.
+[018003] Limited technology cooperation in genomics
+[018145] Limited diplomatic backchannel on prisoner swaps
+[018147] Limited research only
+[018149] Limited sanctions pause
+[019706] No single-market or customs-union membership. Services access is limited, professional qualifications are not mutually recognised, and border friction is a standing cost to exporters.
+[022227] Priority doesn't mean unlimited
+[022228] limited_response
+[022231] Priority means first call on new money. It does not mean unlimited funding at any inflation rate. Every government in Europe faces the same pressure and makes the same trade-offs.
+[022305] Prohibits social media platforms from allowing accounts for users under 16, requiring robust age verification or facing unlimited fines and possible operating bans.
+[026391] The cost to taxpayers of the uncapped system is significant. We are running a deficit. Unlimited benefit entitlements for an unlimited number of children were never sustainable.
+[026665] The honest answer is that Britain's power to shape this is real but limited. I would rather tell you that than promise an influence we do not have.
+[026989] The packaging tax is part of a broader framework including the single-use plastics ban, deposit return scheme rollout, and producer responsibility reform. Individual measures have limited effect but the package taken together is substantial.
+[028425] UK polls under-aware; palm oil debate drives the limited press coverage.
+[029799] You limited Britain to protecting its own shipping
+[032763] +£30m limited devolution deal
+[033256] A single, limited retaliation — no war
+[033432] Agree a limited expansion — more spending autonomy and a mayoral deal, without tax-varying powers or a full assembly.
+[033827] Brief that the breach is under control and that the threat to citizens is limited — the security services are handling it.
+[033881] Britain will not publicly condemn — provided the operation is proportionate, time-limited, and notified to allies in real time.
+[034248] Construction's labour problem is skills and productivity, not raw headcount. Germany builds more with fewer workers because of better training and better site methods — that is where UK construction needs to go, not to unlimited migration.
+[034724] Each 5pt change ≈ £1.5bn revenue. Working class up; business down. Limited duration in real terms.
+[035305] I am today releasing the documents in full. Redactions limited to national security only — signed off by the Cabinet Secretary.
+[035403] I will concede that the immediate behavioural shift has been limited. The deterrent function of the sanctions — signalling to {LEADER_NAME} and others what the UK will and will not tolerate — is also part of the design and that function is performing.
+[035458] IMF programme: total spending is limited to £
+[036246] Open to a pilot off-take agreement — limited volume, with re-evaluation after 24 months.
+[036830] Prime Minister — as the temperature falls, a deal is forming: detained nationals home in exchange for limited sanctions relief and frozen funds released. It brings people home; critics will call it a ransom.
+[036893] Prime Minister — {LEADER_A} has moved to take the outlying islands by force — a limited grab designed to test the coalition without triggering the big war. The world's response now sets the price of the next, larger move.
+[037741] Standing fully with {CONFLICT_NAME} is in this country's direct interest — a war lost there costs us more, in security and in pounds, than the commitment does. It is costed, it is time-limited to the campaign, and I will defend it.
+[039244] Visa cooperation only — explicitly limited to chess delegations, no diplomatic spillover.
+[047208] QUOTA_LIMITED
+[048790] QuotaLimitedFeature
+[050439] timeLimited
+[050507] _onBucketRateLimited
+[050512] isRateLimited
+[050516] quotaLimited
+[066430] limited
+[067344] Limited engagement
+[069265] Limited scope
+[069609] Limited, staff-led pilots. Three regions. Transparent outcome reporting.
+[069919] Limited participation
+[070312] ' does not exist/quota limited.
+[075294] UK citizens get visa-free tourism + limited work. Politically defensible at home.
+[081733] Time-limited only
+[081737] Time-limited pilot
+[082804] Limited MOU signed.
+[089785] A limited compensation scheme for verified retail losses, funded from the licensing levy.
+[092118] quota_limited
+[094905] Formal diplomatic condemnation only. The UK has limited leverage on this question.
+[096263] I will seek a new vote to add protection corridors with limited ground presence. Conditional expansion.
+[102935] Pass time-limited pilot legislation, 5-year sunset clause. Honest experiment, reversible result.
+[103493] Push for limited UK Supreme Court override on civil-liberties + national-security cases.
+[104217] Set a legal deadline: all unsafe cladding removed within 2 years. Developers face unlimited liability from that date.
+[105124] The Royal College of Nursing has confirmed that 94% of its membership voted for unlimited strike action. The Health Secretary says they need an answer on pay within 48 hours.
+[105323] The carrier will make a symbolic transit but shortened. Sufficient signal, limited escalation.
+[105686] The inquiry produces reforms to public-order policing. Movement hostility remains but the clearance's long-term cost is limited.
+[106380] Their fleet limited; UK fleet has wider access. Politically popular at home.
+[106586] Treasury defends the call as targeted, time-limited, and accompanied by reform conditions.
+[106954] Waiting lists at 9 million. A&E corridors lined with trolleys. Nursing staff are balloting for unlimited strike action.
+[111222] — Deflect: issue a line-to-take. Cheap and limited — buys time but does not resolve the scandal.
+[111602] Unlimited weeks in power — survive as many terms as you can
+[111644] is divided and offers only a limited, hedged response — its member left more exposed than the treaty promises.
+[112248] A non-political president with defined, limited powers. Answer the questions before they’re asked.
+[112689] Britain approves a limited variant of the engine technology — not the full-spec version. Ankara gets a deal, London keeps controls.
+[113958] I will argue for a strictly humanitarian mission — no-fly zone and protection corridors only, no ground troops. Time-limited, UN-mandated.
+[114324] Modernise — limited written code
+[115714] The Chief Whip reports: no specific intelligence this week — sources are limited.
+[115931] The free vote has passed 314-304. UK participation will be light — 2,000 troops, time-limited. But the narrow margin means the government has no clear mandate. The mission's political support is fragile from day one.
+[116014] The next phase extends fiscal devolution — limited business rates and council tax flexibility — to the combined authorities that ask for it. Devolution is a process, not an event. The legal foundation is now in place.
+[116383] Universities sign limited MOU — visa scope narrowed further
+[00042] "Prime Minister. We are exploring a more durable Yemen settlement. The Omani channel has been useful but limited. Britain has the historical relationships and the convening power to host a Track-Two dialogue in London. I am offering you the role of facilitator. The cost is small. The reward is generations of stability."
+[00053] "Prime Minister. The world faces a food security crisis. Russia controls the grain corridor. I am prepared to discuss a limited lifting of sanctions in exchange for Russian cooperation on Black Sea grain exports. This is practical, not political. Think of the millions who will not starve."
+[00421] I will concede the honest part of the question: UK bilateral leverage on {LEADER_COUNTRY} in isolation is limited and always was. The {TOPIC_LABEL} sits within a coordinated multilateral response that is the realistic source of pressure. The country should understand that lens.
+[00529] VAT sits at {DELIVERED_VALUE}{UNIT}. I promised {PROMISED_VALUE}{UNIT} and the {GAP}-point gap is one I will not minimise. The adjustment was time-limited and is in train to reverse. Pensioners and low earners will see the rate return to the promised level within this Parliament.
+[01101] Three things tonight. One: the next General Election under the new system will be held on the existing fiscal framework. Two: coalition negotiations will be time-limited to fourteen days by statute. Three: the Office for Budget Responsibility will publish a stability impact assessment within the month. That is the reassurance.
+
+--- Pattern: "upgrade" (94 matches) ---
+[001107] Fund the full upgrade
+[003189] The North of England needs trans-Pennine upgrades and faster local services as much as it needed one high-speed line. That is where this government will be judged on transport, and I accept that.
+[004704] A phased upgrade
+[006206] Allow a two-year phased rollout giving schools time to upgrade
+[006314] An infrastructure fund offers to co-finance a UK transport upgrade
+[006315] transport upgrade
+[007636] Binding targets to end sewage discharges, mandatory treatment-plant upgrades, and real fines for water companies that pollute. Cleans up rivers and bathing waters.
+[007869] defence_nato_upgrade
+[009524] UK upgrades its representative office and engagement in Taipei
+[009829] the national grid upgraded for clean power
+[010401] Commit to a landmark tournament: upgraded stadiums, fan zones in every region, a showcase for the country.
+[014021] Engineering and digital facilities upgraded across 150 colleges
+[015208] Full grid upgrade complete
+[015706] National Grid Transmission Upgrade
+[016638] I hear the opposition criticised the M62 upgrade as too rapid. I had not previously regarded "delivered on time" as a charge sheet.
+[017260] Intelligence sharing upgrade
+[018368] M62 Smart Motorway Upgrade
+[018885] Mobility chapter inclusion in any future trade upgrade
+[018908] Money funds change; change takes time. The settlement is funding new diagnostic hubs, workforce expansion, and IT upgrades that will move the numbers through next winter. Judge us on outcomes twelve months from now.
+[022877] Rail investment has continued through HS2 stations, the Elizabeth Line, and the Transpennine upgrade. Cancellation rates vary significantly by operator and the headline figures obscure performance where investment has landed.
+[025495] The Crossing is paired with freight rail upgrades at Felixstowe and Thamesport that shift a defined proportion of tonnage off road. The scheme is net-carbon-neutral within fifteen years on the DCO calculation.
+[027220] The rollover covers goods but is dated on services and digital trade, and the upgrade has not been concluded.
+[028576] evt_national_grid_upgrade
+[028613] UK supports EU position blocking Turkish customs union upgrade
+[029409] Worst 200 overflow points upgraded
+[030036] You upgraded the CPTPP framework with PM Takenaka. The financial services chapter that came back is materially deeper than the Treasury briefed to the City three weeks ago. Why the gap?
+[030994] call_us_intel_sharing_upgrade
+[032587] +£12bn national grid full upgrade
+[032835] +£4bn phased grid upgrade
+[033008] 2.5% GDP defence — NATO upgrades UK posture
+[033604] Approve the full upgrade — commit public capital to the national infrastructure that makes the clean energy transition real.
+[033960] Build it around legacy — community pitches, transport upgrades, and grassroots football funding that lasts.
+[034000] CPTPP upgrade — financial services chapter unexpected depth.
+[034516] Defer the decision — the full upgrade is not affordable in this spending review.
+[034653] Does the Prime Minister agree that smarter incident detection on the M62 — and a measurable fall in accident rates — is exactly the kind of evidence-led upgrade that should be the standard, not the exception, on our motorway network?
+[034871] Exempt motorway service areas from EV charging mandate — grid upgrades too expensive
+[034945] First 2,000 km upgraded — renewables unblocked
+[036243] Open Banking pause ends quietly — security upgrades certified
+[038222] The Warm Homes Plan commits £13.2bn over the parliament — insulation upgrades, heat pumps, solar for a million homes prioritising low-income households first. EPC C for private rentals, enforced by local authority powers we are restoring this autumn.
+[039068] Twelve months after legislating the 2.5% commitment, NATO has formally upgraded the UK capability-tier rating. The Pentagon and Élysée are publicly supportive. The defence-industrial-base announcement has secured 14,000 skilled jobs.
+[039359] Will the Prime Minister confirm that 8,000 kilometres of transmission upgrades — pylons, cables, substations — are now complete, and that the connection queue that was paralysing the renewable industry has finally been unblocked?
+[039410] Will the Prime Minister join me in marking the fact that the M62 upgrade was delivered start-to-finish in less than a year — and confirm that not every transport improvement needs a decade-long debate before a single cone goes out?
+[039425] Will the Prime Minister join me in welcoming the smart-grid systems that have come online with the upgrade — allowing the network to balance distributed generation in real time and squeeze the maximum value from every renewable site connected to it?
+[042712] upgradeBondRating
+[045108] __SERVER_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE
+[045109] UPGRADE_REQUIRED
+[046957] onupgradeneeded
+[047737] targeted_targeted_upgrade
+[049889] proj_national_grid_upgrade
+[050669] __CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE
+[050670] UPGRADE_MARGIN
+[055552] UNKNOWN_SUBSCRIPTION_UPGRADE_DOWNGRADE_POLICY
+[068862] upgradeHydrationErrorsToRecoverable
+[069994] Upgrade without observer status
+[071485] targeted_upgrade
+[072803] Upgrade to emergency
+[072805] Transport upgrade opens first section ahead of schedule
+[073767] Upgrade to a statutory public inquiry with full powers. Name and shame every VIP lane beneficiary.
+[081520] Upgrade travel advice to "LEAVE NOW" and provide consular support. No military assets.
+[083608] Accept the full upgrade
+[091400] Britain accepts the partnership upgrade and commits to consistent Indo-Pacific engagement. London participates as observer at the next ASEAN summit.
+[091529] Britain values the dialogue partner status and will engage through existing channels. A formal upgrade requires longer political work in London.
+[091652] Britain will upgrade the existing eFP battlegroup contribution and base prepositioning kit. A brigade element is a 2030s decision.
+[094910] Formalise or upgrade intelligence cooperation. Low public profile, high strategic value.
+[095933] I gather the LGA initially asked for a 3-year settlement. We gave them four. I accept the upgrade.
+[096260] I will ring-fence a portion of the fiscal dividend into low-income energy-efficiency upgrades. The framework benefits everyone.
+[102176] Move the body around the room. The challenger's allies get demoted; the loyalists get the upgrades. Brutal, visible, immediate.
+[105552] The excess-death count is climbing faster than modelled. ONS has declared the heatwave the deadliest weather event since 1976. The BMA is demanding the government upgrade to emergency status. You are 48 hours into a worsening crisis.
+[105733] The late upgrade saves hundreds of additional deaths but the initial response timing is the story. Mixed legacy.
+[105866] The next phase aligns the gigabit programme with the wider digital public-services upgrade so the infrastructure investment pays back in service delivery.
+[105892] The next phase extends digital authentication options so the security upgrades do not impose new administrative burdens on the people they are meant to protect.
+[106334] The upgrade that shrank
+[112011] +£400m IT upgrade
+[112256] A pragmatic upgrade for one of England's busiest stretches. The hard-shoulder concerns can be designed out — let's judge it once it's open.
+[112759] Britain signs the UK–Turkey Returns and Mobility Agreement. £3bn package committed; visa-services upgrade lands within six months. Joint announcement at Ankara.
+[112774] Britain will commit the £400m corridor funding package. London joins Warsaw in financing the rail upgrades and drone defence directly.
+[112817] Britain will sign the returns deal at £2bn. The visa-services upgrade for skilled workers requires Home Office consultation and a domestic political path.
+[114034] Infrastructure fund commits £{DEAL_VALUE}bn to motorway and rail upgrade
+[115006] President Lestari — formal ASEAN-UK partnership upgrade
+[115603] Sustained dividend — Treasury upgrades growth forecast.
+[116264] To balance the decision, I will announce next week a £20bn green industrial acceleration — offshore wind, grid upgrade, heat-pump subsidy. The field pays for the transition it complicates.
+[00139] A trans-Pennine rail upgrade linking Liverpool, Manchester, Leeds, and Hull with faster, more frequent services. The project modernises Victorian-era infrastructure and would cut cross-Pennine journey times by up to 40 minutes. Essential for closing the north-south productivity gap.
+[00354] I am grateful to my honourable Friend. The British Army is back at 82,000 regular personnel, fully equipped with 500 Ajax, the Boxer APC fleet, and the upgraded AS90 artillery. The pay rise drove the recruitment surge; the housing programme drove the retention. We are no longer the smallest British Army since Napoleon, and our NATO allies have noticed.
+[00355] I am grateful to my honourable Friend. The British Army stands at {ARMY_STRENGTH} trained regular soldiers, fully equipped with 500 Ajax, the Boxer APC fleet, and the upgraded AS90 artillery. The pay rise drove recruitment; the housing programme drove retention. Our NATO allies have noticed.
+[00357] I am grateful to my honourable Friend. The Clean Rivers Act is fully implemented. The worst 200 combined-sewer overflow points are upgraded, illegal discharges are down 80%, and bathing-quality rivers have returned. The board directors of water companies that breach the regulations now face criminal prosecution, personally. That is what enforcement looks like when the regulator is given teeth.
+[00362] I am grateful to my honourable Friend. The national grid upgrade is complete. 8,000 kilometres of transmission infrastructure rebuilt, the smart-grid balancing systems live, and the renewable connection queue has cleared. Every wind farm, solar farm, and battery park that was waiting to connect now does. This is the unglamorous work that makes everything else possible.
+[00478] Megan, levelling up failed because it was Whitehall handing out pots it controlled, not power going to the places themselves. We're doing the opposite: real devolution of transport, skills, and investment budgets to the North East, a binding commitment that infrastructure spend per head matches London's, and the rail upgrades that actually connect your towns. The gap closes when the decisions are made where you live.
+[00597] Rebuilding the British Army's regular strength to 82,000 personnel through improved pay, housing, and career paths, alongside equipping it with 500 new Ajax armoured vehicles, Boxer APCs, and upgraded AS90 artillery. The Army has shrunk to its smallest size since Napoleon and faces credibility concerns among NATO allies despite increased threat levels.
+[00598] Rebuilding the British Army's regular strength, now {ARMY_STRENGTH} trained soldiers, through improved pay, housing, and career paths, alongside equipping it with 500 new Ajax armoured vehicles, Boxer APCs, and upgraded AS90 artillery. NATO allies have raised concerns about British land power as threat levels rise.
+[01134] Twelve times is too many, and the government is adopting the Hansard Society's recommendations on Henry VIII powers in full. New primary legislation will carry sunset clauses on delegated power, the super-affirmative procedure will be the default for substantive amendments to primary Acts, and the Statutory Instrument Committee is being given a formal power to require upgrade to primary route where the test is met. Executive convenience is not a constitutional justification.
+[01148] Upgrading 8,000 km of electricity transmission infrastructure to handle the transition to renewable energy, including new pylons, cables, and substations. The existing Victorian-era grid was not designed for large-scale distributed generation and is becoming a bottleneck for new renewable connections. Without this upgrade, green energy projects cannot connect to customers.
+[01164] Will the Prime Minister confirm that the British Army now stands at {ARMY_STRENGTH} trained soldiers, fully equipped with 500 Ajax armoured vehicles, Boxer APCs, and upgraded AS90 artillery, and that the credibility concerns our NATO allies were quietly raising about British land power are answered?
+[03088] India CEPA upgraded, Australia FTA deepened, US sectoral deals on the table. The DBT thinks you can land three within the quarter. Cabinet wants a flagship press event; the FCDO wants quiet sequencing; the Treasury wants Treasury talking points to dominate.
+[03097] Kate Holloway: Two years after restored Single Market access, the ONS quarterly figures are unambiguous. UK exports to the EU up 31%; FDI up 22%; the long-run growth model upgraded by 0.4 percentage points. The IFS, OBR and CBI have all issued statements treating the accession as a settled positive. The Telegraph still publishes opinion pieces against; the news pages have stopped.

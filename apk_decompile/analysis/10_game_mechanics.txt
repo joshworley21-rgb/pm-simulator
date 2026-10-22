@@ -1,0 +1,69 @@
+
+=== BRITISH_POLITICS ===
+  prime minister: 246
+  parliament: 151
+  speaker: 33
+  backbench: 27
+  whip: 23
+  westminster: 19
+  whitehall: 9
+  downing street: 5
+  house of commons: 1
+
+=== POLICY_AREAS ===
+  tax: 70
+  nhs: 66
+  trade: 60
+  defence: 59
+  housing: 47
+  pension: 46
+  climate: 41
+  energy: 39
+  education: 27
+  transport: 25
+  crime: 15
+  benefits: 13
+  immigration: 3
+
+=== GAME_MECHANICS ===
+  turn: 348
+  round: 131
+  vote: 102
+  decision: 94
+  election: 70
+  campaign: 56
+  poll: 54
+  choice: 37
+  rating: 37
+  points: 31
+  outcome: 22
+  consequence: 20
+  score: 7
+  popularity: 1
+
+=== NATIONS_REGIONS ===
+  eu: 117
+  london: 58
+  england: 56
+  usa: 53
+  europe: 33
+  wales: 19
+  russia: 18
+  scotland: 16
+  northern ireland: 14
+  china: 10
+  france: 9
+  japan: 8
+  germany: 7
+  united states: 4
+
+=== DATA_VARS ===
+  GDP: 0
+  UNEMPLOYMENT: 0
+  INFATION: 0
+  DEBT: 0
+  APPROVAL: 0
+  CO2: 0
+  ARMY: 0
+  NHS: 0
+  NET_MIGRATION: 0

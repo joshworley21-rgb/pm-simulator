@@ -1,0 +1,106 @@
+=== STRINGS > 500 CHARS (225 total) ===
+
+--- Sorted by length (largest first) ---
+  Line 334: 12434 chars [text]
+    First 300: data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAADwCAYAAAA+VemSAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAhGVYSWZNTQAqAAAACAAFARIAAwAAAAEAAQAAARoABQAAAAEAAABKARsABQAAAAEAAABSASgAAwAAAAEAAgAAh2kABAAAAAEAAABaAAAAAAAAAEgAAAABAAAASAAAAAEAA6ABAAMAAAABAAEAAKACAA
+  Line 442: 10329 chars [code]
+    First 300: var t=Uint8Array,n=Uint16Array,r=Int32Array,e=new t([0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0,0,0,0]),i=new t([0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13,0,0]),s=new t([16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15]),a=function(t,e){for(var i=new n(31),s=0;
+  Line 3418: 7986 chars [code]
+    First 300: function decorateAnimation_reactNativeReanimated_utilTs8(animation){const{getReduceMotionFromConfig,recognizePrefixSuffix,isColor,toLinearSpace,convertToRGBA,clampRGBA,rgbaArrayToRGBAColor,toGammaSpace,decomposeMatrixIntoMatricesAndAngles,applyProgressToMatrix,applyProgressToNumber,getRotationMatrix
+  Line 3438: 7240 chars [code]
+    First 300: function reactNativeReanimated_springTs2(toValue,userConfig,callback){const{defineAnimation,_worklet_13917184105769_init_data,GentleSpringConfig,GentleSpringConfigWithDuration,safeMergeConfigs,checkIfConfigIsValid,underDampedSpringCalculations,criticallyDampedSpringCalculations,isAnimationTerminatin
+  Line 3452: 5021 chars [code]
+    First 300: function withStyleAnimation_reactNativeReanimated_styleAnimationTs4(styleAnimations){const{defineAnimation,_worklet_8089900464384_init_data,ColorProperties,setPath,processColor,resolvePath,__DEV__,logger,isValidLayoutAnimationProp,withTiming}=this.__closure;return defineAnimation({},function withSty
+  Line 3385: 4761 chars [code]
+    First 300: function reactNativeReanimated_springTs1(){const{GentleSpringConfig,GentleSpringConfigWithDuration,safeMergeConfigs,userConfig,checkIfConfigIsValid,underDampedSpringCalculations,criticallyDampedSpringCalculations,isAnimationTerminatingCalculation,calculateNewStiffnessToMatchDuration,initialCalculati
+  Line 3366: 4636 chars [code]
+    First 300: function create_reactNativeGestureHandler_gestureStateManagerTs5(handlerTag){const{_worklet_17260278338724_init_data,REANIMATED_AVAILABLE,setGestureState,State,warningMessage,_worklet_5121398549284_init_data,_worklet_6127591060938_init_data,_worklet_16541790591841_init_data}=this.__closure;return{be
+  Line 3437: 4345 chars [code]
+    First 300: function withSequence_reactNativeReanimated_sequenceTs3(_reduceMotionOrFirstAnimation){const{logger,defineAnimation,_worklet_12572076258850_init_data,getReduceMotionForAnimation,_worklet_16553735205395_init_data}=this.__closure;for(var _len=arguments.length,_animations=new Array(_len>1?_len-1:0),_ke
+  Line 3363: 4305 chars [code]
+    First 300: function getSwipeSimulator_reactNativeReanimated_swipeSimulatorTs5(event,screenTransitionConfig,lockAxis){const{BASE_VELOCITY,ADDITIONAL_VELOCITY_FACTOR_X,ADDITIONAL_VELOCITY_FACTOR_Y,ADDITIONAL_VELOCITY_FACTOR_XY,applyStyleForBelowTopScreen,computeEasingProgress,easing,applyStyle,maybeScheduleNextF
+  Line 3586: 3701 chars [code]
+    First 300: function reactNativeReanimated_styleAnimationTs3(){const{ColorProperties,setPath,processColor,styleAnimations,resolvePath,__DEV__,logger,isValidLayoutAnimationProp,withTiming}=this.__closure;const onFrame=function(animation,now){let stillGoing=false;const entriesToCheck=[{value:animation.styleAnimat
+  Line 2954: 3402 chars [code]
+    First 300: function Bezier_reactNativeReanimated_BezierTs11(mX1,mY1,mX2,mY2){const{_worklet_4167038034701_init_data,kSplineTableSize,calcBezier,kSampleStepSize,_worklet_15525109144565_init_data,getSlope,NEWTON_MIN_SLOPE,newtonRaphsonIterate,binarySubdivide,_worklet_3134142024792_init_data}=this.__closure;const
+  Line 3375: 3305 chars [code]
+    First 300: function reactNativeReanimated_EntryExitTransitionTs1(values){const{enteringAnimation,exitingAnimation,delayFunction,delay,withSequence,withTiming,exitingDuration,logger,callback}=this.__closure;const enteringValues=enteringAnimation(values);const exitingValues=exitingAnimation(values);const animati
+  Line 3449: 3100 chars [code]
+    First 300: function reactNativeReanimated_clampTs2(config,_animationToClamp){const{defineAnimation,_worklet_6827601499978_init_data,recognizePrefixSuffix,logger,getReduceMotionForAnimation}=this.__closure;return defineAnimation(_animationToClamp,function reactNativeReanimated_clampTs1Factory({_worklet_68276014
+  Line 3370: 3037 chars [code]
+    First 300: function animateToPosition_Gorhom_BottomSheetTsx8(position,source){const{__DEV__,runOnJS,print,animatedPosition,animatedAnimationState,ANIMATION_STATUS,stopAnimation,animatedKeyboardState,animatedSheetState,KEYBOARD_STATUS,keyboardBehavior,KEYBOARD_BEHAVIOR,ANIMATION_SOURCE,SHEET_STATE,animatedDeten
+  Line 3435: 2860 chars [code]
+    First 300: function reactNativeReanimated_repeatTs2(_nextAnimation){const{defineAnimation,_worklet_1106971096143_init_data,getReduceMotionForAnimation}=this.__closure;let numberOfReps=arguments.length>1&&arguments[1]!==undefined?arguments[1]:2;let reverse=arguments.length>2&&arguments[2]!==undefined?arguments[
+  Line 631: 2670 chars [text]
+    First 300: data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAMAAABrrFhUAAAAk1BMVEUAAAAqIDEqIjMmIDArIjIrIjMoHjErITMrIjMqITIqITIqITIqIjIqITIqITIhHi4qITIqITIeAConHi8rITMqITIqITIcHCopITIpIDEpIDIlGC8qITIqITIpIDIpHjAqITIqIDIqIDEqIDAqITInHjAqIDIqIDEqITIqITIqIDIiFCgpIDEqITIoHS8qIDIrIjMN1S0HAAAAMHRSTlMAhnknzMQy1z
+  Line 3402: 2630 chars [code]
+    First 300: function handleOnChange_Gorhom_useGestureEventsHandlersDefaultTsx3(source,_ref3){const{animatedDetentsState,isInTemporaryPosition,context,KEYBOARD_STATUS,animatedLayoutState,enablePanDownToClose,GESTURE_SOURCE,animatedScrollableState,animatedPosition,clamp,enableOverDrag,SCROLLABLE_TYPE,overDragResi
+  Line 3454: 2496 chars [code]
+    First 300: function reactNativeReanimated_delayTs2(delayMs,_nextAnimation,reduceMotion){const{defineAnimation,_worklet_9275966905248_init_data,getReduceMotionForAnimation}=this.__closure;return defineAnimation(_nextAnimation,function reactNativeReanimated_delayTs1Factory({_worklet_9275966905248_init_data:_work
+  Line 3439: 2492 chars [code]
+    First 300: function reactNativeReanimated_decayTs3(userConfig,callback){const{defineAnimation,_worklet_13957192501126_init_data,isValidRubberBandConfig,rubberBandDecay,rigidDecay,validateConfig,getReduceMotionForAnimation}=this.__closure;return defineAnimation(0,function reactNativeReanimated_decayTs2Factory({
+  Line 3440: 2465 chars [code]
+    First 300: function reactNativeReanimated_timingTs2(toValue,userConfig,callback){const{__DEV__,assertEasingIsWorklet,defineAnimation,_worklet_15142811190695_init_data,Easing,getReduceMotionForAnimation}=this.__closure;if(__DEV__&&userConfig!==null&&userConfig!==void 0&&userConfig.easing){assertEasingIsWorklet(
+  Line 3414: 2354 chars [code]
+    First 300: function handleOnEnd_Gorhom_useGestureEventsHandlersDefaultTsx4(source,_ref5){const{animatedDetentsState,animatedPosition,animatedScrollableState,GESTURE_SOURCE,isInTemporaryPosition,context,animateToPosition,ANIMATION_SOURCE,SCROLLABLE_TYPE,KEYBOARD_STATUS,Platform,WINDOW_HEIGHT,animatedKeyboardSta
+  Line 3339: 2350 chars [text]
+    First 300: M 89,332 Q 97,336 103,335 L 113,332 120,329 130,327 134,326 145,327 152,325 163,323 172,320 177,319 185,317 196,315 204,314 210,313 222,312 232,312 235,312 245,312 250,312 258,311 262,310 270,306 278,301 280,298 282,294 L 272,292 261,294 L 265,291 267,290 265,288 273,281 283,269 291,262 290,258 285,
+  Line 4282: 2267 chars [code]
+    First 300: function styleUpdater_reactNativeReanimated_useAnimatedStyleTs3(viewDescriptors,updater,state,animationsActive){const{isAnimated,prepareAnimation,runAnimations,updateProps,shallowEqual}=this.__closure;var _state$animations,_updater;let isAnimatedProps=arguments.length>4&&arguments[4]!==undefined?arg
+  Line 3362: 2237 chars [code]
+    First 300: function gorhom_BottomSheetTsx20(result,_previousResult){const{animatedKeyboardState,KEYBOARD_STATUS,animatedAnimationState,ANIMATION_STATUS,ANIMATION_SOURCE,animatedLayoutState,$modal,bottomInset,__DEV__,runOnJS,print,Platform,android_keyboardInputMode,KEYBOARD_INPUT_MODE,keyboardBehavior,KEYBOARD_
+  Line 3387: 2223 chars [code]
+    First 300: function getEvaluatedPosition_Gorhom_BottomSheetTsx11(source){const{animatedCurrentIndex,animatedDetentsState,animatedKeyboardState,ANIMATION_SOURCE,keyboardBlurBehavior,KEYBOARD_BLUR_BEHAVIOR,KEYBOARD_STATUS,animatedContentGestureState,State,animatedHandleGestureState,isInTemporaryPosition,keyboard
+  Line 3391: 2191 chars [code]
+    First 300: function createMapperRegistry_reactNativeReanimated_mappersTs1(){const{IS_JEST,isSharedValue}=this.__closure;const mappers=new Map();let sortedMappers=[];let runRequested=false;let processingMappers=false;function updateMappersOrder(){const pre=new Map();mappers.forEach(function(mapper){if(mapper.ou
+  Line 3421: 2066 chars [code]
+    First 300: function reactNativeReanimated_clampTs1(){const{_animationToClamp,config,recognizePrefixSuffix,logger,getReduceMotionForAnimation}=this.__closure;const animationToClamp=typeof _animationToClamp==='function'?_animationToClamp():_animationToClamp;const strippedMin=config.min===undefined?undefined:reco
+  Line 2998: 2038 chars [code]
+    First 300: function reactNativeReanimated_sequenceTs2(){const{_animations,getReduceMotionForAnimation,reduceMotion}=this.__closure;const animations=_animations.map(function(a){const result=typeof a==='function'?a():a;result.finished=false;return result;});function findNextNonReducedMotionAnimationIndex(index){
+  Line 490: 2024 chars [text]
+    First 300: M15.6622 15H12.3997C12.2129 14.9959 12.031 14.9396 11.8747 14.8375L8.04965 12.2H7.49956V19.1C7.4875 19.3348 7.3888 19.5568 7.22256 19.723C7.05632 19.8892 6.83435 19.9879 6.59956 20H2.04956C1.80193 19.9968 1.56535 19.8969 1.39023 19.7218C1.21511 19.5467 1.1153 19.3101 1.11206 19.0625V12.2H0.949652C0.
+  Line 3254: 1965 chars [code]
+    First 300: function jestStyleUpdater_reactNativeReanimated_useAnimatedStyleTs4(viewDescriptors,updater,state,animationsActive,animatedValues,adapters,forceUpdate){const{isAnimated,prepareAnimation,runAnimations,updatePropsJestWrapper,shallowEqual}=this.__closure;var _state$animations,_updater;const animations=
+  Line 3386: 1940 chars [code]
+    First 300: function reactNativeGestureHandler_useAnimatedGestureTs6(event){const{sharedHandlersCallbacks,isStateChangeEvent,State,runWorklet,CALLBACK_TYPE,lastUpdateEvent,isTouchEvent,stateControllers,GestureStateManager,TouchEventType,touchEventTypeToCallbackType}=this.__closure;const currentCallback=sharedHa
+  Line 3457: 1866 chars [code]
+    First 300: function reactNativeReanimated_FrameCallbackRegistryUITs1(){const frameCallbackRegistry={frameCallbackRegistry:new Map(),activeFrameCallbacks:new Set(),previousFrameTimestamp:null,nextCallId:0,runCallbacks:function(callId){var _this=this;const loop=function(timestamp){if(callId!==_this.nextCallId){r
+  Line 3442: 1858 chars [code]
+    First 300: function calculateNewStiffnessToMatchDuration_reactNativeReanimated_springUtilsTs8(x0,config,v0){const{_worklet_17348859606966_init_data,getEnergy,bisectRoot}=this.__closure;if(config.skipAnimation){return 0;}const{dampingRatio:zeta,energyThreshold:threshold,mass:m,duration:targetDuration}=config;co
+  Line 3429: 1851 chars [code]
+    First 300: function runOnRuntime_reactNativeWorklets_runtimesTs4(workletRuntime,worklet){const{__DEV__,SHOULD_BE_USE_WEB,isWorkletFunction,RuntimeKind,makeShareableCloneOnUIRecursive,_worklet_3456632045036_init_data,WorkletsModule,createSerializable,_worklet_10475759145780_init_data}=this.__closure;if(__DEV__&
+  Line 3458: 1835 chars [code]
+    First 300: function evaluatePosition_Gorhom_BottomSheetTsx12(source,animationConfigs){const{animatedAnimationState,animatedDetentsState,ANIMATION_SOURCE,isLayoutCalculated,getEvaluatedPosition,isAnimatedOnMount,animateOnMount,animateToPosition,setToPosition,ANIMATION_STATUS,INITIAL_VALUE,isInTemporaryPosition,
+  Line 3397: 1744 chars [code]
+    First 300: function normalizeColor_reactNativeReanimated_ColorsTs9(color){const{MATCHERS,names,parse255,parse1,hslToRgb,parse360,parsePercentage,hwbToRgb}=this.__closure;if(typeof color==='number'){if(color>>>0===color&&color>=0&&color<=0xffffffff){return color;}return null;}if(typeof color!=='string'){return 
+  Line 3534: 1667 chars [code]
+    First 300: function valueSetter_reactNativeReanimated_valueSetterTs1(mutable,value){let forceUpdate=arguments.length>2&&arguments[2]!==undefined?arguments[2]:false;const previousAnimation=mutable._animation;if(previousAnimation){previousAnimation.cancelled=true;mutable._animation=null;}if(typeof value==='funct
+  Line 3444: 1632 chars [code]
+    First 300: function setToPosition_Gorhom_BottomSheetTsx10(targetPosition){const{animatedPosition,animatedAnimationState,ANIMATION_STATUS,__DEV__,runOnJS,print,animatedDetentsState,_worklet_4233841815141_init_data,stopAnimation,animatedContainerHeightDidChange}=this.__closure;var _detents$indexOf;if(!targetPosi
+  Line 3539: 1581 chars [code]
+    First 300: function gorhom_useAnimatedDetentsTs1(){const{layoutState,INITIAL_LAYOUT_VALUE,detents,normalizeSnapPoint,$modal,detached,bottomInset,enableDynamicSizing,maxDynamicContentSize}=this.__closure;const{containerHeight:containerHeight,handleHeight:handleHeight,contentHeight:contentHeight}=layoutState.get
+  Line 3576: 1575 chars [code]
+    First 300: function reactNativeReanimated_repeatTs1(){const{_nextAnimation,numberOfReps,reverse,callback,getReduceMotionForAnimation,reduceMotion}=this.__closure;const nextAnimation=typeof _nextAnimation==='function'?_nextAnimation():_nextAnimation;function repeat(animation,now){const finished=nextAnimation.on
+  Line 3426: 1573 chars [code]
+    First 300: function reactNativeReanimated_delayTs1(){const{_nextAnimation,delayMs,getReduceMotionForAnimation,reduceMotion}=this.__closure;const nextAnimation=typeof _nextAnimation==='function'?_nextAnimation():_nextAnimation;function delay(animation,now){const{startTime:startTime,started:started,previousAnima
+  Line 488: 1534 chars [code]
+    First 300: for(var e="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",t="undefined"==typeof Uint8Array?[]:new Uint8Array(256),a=0;a<64;a++)t[e.charCodeAt(a)]=a;var n=function(t){var a,n=new Uint8Array(t),r=n.length,s="";for(a=0;a<r;a+=3)s+=e[n[a]>>2],s+=e[(3&n[a])<<4|n[a+1]>>4],s+=e[(15&n[a+1
+  Line 3389: 1492 chars [code]
+    First 300: function gorhom_BottomSheetContentTsx1(){const{animatedLayoutState,INITIAL_LAYOUT_VALUE,animatedKeyboardState,animatedSheetHeight,keyboardBehavior,KEYBOARD_BEHAVIOR,KEYBOARD_STATUS,isInTemporaryPosition}=this.__closure;const{containerHeight:containerHeight,handleHeight:handleHeight}=animatedLayoutSt
+  Line 4274: 1450 chars [code]
+    First 300: function runAnimations_reactNativeReanimated_useAnimatedStyleTs2(animation,timestamp,key,result,animationsActive,forceCopyAnimation){const runAnimations_reactNativeReanimated_useAnimatedStyleTs2=this._recur;if(!animationsActive.value){return true;}if(Array.isArray(animation)){result[key]=[];let allF
+  Line 4271: 1431 chars [code]
+    First 300: function reactNativeReanimated_timingTs1(){const{Easing,userConfig,toValue,callback,getReduceMotionForAnimation}=this.__closure;var _userConfig;const config={duration:300,easing:Easing.inOut(Easing.quad)};if(userConfig){Object.keys(userConfig).forEach(function(key){return config[key]=userConfig[key]
+  Line 493: 1430 chars [text]
+    First 300: data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAC4BAMAAABUVL5sAAAAD1BMVEUAAAA2Llo3LVk4LFg2LVmgcvrUAAAABHRSTlMAgL9ARyeO/QAAA7pJREFUeNrtWltynDAQFBIHIFUcgCQ6AIk5AAjd/0ypxFk3ouUCNJofl/rHy75a09MzI7Q2DQ0NDQ0NDQ0NDQ0N9eF+xPh9MKpwPv6FLss7R9yMImz8j8nowb9IglFDF6N+KCNIdqMFcGjpBbVUXdzHqKsXUhJGNb2g1vz6azRgX8
+  Line 2991: 1425 chars [text]
+    First 300: /** One more than the paywall */z-index:1000002;}.rc-simulated-store-modal.svelte-17914yi {background:white;border-radius:8px;padding:0;max-width:500px;width:90%;max-height:90%;overflow-y:auto;box-shadow:0 4px 20px rgba(0, 0, 0, 0.15);}.rc-simulated-store-modal-content.svelte-17914yi {padding:24px;}
+  Line 3432: 1396 chars [code]
+    First 300: function createUpdatePropsManager_reactNativeReanimated_updatePropsTs3(){const{runOnJS,updateJSProps}=this.__closure;const nativeOperations=[];const jsOperations=[];let flushPending=false;const processViewUpdates=function(tag,updates){return Object.entries(updates).reduce(function(acc,[propName,valu
+  Line 4188: 1392 chars [code]
+    First 300: function gorhom_BottomSheetTsx4(){const{animatedDetentsState,animatedLayoutState,isLayoutCalculated,interpolate,animatedPosition,Extrapolation,animatedAnimationState,android_keyboardInputMode,KEYBOARD_INPUT_MODE,ANIMATION_STATUS,ANIMATION_SOURCE,isInTemporaryPosition,animatedCurrentIndex}=this.__clo
+  Line 3518: 1376 chars [code]
+    First 300: function prepareAnimation_reactNativeReanimated_useAnimatedStyleTs1(frameTimestamp,animatedProp,lastAnimation,lastValue){const prepareAnimation_reactNativeReanimated_useAnimatedStyleTs1=this._recur;if(Array.isArray(animatedProp)){animatedProp.forEach(function(prop,index){prepareAnimation_reactNative
+
+=== JSON-LOOKING (start with { or [ ) ===
+  Count: 0

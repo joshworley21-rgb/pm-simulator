@@ -1,0 +1,155 @@
+=== CSS BLOCKS EXTRACTED (108) ===
+
+--- Lines 292-295 (66 chars) ---
+@media (max-width: 600px) {
+.widget__actor span {
+display: none;
+}
+
+--- Lines 311-314 (59 chars) ---
+@media (max-width: 600px) {
+.dialog__title {
+width: auto;
+}
+
+--- Lines 398-402 (88 chars) ---
+@media (max-width: 600px) {
+.dialog__position {
+inset: var(--page-margin);
+padding: 0;
+}
+
+--- Lines 446-449 (1152 chars) ---
+I can give that assurance unequivocally. The {TOPIC_LABEL} with {LEADER_COUNTRY} is a framework for cooperation. British forces remain under British command in every operational scenario contemplated. That is non-negotiable and {LEADER_NAME} understands it perfectly well.
+"This is a Government that legislated to flood Welsh valleys for English reservoirs in living memory, that closed our pits without compensation, and that now lectures the Senedd on how to run our health service. We are not bein
+
+--- Lines 488-488 (1534 chars) ---
+for(var e="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",t="undefined"==typeof Uint8Array?[]:new Uint8Array(256),a=0;a<64;a++)t[e.charCodeAt(a)]=a;var n=function(t){var a,n=new Uint8Array(t),r=n.length,s="";for(a=0;a<r;a+=3)s+=e[n[a]>>2],s+=e[(3&n[a])<<4|n[a+1]>>4],s+=e[(15&n[a+1])<<2|n[a+2]>>6],s+=e[63&n[a+2]];return r%3==2?s=s.substring(0,s.length-1)+"=":r%3==1&&(s=s.substring(0,s.length-2)+"=="),s};const r=new Map,s=new Map;const i=self;i.onmessage=async function(e){if(!("
+
+--- Lines 541-541 (335 chars) ---
+A headline commitment to be remembered by polling day is exactly the kind of campaign-flavoured request that should make a Prime Minister careful. The honest answer is that the manifesto is the contract; {WEEKS_TO_ELECTION} weeks is the time left to honour the contract; the headline is whether the country reads us as honest delivery.
+
+--- Lines 559-560 (540 chars) ---
+A {BROKEN_PLEDGES}-pledge broken count is a number every Prime Minister hates to recite. The manifesto was the country's assessment of what mattered. The broken count is real and I will not soften it. The honest answer is that delivery on the remainder is what closes the gap.
+A {HOSTILE_PCT}% hostile share is the parliamentary expression of a country going through a cost-of-living shock and a delivery cycle at the same time. The honest answer is that the party is testing itself; the coherence is
+
+--- Lines 643-645 (911 chars) ---
+Control is a word this Government claims because the visa-cap framework, the MAC reviews and the in-year remit-letter mechanism are the visible levers. {NET_MIGRATION} is the reading the levers are pulling against. Control is the framework holding; the headline is the receipt the framework is being judged on.
+Converting the M62 corridor to a fully managed smart motorway with dynamic speed limits, variable messaging, and emergency refuge areas. The project reduces peak congestion by 20% and cuts 
+
+--- Lines 659-660 (715 chars) ---
+Delivery is at {DELIVERED_VALUE} homes against a {PROMISED_BAND} commitment of {PROMISED_VALUE_K}k. The planning reforms passed in the last Session will lift the pace into the next financial year. The Secretary of State is publishing site-by-site forecasts this month. The {PROMISED_VALUE_K}k figure remains the operating target.
+Demolishing and rebuilding 500 schools across England that contain RAAC concrete or are otherwise assessed as structurally unsound, creating modern learning environments 
+
+--- Lines 782-783 (615 chars) ---
+I am not comfortable. {FOODBANK} million distributions with in-work families inside the figure is the policy failure on its sharpest reading. The minimum-wage uprating, the work-allowance reform and the Low Pay Commission remit are the three structural responses; the Household Support Fund is the immediate one. The country judges us on whether both stick.
+I am not going to pretend the choices ahead are easy. Real-terms spending discipline means departments will not get the year-on-year increases
+
+--- Lines 996-997 (531 chars) ---
+Prime Minister, the {PROJECT_NAME} procurement process has come under fresh scrutiny. A prime contractor is now under investigation, and a sub-contract was reportedly handed to a connected party. Was this project commissioned at arm's length, or wasn't it?
+Prime Minister, the {TOPIC_LABEL} for {LEADER_COUNTRY} announced {WEEKS_AGO} weeks ago commits substantial UK taxpayer money. With NHS waiting lists and council finances where they are, will the Prime Minister explain to my constituents why th
+
+--- Lines 1198-1199 (585 chars) ---
+The Levelling-Up Premium for early-career teachers and the Priority Education Investment Areas framework both target the regional distribution the NEU and NASUWT describe. {TEACHER_VACANCIES} is the national headline; the regional uplift is the published response to where the gap concentrates.
+The Local Government Association is right and the mayors are right. A devolution settlement that requires constant ministerial intervention to make work is not a devolution settlement. The reset is being d
+
+--- Lines 1246-1246 (269 chars) ---
+The UK labour market has been restructuring towards services and away from low-skill manufacturing for two decades. The headline rate at {DELIVERED_VALUE}{UNIT} reflects friction the Government is investing to reduce. The {PROMISED_BAND} target remains the destination.
+
+--- Lines 1288-1289 (738 chars) ---
+The concern is legitimate and I will treat it as legitimate. I will commit to an independent annual review of post-removal outcomes under the {TOPIC_LABEL}, conducted by a body with the standing to be taken seriously by the human-rights community. The system has to earn its legitimacy.
+The contingency plan is three elements. One, accelerated DMO issuance to front-load the remainder of this year's programme before any downgrade prices in. Two, a joint Treasury-Bank of England statement designed t
+
+--- Lines 1373-1373 (305 chars) ---
+The honest answer is that {WEEKS_AGO} weeks is too long to leave a procurement audit on a Cabinet Office desk, and the slippage is on me. Within twelve weeks the unredacted version, less the commercial sensitivities the Solicitor General signs off on, will be in the public domain. I will be held to that.
+
+--- Lines 1407-1407 (256 chars) ---
+The original backlog this Government inherited was many times the size of the current one. The figure at {DELIVERED_VALUE} reflects a system that is processing more cases than at any point in its history. The {PROMISED_BAND} target remains the destination.
+
+--- Lines 1409-1410 (529 chars) ---
+The pace is below what either side targeted. I am announcing an acceleration package today: increased ministerial cadence, two additional working groups, and a hard deadline for the political-level review with {LEADER_NAME}. The remaining gap will be closed.
+The package is administered through the World Bank Ukraine Multi-Donor Coordination Platform, with quarterly UK-Polish audit reviews and published expenditure reports. British taxpayers can track every pound. The mechanisms are public; the p
+
+--- Lines 1427-1430 (1311 chars) ---
+The premise that a single decision should drive a permanent reform of how every ministerial meeting is recorded is a press framing, not a governance one. The {LOBBY_GROUP} handling can be reviewed without rewriting the diary regime; if the review finds the regime is the problem, that is the time to reform it.
+The premise that one tax holiday drove medium-term affordability is not borne out by the serious economic analysis, which points to planning constraints and mortgage rate normalisation as t
+
+--- Lines 1495-1496 (532 chars) ---
+The {TOPIC_LABEL} is a serious legal instrument with the safeguards an independent judiciary in this country would expect. Removals can be expedited but they cannot be summary. That is the right of any individual under British law and the {TOPIC_LABEL} respects it.
+The {TOPIC_LABEL} is one strand in a wider climate strategy that is hitting its UK-domestic targets and is on track for the legally-binding 2035 envelope. The single-bilateral lens flatters neither side; the portfolio is what matters 
+
+--- Lines 2950-2950 (302 chars) ---
+.footer-caption-container.svelte-1fu2zos {display:flex;flex-direction:column;gap:var(--rc-spacing-gapLarge-mobile);}.footer-caption.svelte-1fu2zos {color:var(--rc-color-grey-text-light);text-align:center;margin:0;}.terms-link.svelte-1fu2zos {color:inherit;}.terms-divider.svelte-1fu2zos {margin:0 4px;}
+
+--- Lines 2955-2955 (1323 chars) ---
+function createLayoutAnimationManager_reactNativeReanimated_animationsManagerTs3(){const{makeMutableUI,stopObservingProgress,withStyleAnimation,LayoutAnimationType,startObservingProgress}=this.__closure;const currentAnimationForTag=new Map();const mutableValuesForTag=new Map();return{start:function(tag,type,yogaValues,config){const style=config(yogaValues);let currentAnimation=style.animations;const previousAnimation=currentAnimationForTag.get(tag);if(previousAnimation){currentAnimation={...prev
+
+--- Lines 2977-2979 (615 chars) ---
+.backdrop.svelte-1waqqtj {position:absolute;inset:0 0 0 0;width:100%;height:100%;background-color:#0000003f;display:flex;flex-direction:column;}.sheet.svelte-1waqqtj {position:absolute;inset:auto 0 0 0;transition-property:transform;transition-duration:225ms;transition-timing-function:cubic-bezier(0, 0, 0.2, 1);transform:translateY(100%);&.visible {transform:translateY(0);}}
+.rc-simulated-store-modal-overlay.svelte-17914yi {position:fixed;top:0;left:0;width:100%;height:100%;background-color:rgba(
+
+--- Lines 2991-2991 (1425 chars) ---
+/** One more than the paywall */z-index:1000002;}.rc-simulated-store-modal.svelte-17914yi {background:white;border-radius:8px;padding:0;max-width:500px;width:90%;max-height:90%;overflow-y:auto;box-shadow:0 4px 20px rgba(0, 0, 0, 0.15);}.rc-simulated-store-modal-content.svelte-17914yi {padding:24px;}.rc-simulated-store-modal-title.svelte-17914yi {margin:0 0 20px 0;font-size:24px;font-weight:600;color:#333;}.rc-simulated-store-modal-details.svelte-17914yi {margin-bottom:24px;}.rc-simulated-store-m
+
+--- Lines 2994-2995 (324 chars) ---
+@media (max-width: 768px) {.rc-simulated-store-modal-overlay.svelte-17914yi {padding:0;}.rc-simulated-store-modal.svelte-17914yi {width:100%;height:100%;border-radius:0;max-width:none;max-height:none;}.rc-simulated-store-modal-content.svelte-17914yi {height:100%;display:flex;flex-direction:column;justify-content:center;}
+}
+
+--- Lines 2999-2999 (484 chars) ---
+.message-layout.svelte-clabfx {display:flex;flex-direction:column;}.message-layout-content.svelte-clabfx {flex-grow:1;display:flex;flex-direction:column;justify-content:center;}.message-layout-content-full-width.svelte-clabfx {padding-left:var(--rc-spacing-outerPadding-mobile);padding-right:var(--rc-spacing-outerPadding-mobile);}.message-layout-footer-full-width.svelte-clabfx {padding-left:var(--rc-spacing-outerPadding-mobile);padding-right:var(--rc-spacing-outerPadding-mobile);}
+
+--- Lines 3004-3005 (277 chars) ---
+@container layout-query-container (width >= 768px) {.message-layout.svelte-clabfx {min-height:354px;gap:var(--rc-spacing-gapXXLarge-desktop);}.message-layout-content.svelte-clabfx {justify-content:flex-start;flex-grow:1;}
+}.message-layout-full-width.svelte-clabfx {width:100%;}
+
+--- Lines 3007-3008 (84 chars) ---
+@media (min-width: 768px) {.message-layout-full-width.svelte-clabfx {width:544px;}
+}
+
+--- Lines 3026-3027 (892 chars) ---
+.carousel.svelte-19yhef4 {max-width:100%;display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;}.slider.svelte-19yhef4 {display:flex;flex-direction:row;flex-wrap:nowrap;transition-property:transform;transition-duration:500ms;transition-timing-function:ease-in-out;transition-delay:2500ms;transform:translateX(0);cursor:grab;&:active {cursor:grabbing;user-select:none;}}
+.layout-wrapper-outer.svelte-13h5jq9 {flex:1;display:flex;background-color:var(--rc-color-background);}.layout-wrapper-
+
+--- Lines 3029-3030 (386 chars) ---
+@container layout-query-container (width < 768px) {.layout-wrapper.svelte-13h5jq9 {width:100%;min-width:300px;display:flex;flex-grow:1;}.layout-content.svelte-13h5jq9 {flex-grow:1;height:100%;}.layout-content.rcb-navbar.svelte-13h5jq9 {padding-bottom:var(--rc-spacing-outerPadding-mobile);}.layout-content.rcb-main-block.svelte-13h5jq9 {padding:var(--rc-spacing-outerPadding-mobile);}
+}
+
+--- Lines 3032-3033 (489 chars) ---
+@container layout-query-container (width >= 768px) {.layout-wrapper.svelte-13h5jq9 {flex-basis:544px;}.layout-content.rcb-main-block.svelte-13h5jq9 {padding-left:var(--rc-spacing-outerPadding-desktop);padding-right:var(--rc-spacing-outerPadding-desktop);}.layout-content.rcb-navbar.svelte-13h5jq9 {gap:var(--rc-spacing-gapXXLarge-desktop);}.layout-wrapper-outer.svelte-13h5jq9 {padding-top:var(--rc-spacing-outerPaddingTop-desktop);padding-bottom:var(--rc-spacing-outerPadding-desktop);}
+}
+
+--- Lines 3034-3034 (537 chars) ---
+.paywall.svelte-ox0uei {position:relative;display:flex;flex-direction:column;align-items:stretch;height:100%;transition-property:filter, transform;transition-duration:0.1s;transition-timing-function:ease-in-out;transform-origin:center;&.blur {filter:blur(10px) brightness(0.8);transform:scale(1.045);}}.header-wrapper.svelte-ox0uei {position:sticky;top:0;width:100%;}.paywall-content.svelte-ox0uei {width:100%;flex:1;display:flex;flex-direction:column;min-height:0;& > .paywall-content-scroll {flex-g
+
+--- Lines 3037-3037 (159 chars) ---
+.paywall *::after {box-sizing:border-box;margin:0;padding:0;font-family:sans-serif;}.paywall {line-height:1.5;-webkit-font-smoothing:antialiased;}.paywall img,
+
+--- Lines 3041-3041 (59 chars) ---
+.paywall svg {display:block;max-width:100%;}.paywall input,
+
+--- Lines 3056-3057 (1007 chars) ---
+.qr-wrapper.svelte-17abt6h {display:flex;justify-content:center;align-items:center;align-self:center;width:fit-content;margin:0 auto;background-color:#ffffff;border-radius:8px;padding:16px;}.qr-code.svelte-17abt6h {display:block;width:128px;height:128px;image-rendering:-webkit-optimize-contrast;image-rendering:crisp-edges;}
+.rc-checkout-secure-container.svelte-zfhfge {margin-top:var(--rc-spacing-gapXLarge-mobile);}.rc-checkout-container.svelte-zfhfge {display:flex;flex-direction:column;gap:var(-
+
+--- Lines 3059-3059 (255 chars) ---
+/* Added to avoid the card getting smaller while loading */min-height:210px;}.rc-checkout-form-container.invisible.svelte-zfhfge {visibility:hidden;}.rc-loading.svelte-zfhfge {width:100%;height:100%;display:flex;justify-content:center;align-items:center;}
+
+--- Lines 3061-3062 (381 chars) ---
+@container layout-query-container (width <= 767px) {.rc-checkout-pay-container.svelte-zfhfge {flex-grow:1;justify-content:flex-end;}.rc-checkout-form.svelte-zfhfge {flex-grow:1;}.rc-checkout-form-container.svelte-zfhfge {height:100%;display:flex;flex-direction:column;}.rc-checkout-container.svelte-zfhfge {flex-grow:1;}.rc-loading.svelte-zfhfge {position:absolute;top:0;left:0;}
+}
+
+--- Lines 3064-3065 (488 chars) ---
+@container layout-query-container (width >= 768px) {.rc-checkout-secure-container.svelte-zfhfge {margin-top:var(--rc-spacing-gapXLarge-desktop);}.rc-checkout-container.svelte-zfhfge {gap:var(--rc-spacing-gapXLarge-desktop);}.rc-checkout-pay-container.svelte-zfhfge {margin-top:var(--rc-spacing-gapXLarge-desktop);}.rc-checkout-price-update-info-container.svelte-zfhfge {margin-top:var(--rc-spacing-gapXLarge-desktop);}
+}form.svelte-zfhfge {display:flex;flex-direction:column;flex-grow:1;}
+
+--- Lines 3066-3068 (1307 chars) ---
+.rcb-back-button.svelte-7773d6 {padding:8px;border:none;cursor:pointer;background-color:transparent;border-radius:50%;color:var(--rc-color-grey-text-dark);display:inline-flex;align-items:center;justify-content:center;width:fit-content;height:fit-content;}
+.rcb-close-button.svelte-8qlvu1 {padding:10px;border:none;cursor:pointer;background-color:transparent;border-radius:50%;color:var(--rc-color-grey-text-dark);display:inline-flex;align-items:center;justify-content:center;width:fit-content;height:
+
+--- Lines 3072-3074 (879 chars) ---
+.rcb-fullscreen-wrapper.svelte-skuziz {width:100%;min-height:100%;display:flex;flex-direction:column;align-items:center;}.rcb-fullscreen-content.svelte-skuziz {flex:1;width:100%;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--rc-color-grey-text-dark);}
+.rcb-header-wrapper.svelte-11a99mf {display:flex;position:relative;justify-content:space-between;align-items:center;}.rcb-header.svelte-11a99mf {display:flex;flex-direction:row;align-i
+
+--- Lines 3076-3077 (742 chars) ---
+@container layout-query-container (width < 768px) {.rcb-header.svelte-11a99mf {padding-top:var(--rc-spacing-gapMedium-mobile);}.rcb-close-wrapper.svelte-11a99mf {padding-top:var(--rc-spacing-gapMedium-mobile);}.rcb-header-wrapper.svelte-11a99mf {padding-top:var(--rc-spacing-gapSmall-mobile);padding-bottom:var(--rc-spacing-gapSmall-mobile);padding-left:var(--rc-spacing-outerPadding-mobile);padding-right:var(--rc-spacing-outerPadding-mobile);}.rcb-header-wrapper.rcb-with-close-button.svelte-11a99m
+

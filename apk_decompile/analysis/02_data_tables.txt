@@ -1,0 +1,98 @@
+
+===== Searching for: "difficulty" =====
+  Matches: 1
+  Line 1134 [00713]: The Department for Education has issued updated guidance on school uniform costs, pupil premium funding supports the most disadvantaged, and the Household Support Fund is available through local autho
+
+===== Searching for: "level" =====
+  Matches: 54
+  Line 230 [00014]: "Prime Minister, I came back to the North East to be near family and took a thirty percent pay cut to do the same job I did down south. The trains are worse, the wages are lower, the investment goes t
+  Line 442 [00041]: var t=Uint8Array,n=Uint16Array,r=Int32Array,e=new t([0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0,0,0,0]),i=new t([0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13,0,0]
+  Line 540 [00123]: A great deal of the follow-through is not visible from a press conference because it is being done at official level, for reasons that include partner discretion and sensible operational practice. Tha
+  Line 546 [00129]: A new north-south rail line through central London running from Wimbledon and Epsom in the south to Alexandra Palace and Cheshunt in the north, with a new deep-level tunnel beneath central London. The
+  Line 554 [00137]: A specific commitment on the consular cases I mentioned earlier, an agreement on intelligence-sharing protocols at official level, and a path to settle a long-standing trade-arbitration matter that ha
+  Line 636 [00219]: Community nursing capacity sits inside the Long Term Workforce Plan and the Future Public Health Workforce package the OHID is leading on. The district nurse strand specifically is being modelled agai
+  Line 662 [00245]: Deploying a layered air defence network including Sky Sabre missiles, counter-drone systems, and hardened radar installations to protect UK critical national infrastructure from drone and cruise missi
+  Line 824 [00407]: I take the fair part of the question. The threat assessment that underpins the {TOPIC_LABEL} is classified, and the operational scope is genuinely opaque from outside. I will commit to a sanitised Whi
+  Line 826 [00409]: I take the honourable Member's point. There is more we could do at the head-of-government level, and there is a moment to do it. I will be picking up that agenda with {LEADER_NAME} before the year is 
+  Line 883 [00466]: Levelling up is a multi-decade programme and expecting a regional productivity gap that compounded over forty years to close in one parliament is not how the underlying economics work. The trajectory 
+  Line 895 [00478]: Megan, levelling up failed because it was Whitehall handing out pots it controlled, not power going to the places themselves. We're doing the opposite: real devolution of transport, skills, and invest
+  Line 908 [00491]: Yes, it is a problem, and the response is not a speech about fairness, it is a tax policy package. Capital gains aligned with income tax on the upper rates, reforms to inheritance tax loopholes that l
+  Line 946 [00529]: VAT sits at {DELIVERED_VALUE}{UNIT}. I promised {PROMISED_VALUE}{UNIT} and the {GAP}-point gap is one I will not minimise. The adjustment was time-limited and is in train to reverse. Pensioners and lo
+  Line 1014 [00597]: Rebuilding the British Army's regular strength to 82,000 personnel through improved pay, housing, and career paths, alongside equipping it with 500 new Ajax armoured vehicles, Boxer APCs, and upgraded
+  Line 1015 [00598]: Rebuilding the British Army's regular strength, now {ARMY_STRENGTH} trained soldiers, through improved pay, housing, and career paths, alongside equipping it with 500 new Ajax armoured vehicles, Boxer
+  ... (+39 more matches)
+
+===== Searching for: "config" =====
+  Matches: 110
+  Line 2955 [02521]: function createLayoutAnimationManager_reactNativeReanimated_animationsManagerTs3(){const{makeMutableUI,stopObservingProgress,withStyleAnimation,LayoutAnimationType,startObservingProgress}=this.__closu
+  Line 3362 [02665]: function gorhom_BottomSheetTsx20(result,_previousResult){const{animatedKeyboardState,KEYBOARD_STATUS,animatedAnimationState,ANIMATION_STATUS,ANIMATION_SOURCE,animatedLayoutState,$modal,bottomInset,__D
+  Line 3363 [02666]: function getSwipeSimulator_reactNativeReanimated_swipeSimulatorTs5(event,screenTransitionConfig,lockAxis){const{BASE_VELOCITY,ADDITIONAL_VELOCITY_FACTOR_X,ADDITIONAL_VELOCITY_FACTOR_Y,ADDITIONAL_VELOC
+  Line 3364 [02667]: function gorhom_animateTs1(_ref){const{ANIMATION_CONFIGS,ANIMATION_METHOD,withTiming,withSpring}=this.__closure;let{point:point,configs:configs,velocity=0,overrideReduceMotion:overrideReduceMotion,onC
+  Line 3370 [02673]: function animateToPosition_Gorhom_BottomSheetTsx8(position,source){const{__DEV__,runOnJS,print,animatedPosition,animatedAnimationState,ANIMATION_STATUS,stopAnimation,animatedKeyboardState,animatedShee
+  Line 3371 [02674]: function rubberBandDecay_reactNativeReanimated_rubberBandDecayTs1(animation,now,config){const{SLOPE_FACTOR,DERIVATIVE_EPS,VELOCITY_EPS}=this.__closure;const{lastTimestamp:lastTimestamp,startTimestamp:
+  Line 3372 [02675]: function handleLog_reactNativeReanimated_loggerTs4(level,message,options){const{getLoggerConfig,DOCS_REFERENCE,PREFIX}=this.__closure;const config=getLoggerConfig();if(options.strict&&!config.strict||
+  Line 3385 [02682]: function reactNativeReanimated_springTs1(){const{GentleSpringConfig,GentleSpringConfigWithDuration,safeMergeConfigs,userConfig,checkIfConfigIsValid,underDampedSpringCalculations,criticallyDampedSpring
+  Line 3393 [02690]: function reactNativeReanimated_JumpingTransitionTs1(values){const{delayFunction,delay,withTiming,config,withSequence,halfDuration,Easing,callback}=this.__closure;const d=Math.max(Math.abs(values.targe
+  Line 3396 [02693]: function reactNativeReanimated_LinearTransitionTs1(values){const{delayFunction,delay,animation,config,callback}=this.__closure;return{initialValues:{originX:values.currentOriginX,originY:values.curren
+  Line 3408 [02705]: function reactNativeReanimated_SequencedTransitionTs1(values){const{delayFunction,delay,withSequence,withTiming,reverse,config,callback}=this.__closure;return{initialValues:{originX:values.currentOrig
+  Line 3413 [02710]: function rigidDecay_reactNativeReanimated_rigidDecayTs1(animation,now,config){const{SLOPE_FACTOR,VELOCITY_EPS}=this.__closure;const{lastTimestamp:lastTimestamp,startTimestamp:startTimestamp,initialVel
+  Line 3416 [02713]: function addCompilerSafeGetAndSet_reactNativeReanimated_mutablesTs1(mutable){Object.defineProperties(mutable,{get:{value:function(){return mutable.value;},configurable:false,enumerable:false},set:{val
+  Line 3418 [02715]: function decorateAnimation_reactNativeReanimated_utilTs8(animation){const{getReduceMotionFromConfig,recognizePrefixSuffix,isColor,toLinearSpace,convertToRGBA,clampRGBA,rgbaArrayToRGBAColor,toGammaSpac
+  Line 3421 [02718]: function reactNativeReanimated_clampTs1(){const{_animationToClamp,config,recognizePrefixSuffix,logger,getReduceMotionForAnimation}=this.__closure;const animationToClamp=typeof _animationToClamp==='fun
+  ... (+95 more matches)
+
+===== Searching for: "balance" =====
+  Matches: 22
+  Line 603 [00186]: British agriculture cannot remain a closed market in a globalised trade environment. The framework opens new export opportunities for British dairy and lamb in return; sectoral support balances the tr
+  Line 656 [00239]: Deforestation reduction is a multi-year project requiring stable financing. The milestones are real, but the framework recognises that climate diplomacy is a partnership, not a hostage situation. Brit
+  Line 724 [00307]: Forty-seven people were killed in a coordinated attack, and the response has to match the threat. The framing of the Bill as the driver of hate incidents reverses cause and effect, and unbalanced cove
+  Line 896 [00479]: Mental health legislation has to balance individual rights, public protection, and the clinical judgement of treating professionals, and the drafting takes time that is not a function of ministerial w
+  Line 1063 [00646]: Speaker, the Scottish National Party held 48 seats in this House. They held the balance of power on three occasions in the last decade. With those benches now empty, this Parliament's arithmetic has f
+  Line 1070 [00653]: Speaker, the honourable member raises an important principle. This House is the country's primary scrutiny chamber and should hear about foreign engagements promptly. I will commit to coming to the Ho
+  Line 1247 [00826]: The UK runs a very substantial surplus on services trade, particularly financial services, legal services and creative industries, which offsets a significant portion of the goods deficit. The headlin
+  Line 1275 [00854]: The characterisation of three MPs "holding the balance" is a journalistic shorthand rather than a constitutional description. Each piece of legislation is decided on its merits, and framing supply vot
+  Line 1342 [00921]: The honest answer is that every government since 1982 has looked at the trade balance, declared it a concern, and moved on. That is the structural problem the question identifies, and it is an indictm
+  Line 1397 [00976]: The misconduct framework has to balance accountability with due process, and not every upheld complaint meets the threshold for dismissal under the regulations. The figures reflect the operation of a 
+  Line 1421 [01000]: The pension age has to reflect life expectancy and the sustainability of the overall pension system, and the 68 uplift is consistent with the demographic projections set out in the Government Actuary'
+  Line 1474 [01053]: The target is three percent of GDP on R&D, up from the current 2.1, and it is funded in the spending review. A British Advanced Research and Invention Agency on the DARPA model is being scaled from pi
+  Line 1484 [01063]: The two reactor vessels were installed in this Parliament, the regulatory programme was completed in this Parliament, and the first electrons left the station for the national grid in this Parliament.
+  Line 1527 [01106]: Trade balance matters as an economic diagnostic but a persistent deficit financed by capital inflow is a feature of open advanced economies, not a crisis that requires correction. The fixation on trad
+  Line 3055 [?]: .paywall h6 {text-wrap:balance;}
+  ... (+7 more matches)
+
+===== Searching for: "scenario" =====
+  Matches: 9
+  Line 446 [00045]: I can give that assurance unequivocally. The {TOPIC_LABEL} with {LEADER_COUNTRY} is a framework for cooperation. British forces remain under British command in every operational scenario contemplated.
+  Line 730 [00313]: GDP has contracted 3% in the past year. The OBR has revised its forecasts to their worst-case scenario. The Chancellor is requesting emergency powers under the Civil Contingencies Act. Three banks hav
+  Line 1185 [00764]: The IEA pathway assumes a global trajectory that no major fossil-producing economy is currently on. The marginal effect of UK North Sea extraction inside that framework is below the IEA's own material
+  Line 1534 [01113]: Twelve months after blocking the mandatory flood-insurance framework, ABI reports household premium inflation has held below CPI. Three major insurers have committed to expanded UK underwriting capaci
+  Line 1548 [01127]: Twelve months after the 5-year delay to the generational ban, ASH reports no measurable rise in smoking uptake. The 12,000 retail jobs the policy was framed to protect have been confirmed by ONS. The 
+  Line 1554 [01133]: Twelve months after the workers' rights exemption for supermarkets, the BRC reports sector employment up 18,000. Food-price inflation has been measurably lower than the modelled non-exempt scenario. C
+  Line 1604 [01183]: Yes. The Treasury will publish a counter-paper, eight weeks before polling day, with the post-independence fiscal projections under three scenarios. Honest numbers, not campaign numbers. The Welsh pub
+  Line 3837 [03029]: I am grateful to my honourable Friend. Photo voter ID is in operation. The free voter authority certificate is accessible at every council office. Turnout was within the historic range and the disenfr
+  Line 4074 [03222]: The Treasury has formally updated its medium-term fiscal modelling assumptions to reflect coalition-default governance, the IFS reports. Single-party majorities are now classified as "low-probability 
+
+===== Searching for: "csv" =====
+  Matches: 0
+
+===== Searching for: "tabular" =====
+  Matches: 0
+
+===== Searching for: "table" =====
+  Matches: 118
+  Line 5 [00004]: At the processing rate we inherited, the honest answer is around four years, which is not acceptable. The current rate has been doubled since the spring through additional caseworkers and streamlined 
+  Line 329 [00028]: Chen Wei is on the line. The translator's tone is colder than usual. "Prime Minister. We have observed your government through one full term. The frictions between us have multiplied, and your public 
+  Line 331 [00030]: "Prime Minister, I have rung every dentist within thirty miles and not one is taking NHS patients. I'm sixty-six. I've fixed a filling myself with a kit off the internet because that's what it's come 
+  Line 468 [00054]: "Prime Minister, I've been teaching for fifteen years. My school has buckets in two classrooms when it rains, we've had three maths teachers leave in two years because they can't afford to live nearby
+  Line 519 [00102]: A child died in the care of the state I lead, and I want to say to that child's family that I am sorry. Not sorry on behalf of a department, sorry as the person who is accountable. Whatever the inquir
+  Line 552 [00135]: A significant trading partner has tabled a comprehensive bilateral trade deal that goes further than any agreement the UK has signed since Brexit. Your Trade Secretary says it's the best offer on the 
+  Line 558 [00141]: A young person at 22 looking at a {UNEMPLOYMENT}% unemployment headline and asking whether their first job is going to materialise deserves a straight answer. The honest one is that the structural lev
+  Line 570 [00153]: Accept that technology moves faster than any legislative timetable and that the gap is real, then set out the approach: the government legislates for principles that endure rather than products that d
+  Line 616 [00199]: CAMHS sits inside the Long Term Workforce Plan envelope and the Mental Health Investment Standard binds every ICB to year-on-year real-terms uplift. Specific waiting-time guarantees are for the Mental
+  Line 646 [00229]: Council tax decisions are taken locally by elected councils accountable to their own electorates, and the central government cap is a ceiling on unavoidable rises rather than a guarantee of no rise. C
+  Line 654 [00237]: The Dilnot framework, the Care Act 2014 unimplemented sections, and the 2021 cap-and-floor proposal are all still on the table; the December settlement and the next Spending Review have to sequence th
+  Line 656 [00239]: Deforestation reduction is a multi-year project requiring stable financing. The milestones are real, but the framework recognises that climate diplomacy is a partnership, not a hostage situation. Brit
+  Line 671 [00254]: Six weeks after you agreed the timetable, the ECHR Withdrawal Bill reaches its final Commons vote. The Whips warn of a bruising fight through its remaining parliamentary stages. First Ministers of Sco
+  Line 677 [00260]: Eighty percent in six weeks is not a statistic, it is children going to bed hungry this winter because of decisions being taken on my watch, and I am not going to stand here and answer that with a lin
+  Line 685 [00268]: Every Northern Powerhouse Rail business case sat in a Department for Transport file for fifteen years. We took it out, funded it, and built it. The Victorian tunnels are now Victorian relics, and the 
+  ... (+103 more matches)

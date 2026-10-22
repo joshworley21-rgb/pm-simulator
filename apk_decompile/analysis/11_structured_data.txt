@@ -1,0 +1,152 @@
+=== POTENTIALLY STRUCTURED/TABULAR DATA (610 lines) ===
+
+--- Line 442: 10329 chars, nums=563, pipes=86, semicolons=223, equals=459 (score=3602) ---
+var t=Uint8Array,n=Uint16Array,r=Int32Array,e=new t([0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0,0,0,0]),i=new t([0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13,0,0]),s=new t([16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15]),a=function(t,e){for(var i=new n(31),s=0;s<31;++s)i[s]=e+=1<<t[s-1];var a=new r(i[30]);for(s=1;s<30;++s)for(var o=i[s];o<i[s+1];++o)a[o]=o-i[
+
+--- Line 3339: 2350 chars, nums=600, pipes=0, semicolons=0, equals=0 (score=1200) ---
+M 89,332 Q 97,336 103,335 L 113,332 120,329 130,327 134,326 145,327 152,325 163,323 172,320 177,319 185,317 196,315 204,314 210,313 222,312 232,312 235,312 245,312 250,312 258,311 262,310 270,306 278,301 280,298 282,294 L 272,292 261,294 L 265,291 267,290 265,288 273,281 283,269 291,262 290,258 285,252 280,249 272,248 262,248 255,248 250,248 243,247 247,243 252,242 248,234 245,229 243,221 241,214 
+
+--- Line 3438: 7240 chars, nums=57, pipes=52, semicolons=56, equals=161 (score=1025) ---
+function reactNativeReanimated_springTs2(toValue,userConfig,callback){const{defineAnimation,_worklet_13917184105769_init_data,GentleSpringConfig,GentleSpringConfigWithDuration,safeMergeConfigs,checkIfConfigIsValid,underDampedSpringCalculations,criticallyDampedSpringCalculations,isAnimationTerminatingCalculation,calculateNewStiffnessToMatchDuration,initialCalculations,scaleZetaToMatchClamps,getEner
+
+--- Line 3385: 4761 chars, nums=56, pipes=52, semicolons=51, equals=159 (score=1002) ---
+function reactNativeReanimated_springTs1(){const{GentleSpringConfig,GentleSpringConfigWithDuration,safeMergeConfigs,userConfig,checkIfConfigIsValid,underDampedSpringCalculations,criticallyDampedSpringCalculations,isAnimationTerminatingCalculation,calculateNewStiffnessToMatchDuration,initialCalculations,scaleZetaToMatchClamps,getEnergy,toValue,callback,getReduceMotionForAnimation}=this.__closure;va
+
+--- Line 3418: 7986 chars, nums=20, pipes=0, semicolons=146, equals=151 (score=931) ---
+function decorateAnimation_reactNativeReanimated_utilTs8(animation){const{getReduceMotionFromConfig,recognizePrefixSuffix,isColor,toLinearSpace,convertToRGBA,clampRGBA,rgbaArrayToRGBAColor,toGammaSpace,decomposeMatrixIntoMatricesAndAngles,applyProgressToMatrix,applyProgressToNumber,getRotationMatrix,multiplyMatrices,flatten,isAffineMatrixFlat}=this.__closure;const baseOnStart=animation.onStart;con
+
+--- Line 466: 1249 chars, nums=223, pipes=87, semicolons=0, equals=0 (score=881) ---
+(?:^(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)){3}$)|(?:^(?:(?:[a-fA-F\d]{1,4}:){7}(?:[a-fA-F\d]{1,4}|:)|(?:[a-fA-F\d]{1,4}:){6}(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)(?:\\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)){3}|:[a-fA-F\d]{1,4}|:)|(?:[a-fA-F\d]{1,4}:){5}(?::(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)(?:\\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)){3}|(?::[a-fA-F\d]{
+
+--- Line 490: 2024 chars, nums=373, pipes=0, semicolons=0, equals=0 (score=746) ---
+M15.6622 15H12.3997C12.2129 14.9959 12.031 14.9396 11.8747 14.8375L8.04965 12.2H7.49956V19.1C7.4875 19.3348 7.3888 19.5568 7.22256 19.723C7.05632 19.8892 6.83435 19.9879 6.59956 20H2.04956C1.80193 19.9968 1.56535 19.8969 1.39023 19.7218C1.21511 19.5467 1.1153 19.3101 1.11206 19.0625V12.2H0.949652C0.824431 12.2017 0.700142 12.1783 0.584123 12.1311C0.468104 12.084 0.362708 12.014 0.274155 11.9255C0.
+
+--- Line 4197: 1110 chars, nums=256, pipes=0, semicolons=1, equals=0 (score=515) ---
+function multiplyMatrices_reactNativeReanimated_matrixUtilsTsx6(a,b){return[[a[0][0]*b[0][0]+a[0][1]*b[1][0]+a[0][2]*b[2][0]+a[0][3]*b[3][0],a[0][0]*b[0][1]+a[0][1]*b[1][1]+a[0][2]*b[2][1]+a[0][3]*b[3][1],a[0][0]*b[0][2]+a[0][1]*b[1][2]+a[0][2]*b[2][2]+a[0][3]*b[3][2],a[0][0]*b[0][3]+a[0][1]*b[1][3]+a[0][2]*b[2][3]+a[0][3]*b[3][3]],[a[1][0]*b[0][0]+a[1][1]*b[1][0]+a[1][2]*b[2][0]+a[1][3]*b[3][0],a
+
+--- Line 3363: 4305 chars, nums=20, pipes=2, semicolons=59, equals=68 (score=431) ---
+function getSwipeSimulator_reactNativeReanimated_swipeSimulatorTs5(event,screenTransitionConfig,lockAxis){const{BASE_VELOCITY,ADDITIONAL_VELOCITY_FACTOR_X,ADDITIONAL_VELOCITY_FACTOR_Y,ADDITIONAL_VELOCITY_FACTOR_XY,applyStyleForBelowTopScreen,computeEasingProgress,easing,applyStyle,maybeScheduleNextFrame}=this.__closure;const screenDimensions=screenTransitionConfig.screenDimensions;const startTimes
+
+--- Line 886: 935 chars, nums=200, pipes=0, semicolons=0, equals=0 (score=400) ---
+M3.55544 15.1518C4.87103 16.0308 6.41775 16.5 8 16.5C10.1217 16.5 12.1566 15.6571 13.6569 14.1569C15.1571 12.6566 16 10.6217 16 8.5C16 6.91775 15.5308 5.37103 14.6518 4.05544C13.7727 2.73985 12.5233 1.71447 11.0615 1.10897C9.59966 0.503466 7.99113 0.34504 6.43928 0.653721C4.88743 0.962403 3.46197 1.72433 2.34315 2.84315C1.22433 3.96197 0.462403 5.38743 0.153721 6.93928C-0.15496 8.49113 0.00346625 
+
+--- Line 3437: 4345 chars, nums=19, pipes=4, semicolons=53, equals=58 (score=391) ---
+function withSequence_reactNativeReanimated_sequenceTs3(_reduceMotionOrFirstAnimation){const{logger,defineAnimation,_worklet_12572076258850_init_data,getReduceMotionForAnimation,_worklet_16553735205395_init_data}=this.__closure;for(var _len=arguments.length,_animations=new Array(_len>1?_len-1:0),_key=1;_key<_len;_key++){_animations[_key-1]=arguments[_key];}let reduceMotion;if(_reduceMotionOrFirstA
+
+--- Line 3452: 5021 chars, nums=11, pipes=4, semicolons=51, equals=61 (score=378) ---
+function withStyleAnimation_reactNativeReanimated_styleAnimationTs4(styleAnimations){const{defineAnimation,_worklet_8089900464384_init_data,ColorProperties,setPath,processColor,resolvePath,__DEV__,logger,isValidLayoutAnimationProp,withTiming}=this.__closure;return defineAnimation({},function withStyleAnimation_reactNativeReanimated_styleAnimationTs4({_worklet_8089900464384_init_data:_worklet_80899
+
+--- Line 3534: 1667 chars, nums=7, pipes=18, semicolons=28, equals=57 (score=359) ---
+function valueSetter_reactNativeReanimated_valueSetterTs1(mutable,value){let forceUpdate=arguments.length>2&&arguments[2]!==undefined?arguments[2]:false;const previousAnimation=mutable._animation;if(previousAnimation){previousAnimation.cancelled=true;mutable._animation=null;}if(typeof value==='function'||value!==null&&typeof value==='object'&&value.onFrame!==undefined){const animation=typeof value
+
+--- Line 3586: 3701 chars, nums=10, pipes=4, semicolons=45, equals=57 (score=346) ---
+function reactNativeReanimated_styleAnimationTs3(){const{ColorProperties,setPath,processColor,styleAnimations,resolvePath,__DEV__,logger,isValidLayoutAnimationProp,withTiming}=this.__closure;const onFrame=function(animation,now){let stillGoing=false;const entriesToCheck=[{value:animation.styleAnimations,path:[]}];while(entriesToCheck.length>0){const currentEntry=entriesToCheck.pop();if(Array.isArr
+
+--- Line 3370: 3037 chars, nums=14, pipes=6, semicolons=27, equals=68 (score=343) ---
+function animateToPosition_Gorhom_BottomSheetTsx8(position,source){const{__DEV__,runOnJS,print,animatedPosition,animatedAnimationState,ANIMATION_STATUS,stopAnimation,animatedKeyboardState,animatedSheetState,KEYBOARD_STATUS,keyboardBehavior,KEYBOARD_BEHAVIOR,ANIMATION_SOURCE,SHEET_STATE,animatedDetentsState,DEFAULT_KEYBOARD_INDEX,_worklet_8115917196139_init_data,handleOnAnimate,animate,_providedAni
+
+--- Line 488: 1534 chars, nums=25, pipes=2, semicolons=26, equals=65 (score=333) ---
+for(var e="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",t="undefined"==typeof Uint8Array?[]:new Uint8Array(256),a=0;a<64;a++)t[e.charCodeAt(a)]=a;var n=function(t){var a,n=new Uint8Array(t),r=n.length,s="";for(a=0;a<r;a+=3)s+=e[n[a]>>2],s+=e[(3&n[a])<<4|n[a+1]>>4],s+=e[(15&n[a+1])<<2|n[a+2]>>6],s+=e[63&n[a+2]];return r%3==2?s=s.substring(0,s.length-1)+"=":r%3==1&&(s=s.substrin
+
+--- Line 2954: 3402 chars, nums=21, pipes=0, semicolons=43, equals=54 (score=333) ---
+function Bezier_reactNativeReanimated_BezierTs11(mX1,mY1,mX2,mY2){const{_worklet_4167038034701_init_data,kSplineTableSize,calcBezier,kSampleStepSize,_worklet_15525109144565_init_data,getSlope,NEWTON_MIN_SLOPE,newtonRaphsonIterate,binarySubdivide,_worklet_3134142024792_init_data}=this.__closure;const LinearEasing=function Bezier_reactNativeReanimated_BezierTs11({_worklet_4167038034701_init_data:_wo
+
+--- Line 3397: 1744 chars, nums=69, pipes=13, semicolons=18, equals=24 (score=329) ---
+function normalizeColor_reactNativeReanimated_ColorsTs9(color){const{MATCHERS,names,parse255,parse1,hslToRgb,parse360,parsePercentage,hwbToRgb}=this.__closure;if(typeof color==='number'){if(color>>>0===color&&color>=0&&color<=0xffffffff){return color;}return null;}if(typeof color!=='string'){return null;}let match;if(match=MATCHERS.hex6.exec(color)){return Number.parseInt(match[1]+'ff',16)>>>0;}if
+
+--- Line 3402: 2630 chars, nums=7, pipes=8, semicolons=25, equals=62 (score=315) ---
+function handleOnChange_Gorhom_useGestureEventsHandlersDefaultTsx3(source,_ref3){const{animatedDetentsState,isInTemporaryPosition,context,KEYBOARD_STATUS,animatedLayoutState,enablePanDownToClose,GESTURE_SOURCE,animatedScrollableState,animatedPosition,clamp,enableOverDrag,SCROLLABLE_TYPE,overDragResistanceFactor}=this.__closure;let{translationY:translationY}=_ref3;const{highestDetentPosition:highes
+
+--- Line 4282: 2267 chars, nums=7, pipes=6, semicolons=44, equals=46 (score=314) ---
+function styleUpdater_reactNativeReanimated_useAnimatedStyleTs3(viewDescriptors,updater,state,animationsActive){const{isAnimated,prepareAnimation,runAnimations,updateProps,shallowEqual}=this.__closure;var _state$animations,_updater;let isAnimatedProps=arguments.length>4&&arguments[4]!==undefined?arguments[4]:false;let forceUpdate=arguments.length>5?arguments[5]:undefined;const animations=(_state$a
+
+--- Line 3316: 832 chars, nums=154, pipes=0, semicolons=0, equals=0 (score=308) ---
+M479.504-261Q537-261 585.5-287q48.5-26 78.5-72.4 6-11.6-.75-22.6-6.75-11-20.25-11H316.918Q303-393 296.5-382t-.5 22.6q30 46.4 78.5 72.4 48.5 26 105.004 26ZM347-578l27 27q7.636 8 17.818 8Q402-543 410-551q8-8 8-18t-8-18l-42-42q-8.8-9-20.9-9-12.1 0-21.1 9l-42 42q-8 7.636-8 17.818Q276-559 284-551q8 8 18 8t18-8l27-27Zm267 0 27 27q7.714 8 18 8t18-8q8-7.636 8-17.818Q685-579 677-587l-42-42q-8.8-9-20.9-9-12
+
+--- Line 3449: 3100 chars, nums=5, pipes=6, semicolons=28, equals=59 (score=301) ---
+function reactNativeReanimated_clampTs2(config,_animationToClamp){const{defineAnimation,_worklet_6827601499978_init_data,recognizePrefixSuffix,logger,getReduceMotionForAnimation}=this.__closure;return defineAnimation(_animationToClamp,function reactNativeReanimated_clampTs1Factory({_worklet_6827601499978_init_data:_worklet_6827601499978_init_data,_animationToClamp:_animationToClamp,config:config,r
+
+--- Line 3913: 461 chars, nums=150, pipes=0, semicolons=0, equals=0 (score=300) ---
+M15.39 4.39a1 1 0 0 0 1.68-.474 2.5 2.5 0 1 1 3.014 3.015 1 1 0 0 0-.474 1.68l1.683 1.682a2.414 2.414 0 0 1 0 3.414L19.61 15.39a1 1 0 0 1-1.68-.474 2.5 2.5 0 1 0-3.014 3.015 1 1 0 0 1 .474 1.68l-1.683 1.682a2.414 2.414 0 0 1-3.414 0L8.61 19.61a1 1 0 0 0-1.68.474 2.5 2.5 0 1 1-3.014-3.015 1 1 0 0 0 .474-1.68l-1.683-1.682a2.414 2.414 0 0 1 0-3.414L4.39 8.61a1 1 0 0 1 1.68.474 2.5 2.5 0 1 0 3.014-3.0
+
+--- Line 3387: 2223 chars, nums=3, pipes=4, semicolons=19, equals=71 (score=296) ---
+function getEvaluatedPosition_Gorhom_BottomSheetTsx11(source){const{animatedCurrentIndex,animatedDetentsState,animatedKeyboardState,ANIMATION_SOURCE,keyboardBlurBehavior,KEYBOARD_BLUR_BEHAVIOR,KEYBOARD_STATUS,animatedContentGestureState,State,animatedHandleGestureState,isInTemporaryPosition,keyboardBehavior,KEYBOARD_BEHAVIOR,Platform,android_keyboardInputMode,animatedPosition,isAnimatedOnMount,_pr
+
+--- Line 887: 702 chars, nums=147, pipes=0, semicolons=0, equals=0 (score=294) ---
+M6.68775 12.4297C6.78586 12.4745 6.89218 12.4984 7 12.5C7.11275 12.4955 7.22315 12.4664 7.32337 12.4145C7.4236 12.3627 7.51121 12.2894 7.58 12.2L12 5.63999C12.0848 5.47724 12.1071 5.28902 12.0625 5.11098C12.0178 4.93294 11.9095 4.77744 11.7579 4.67392C11.6064 4.57041 11.4221 4.52608 11.24 4.54931C11.0579 4.57254 10.8907 4.66173 10.77 4.79999L6.88 10.57L5.13 8.56999C5.06508 8.49566 4.98613 8.43488 
+
+--- Line 3919: 437 chars, nums=146, pipes=0, semicolons=0, equals=0 (score=292) ---
+M4 3a1 1 0 0 1 1-1 1.3 1.3 0 0 1 .7.2l.933.6a1.3 1.3 0 0 0 1.4 0l.934-.6a1.3 1.3 0 0 1 1.4 0l.933.6a1.3 1.3 0 0 0 1.4 0l.933-.6a1.3 1.3 0 0 1 1.4 0l.934.6a1.3 1.3 0 0 0 1.4 0l.933-.6A1.3 1.3 0 0 1 19 2a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1 1.3 1.3 0 0 1-.7-.2l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.934.6a1.3 1.3 0 0 1-1.4 0l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-1.4 0l-.934-.6a1.3 1.3 0 0 0-1.4 0l-.93
+
+--- Line 885: 516 chars, nums=144, pipes=0, semicolons=0, equals=0 (score=288) ---
+M29,2.26a4.67,4.67,0,0,0-8,0L14.42,13.53A32.21,32.21,0,0,1,32.17,40.19H27.55A27.68,27.68,0,0,0,12.09,17.47L6,28a15.92,15.92,0,0,1,9.23,12.17H4.62A.76.76,0,0,1,4,39.06l2.94-5a10.74,10.74,0,0,0-3.36-1.9l-2.91,5a4.54,4.54,0,0,0,1.69,6.24A4.66,4.66,0,0,0,4.62,44H19.15a19.4,19.4,0,0,0-8-17.31l2.31-4A23.87,23.87,0,0,1,23.76,44H36.07a35.88,35.88,0,0,0-16.41-31.8l4.67-8a.77.77,0,0,1,1.05-.27c.53.29,20.29,
+
+--- Line 3435: 2860 chars, nums=20, pipes=4, semicolons=34, equals=37 (score=273) ---
+function reactNativeReanimated_repeatTs2(_nextAnimation){const{defineAnimation,_worklet_1106971096143_init_data,getReduceMotionForAnimation}=this.__closure;let numberOfReps=arguments.length>1&&arguments[1]!==undefined?arguments[1]:2;let reverse=arguments.length>2&&arguments[2]!==undefined?arguments[2]:false;let callback=arguments.length>3?arguments[3]:undefined;let reduceMotion=arguments.length>4?
+
+--- Line 3421: 2066 chars, nums=4, pipes=6, semicolons=22, equals=55 (score=269) ---
+function reactNativeReanimated_clampTs1(){const{_animationToClamp,config,recognizePrefixSuffix,logger,getReduceMotionForAnimation}=this.__closure;const animationToClamp=typeof _animationToClamp==='function'?_animationToClamp():_animationToClamp;const strippedMin=config.min===undefined?undefined:recognizePrefixSuffix(config.min).strippedValue;const strippedMax=config.max===undefined?undefined:recog
+
+--- Line 3362: 2237 chars, nums=3, pipes=6, semicolons=19, equals=53 (score=252) ---
+function gorhom_BottomSheetTsx20(result,_previousResult){const{animatedKeyboardState,KEYBOARD_STATUS,animatedAnimationState,ANIMATION_STATUS,ANIMATION_SOURCE,animatedLayoutState,$modal,bottomInset,__DEV__,runOnJS,print,Platform,android_keyboardInputMode,KEYBOARD_INPUT_MODE,keyboardBehavior,KEYBOARD_BEHAVIOR,animatedContentGestureState,State,animatedHandleGestureState,keyboardBlurBehavior,KEYBOARD_
+
+--- Line 3386: 1940 chars, nums=3, pipes=6, semicolons=20, equals=52 (score=252) ---
+function reactNativeGestureHandler_useAnimatedGestureTs6(event){const{sharedHandlersCallbacks,isStateChangeEvent,State,runWorklet,CALLBACK_TYPE,lastUpdateEvent,isTouchEvent,stateControllers,GestureStateManager,TouchEventType,touchEventTypeToCallbackType}=this.__closure;const currentCallback=sharedHandlersCallbacks.value;if(!currentCallback){return;}for(let i=0;i<currentCallback.length;i++){const g
+
+--- Line 3357: 327 chars, nums=125, pipes=0, semicolons=0, equals=0 (score=250) ---
+M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915
+
+--- Line 3414: 2354 chars, nums=4, pipes=6, semicolons=22, equals=48 (score=248) ---
+function handleOnEnd_Gorhom_useGestureEventsHandlersDefaultTsx4(source,_ref5){const{animatedDetentsState,animatedPosition,animatedScrollableState,GESTURE_SOURCE,isInTemporaryPosition,context,animateToPosition,ANIMATION_SOURCE,SCROLLABLE_TYPE,KEYBOARD_STATUS,Platform,WINDOW_HEIGHT,animatedKeyboardState,runOnJS,dismissKeyboard,enablePanDownToClose,snapPoint}=this.__closure;let{translationY:translati
+
+--- Line 2998: 2038 chars, nums=7, pipes=4, semicolons=31, equals=38 (score=241) ---
+function reactNativeReanimated_sequenceTs2(){const{_animations,getReduceMotionForAnimation,reduceMotion}=this.__closure;const animations=_animations.map(function(a){const result=typeof a==='function'?a():a;result.finished=false;return result;});function findNextNonReducedMotionAnimationIndex(index){while(index<animations.length-1&&animations[index].reduceMotion){if(typeof animations[index].callbac
+
+--- Line 3254: 1965 chars, nums=2, pipes=4, semicolons=37, equals=34 (score=237) ---
+function jestStyleUpdater_reactNativeReanimated_useAnimatedStyleTs4(viewDescriptors,updater,state,animationsActive,animatedValues,adapters,forceUpdate){const{isAnimated,prepareAnimation,runAnimations,updatePropsJestWrapper,shallowEqual}=this.__closure;var _state$animations,_updater;const animations=(_state$animations=state.animations)!==null&&_state$animations!==void 0?_state$animations:{};const n
+
+--- Line 3317: 724 chars, nums=117, pipes=0, semicolons=0, equals=0 (score=234) ---
+M626-533q22.5 0 38.25-15.75T680-587q0-22.5-15.75-38.25T626-641q-22.5 0-38.25 15.75T572-587q0 22.5 15.75 38.25T626-533Zm-292 0q22.5 0 38.25-15.75T388-587q0-22.5-15.75-38.25T334-641q-22.5 0-38.25 15.75T280-587q0 22.5 15.75 38.25T334-533Zm146.174 116Q413-417 358.5-379.5T278-280h53q22-42 62.173-65t87.5-23Q528-368 567.5-344.5T630-280h52q-25-63-79.826-100-54.826-37-122-37ZM480-80q-83 0-156-31.5T197-197q
+
+--- Line 3440: 2465 chars, nums=10, pipes=2, semicolons=28, equals=40 (score=234) ---
+function reactNativeReanimated_timingTs2(toValue,userConfig,callback){const{__DEV__,assertEasingIsWorklet,defineAnimation,_worklet_15142811190695_init_data,Easing,getReduceMotionForAnimation}=this.__closure;if(__DEV__&&userConfig!==null&&userConfig!==void 0&&userConfig.easing){assertEasingIsWorklet(userConfig.easing);}return defineAnimation(toValue,function reactNativeReanimated_timingTs1Factory({
+
+--- Line 3916: 339 chars, nums=115, pipes=0, semicolons=0, equals=0 (score=230) ---
+M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052 2.12 2.12 0 0 0-.004-3 2.124 2.124 0 1 0 3-3 2.124 2.124 0 0 0 3.004 0 2 2 0 0 0 0-2.828l-1.881-1.882a2.41 2.41 0 0 0-3.409 0l-1.71 1.71a2 2 0 0 1-2.828 0 2 2 0 0 1 0-2.828l2.823-2.762
+
+--- Line 3391: 2191 chars, nums=0, pipes=0, semicolons=46, equals=29 (score=225) ---
+function createMapperRegistry_reactNativeReanimated_mappersTs1(){const{IS_JEST,isSharedValue}=this.__closure;const mappers=new Map();let sortedMappers=[];let runRequested=false;let processingMappers=false;function updateMappersOrder(){const pre=new Map();mappers.forEach(function(mapper){if(mapper.outputs){for(const output of mapper.outputs){const preMappers=pre.get(output);if(preMappers===undefine
+
+--- Line 3921: 699 chars, nums=111, pipes=0, semicolons=0, equals=0 (score=222) ---
+M626-533q22.5 0 38.25-15.75T680-587q0-22.5-15.75-38.25T626-641q-22.5 0-38.25 15.75T572-587q0 22.5 15.75 38.25T626-533Zm-292 0q22.5 0 38.25-15.75T388-587q0-22.5-15.75-38.25T334-641q-22.5 0-38.25 15.75T280-587q0 22.5 15.75 38.25T334-533Zm146 272q66 0 121.5-35.5T682-393h-52q-23 40-63 61.5T480.5-310q-46.5 0-87-21T331-393h-53q26 61 81 96.5T480-261Zm0 181q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-
+
+--- Line 3012: 443 chars, nums=108, pipes=0, semicolons=0, equals=1 (score=219) ---
+<path d="M7 18C5.9 18 5.01 18.9 5.01 20C5.01 21.1 5.9 22 7 22C8.1 22 9 21.1 9 20C9 18.9 8.1 18 7 18ZM1 2V4H3L6.6 11.59L5.25 14.04C5.09 14.32 5 14.65 5 15C5 16.1 5.9 17 7 17H19V15H7.42C7.28 15 7.17 14.89 7.17 14.75L7.2 14.63L8.1 13H15.55C16.3 13 16.96 12.59 17.3 11.97L20.88 5.48C20.96 5.34 21 5.17 21 5C21 4.45 20.55 4 20 4H5.21L4.27 2H1ZM17 18C15.9 18 15.01 18.9 15.01 20C15.01 21.1 15.9 22 17 22C18
+
+--- Line 3458: 1835 chars, nums=4, pipes=4, semicolons=23, equals=39 (score=214) ---
+function evaluatePosition_Gorhom_BottomSheetTsx12(source,animationConfigs){const{animatedAnimationState,animatedDetentsState,ANIMATION_SOURCE,isLayoutCalculated,getEvaluatedPosition,isAnimatedOnMount,animateOnMount,animateToPosition,setToPosition,ANIMATION_STATUS,INITIAL_VALUE,isInTemporaryPosition,animatedCurrentIndex,reduceMotion,animatedIndex,animatedPosition,animatedContainerHeightDidChange}=t
+
+--- Line 3917: 287 chars, nums=106, pipes=0, semicolons=0, equals=0 (score=212) ---
+M2 22c1.25-.987 2.27-1.975 3.9-2.2a5.56 5.56 0 0 1 3.8 1.5 4 4 0 0 0 6.187-2.353 3.5 3.5 0 0 0 3.69-5.116A3.5 3.5 0 0 0 20.95 8 3.5 3.5 0 1 0 16 3.05a3.5 3.5 0 0 0-5.831 1.373 3.5 3.5 0 0 0-5.116 3.69 4 4 0 0 0-2.348 6.155C3.499 15.42 4.409 16.712 4.2 18.1 3.926 19.743 3.014 20.732 2 22
+
+--- Line 3454: 2496 chars, nums=2, pipes=4, semicolons=29, equals=32 (score=207) ---
+function reactNativeReanimated_delayTs2(delayMs,_nextAnimation,reduceMotion){const{defineAnimation,_worklet_9275966905248_init_data,getReduceMotionForAnimation}=this.__closure;return defineAnimation(_nextAnimation,function reactNativeReanimated_delayTs1Factory({_worklet_9275966905248_init_data:_worklet_9275966905248_init_data,_nextAnimation:_nextAnimation,delayMs:delayMs,getReduceMotionForAnimatio
+
+--- Line 3375: 3305 chars, nums=13, pipes=2, semicolons=25, equals=30 (score=201) ---
+function reactNativeReanimated_EntryExitTransitionTs1(values){const{enteringAnimation,exitingAnimation,delayFunction,delay,withSequence,withTiming,exitingDuration,logger,callback}=this.__closure;const enteringValues=enteringAnimation(values);const exitingValues=exitingAnimation(values);const animations={transform:[]};for(const prop of Object.keys(exitingValues.animations)){if(prop==='transform'){i
+
+--- Line 3518: 1376 chars, nums=4, pipes=4, semicolons=15, equals=42 (score=199) ---
+function prepareAnimation_reactNativeReanimated_useAnimatedStyleTs1(frameTimestamp,animatedProp,lastAnimation,lastValue){const prepareAnimation_reactNativeReanimated_useAnimatedStyleTs1=this._recur;if(Array.isArray(animatedProp)){animatedProp.forEach(function(prop,index){prepareAnimation_reactNativeReanimated_useAnimatedStyleTs1(frameTimestamp,prop,lastAnimation&&lastAnimation[index],lastValue&&la
+
+--- Line 3552: 1064 chars, nums=60, pipes=0, semicolons=13, equals=13 (score=198) ---
+function decomposeMatrix_reactNativeReanimated_matrixUtilsTsx19(unknownTypeMatrix){const{maybeFlattenMatrix,norm3d,gramSchmidtAlgorithm}=this.__closure;const matrix=maybeFlattenMatrix(unknownTypeMatrix);if(matrix[15]===0){throw new ReanimatedError('Invalid transform matrix.');}matrix.forEach(function(_,i){return matrix[i]/=matrix[15];});const translationMatrix=[[1,0,0,0],[0,1,0,0],[0,0,1,0],[matri
+
+--- Line 3457: 1866 chars, nums=7, pipes=0, semicolons=27, equals=34 (score=197) ---
+function reactNativeReanimated_FrameCallbackRegistryUITs1(){const frameCallbackRegistry={frameCallbackRegistry:new Map(),activeFrameCallbacks:new Set(),previousFrameTimestamp:null,nextCallId:0,runCallbacks:function(callId){var _this=this;const loop=function(timestamp){if(callId!==_this.nextCallId){return;}if(_this.previousFrameTimestamp===null){_this.previousFrameTimestamp=timestamp;}const delta=t
+
+--- Line 3023: 302 chars, nums=98, pipes=0, semicolons=0, equals=0 (score=196) ---
+M12 12c-1.349-.573-1.905-1.005-2.5-2-.546.902-1.048 1.353-2.5 2-1.018-.644-1.46-1.08-2-2-1.028.71-1.69.918-3 1 1.081-1.048 1.757-2.03 2-3 .194-.776.84-1.551 1.79-2.21m11.654 5.997c.887-.457 1.28-.891 1.556-1.787 1.032.916 1.683 1.157 3 1-1.297-1.036-1.758-2.03-2-3-.5-2-4-4-8-4-.74 0-1.461.068-2.15.192
+
+--- Line 4274: 1450 chars, nums=1, pipes=4, semicolons=26, equals=32 (score=196) ---
+function runAnimations_reactNativeReanimated_useAnimatedStyleTs2(animation,timestamp,key,result,animationsActive,forceCopyAnimation){const runAnimations_reactNativeReanimated_useAnimatedStyleTs2=this._recur;if(!animationsActive.value){return true;}if(Array.isArray(animation)){result[key]=[];let allFinished=true;forceCopyAnimation=key==='boxShadow';animation.forEach(function(entry,index){if(!runAni
+

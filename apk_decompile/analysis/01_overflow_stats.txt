@@ -1,0 +1,35 @@
+=== OVERFLOW FILE STATS ===
+Total lines: 4954
+Strings > 500 chars: 225
+Strings > 1000 chars: 73
+Strings > 5000 chars: 5
+
+=== JSON ANALYSIS ===
+Total JSON-parsable objects: 0
+JSON parse errors: 45
+
+=== TOP-LEVEL KEYS FOUND (with count) ===
+
+=== JSON LENGTHS (top 20 largest) ===
+
+=== FIRST 10 JSON PARSE ERRORS ===
+  [7 chars] Expecting ',' delimiter: line 1 column 3 (char 2)
+    Preview: [00011]
+  [7 chars] Expecting ',' delimiter: line 1 column 3 (char 2)
+    Preview: [00012]
+  [7 chars] Expecting ',' delimiter: line 1 column 3 (char 2)
+    Preview: [00026]
+  [7 chars] Expecting ',' delimiter: line 1 column 3 (char 2)
+    Preview: [00027]
+  [7 chars] Expecting ',' delimiter: line 1 column 3 (char 2)
+    Preview: [00035]
+  [7 chars] Expecting ',' delimiter: line 1 column 3 (char 2)
+    Preview: [00036]
+  [7 chars] Expecting ',' delimiter: line 1 column 3 (char 2)
+    Preview: [00049]
+  [268 chars] Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+    Preview: {APPROVAL}% approval is the country's judgement on this Government's record so far, and I am not going to argue with it.
+  [256 chars] Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+    Preview: {BILLS_PASSED_THIS_TERM} below pace is the kind of headline that asks for honest reporting. The honest reporting is that
+  [321 chars] Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+    Preview: {BILLS_PASSED_THIS_TERM} bills delivered this term is the published figure and the order paper is the receipt. The House
