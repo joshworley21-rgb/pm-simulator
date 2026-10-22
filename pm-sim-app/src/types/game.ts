@@ -452,15 +452,15 @@ export type BillStatus =
 
 /** 法案状态中文标签 */
 export const BILL_STATUS_LABELS: Record<BillStatus, string> = {
-  draft: '起草',
-  in_committee: '委员会审议中',
-  revised: '委员会修正',
-  delayed: '搁置',
-  voting: '全院表决',
-  passed: '通过',
-  rejected: '否决',
-  withdrawn: '撤回',
-  implemented: '已实施',
+  draft: 'Draft',
+  in_committee: 'In Committee',
+  revised: 'Revised',
+  delayed: 'Delayed',
+  voting: 'At Division',
+  passed: 'Passed',
+  rejected: 'Rejected',
+  withdrawn: 'Withdrawn',
+  implemented: 'Implemented',
 };
 
 /** 法案 */
