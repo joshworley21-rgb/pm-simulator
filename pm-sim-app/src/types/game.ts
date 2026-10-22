@@ -213,13 +213,13 @@ export type CabinetPost =
 
 /** 阁僚职位中文名 */
 export const CABINET_POST_LABELS: Record<CabinetPost, string> = {
-  prime_minister: '首相',
-  chief_secretary: '官房长官',
-  finance_minister: '财务大臣',
-  foreign_minister: '外务大臣',
-  defense_minister: '防卫大臣',
-  health_minister: '厚生劳动大臣',
-  economy_minister: '经济产业大臣',
+  prime_minister: 'Prime Minister',
+  chief_secretary: 'Deputy Prime Minister',
+  finance_minister: 'Chancellor of the Exchequer',
+  foreign_minister: 'Foreign Secretary',
+  defense_minister: 'Defence Secretary',
+  health_minister: 'Health and Social Care Secretary',
+  economy_minister: 'Business and Trade Secretary',
 };
 
 /** 阁僚 */
@@ -398,15 +398,15 @@ export type CommitteeId =
 
 /** 委员会 ID 对应中文名 */
 export const COMMITTEE_LABELS: Record<CommitteeId, string> = {
-  cabinet: '内阁委员会',
-  general: '总务委员会',
-  judicial: '法务委员会',
-  foreign: '外务委员会',
-  finance: '财务金融委员会',
-  economy: '经济产业委员会',
-  security: '安全保障委员会',
-  budget: '预算委员会',
-  health: '厚生劳动委员会',
+  cabinet: 'Cabinet Committee',
+  general: 'Public Administration Committee',
+  judicial: 'Justice Committee',
+  foreign: 'Foreign Affairs Committee',
+  finance: 'Treasury Committee',
+  economy: 'Business and Trade Committee',
+  security: 'Defence Committee',
+  budget: 'Public Accounts Committee',
+  health: 'Health and Social Care Committee',
 };
 
 /** 委员会成员 */
@@ -452,15 +452,15 @@ export type BillStatus =
 
 /** 法案状态中文标签 */
 export const BILL_STATUS_LABELS: Record<BillStatus, string> = {
-  draft: '起草',
-  in_committee: '委员会审议中',
-  revised: '委员会修正',
-  delayed: '搁置',
-  voting: '全院表决',
-  passed: '通过',
-  rejected: '否决',
-  withdrawn: '撤回',
-  implemented: '已实施',
+  draft: 'Draft',
+  in_committee: 'In Committee',
+  revised: 'Revised',
+  delayed: 'Delayed',
+  voting: 'At Division',
+  passed: 'Passed',
+  rejected: 'Rejected',
+  withdrawn: 'Withdrawn',
+  implemented: 'Implemented',
 };
 
 /** 法案 */

@@ -1,116 +1,120 @@
 import type { Party } from '../types';
 
 /**
- * 初始派系/政党数据
- * 设计为 6 个派系，模拟多党制选举生态
+ * UK political parties — 5 main national parties.
  *
- * NPC 席位分配（199席，玩家占第 200 席 = 1 比例代表席）:
- *   改革民主党 54席 (27.1%) |  自由党 40席 (20.1%)
- *   国民保守党 38席 (19.1%) |  社会联盟 29席 (14.6%)
- *   第一公民阵线 24席 (12.1%) | 联合劳工党 14席 (7.0%)
+ * Internal party IDs are KEPT from the donor engine so relations, AI intents,
+ * committee init and government formation continue to work unchanged; only the
+ * human-visible UK branding is new.
  *
- * 玩家加入某党后该党席位数 +1（占该党 1 个比例代表席）
+ *   conservative → Conservative Party
+ *   reform       → Labour Party
+ *   liberty      → Liberal Democrats
+ *   populist     → Reform UK
+ *   progressive  → Green Party
  *
- * 姓名规则（CONSTITUTION 核心原则 #2 #4）：
- * - 所有政治人物为原创角色，不映射任何现实政治家
- * - 中文读音和日文读音均不引起对现实人物的联想
- * - 姓氏和名字均从排除现实政治家后的姓名库中选取
+ * All politicians are original fictional characters — no real politicians.
+ *
+ * baseSupport / currentSupport = national vote share (%).
+ * projectedSeats = reference 650-seat FPTP starting figures; the election
+ * engine recomputes the actual result from regional supportByParty.
  */
 export const initialParties: Party[] = [
   {
-    id: 'reform',
-    name: '改革民主党',
-    abbreviation: 'RDP',
-    color: '#1E88E5',
-    ideology: 'center',
-    leader: '原田 正',
-    members: ['中村 健一', '山田 美咲', '高桥 直树', '伊藤 樱', '渡边 修', '铃木 亮'],
-    description: '温和中间路线，强调制度改革、廉政建设和经济增长，在都市中产阶级有较强支持。',
-    baseSupport: 27,
-    currentSupport: 27,
-    projectedSeats: 54,
+    id: 'conservative',
+    name: 'Conservative Party',
+    abbreviation: 'CON',
+    color: '#0087DC',
+    ideology: 'center-right',
+    leader: 'Richard Hartley',
+    members: [
+      'Eleanor Wainwright', 'Marcus Okafor', 'Charles Beaumont',
+      'Philippa Ashworth', 'George Redfern', 'Harriet Colville',
+    ],
+    description:
+      'The traditional party of government: low taxes, fiscal discipline, strong defence and family values. Rooted in the English shires, the South and older, rural voters.',
+    baseSupport: 24,
+    currentSupport: 24,
+    projectedSeats: 121,
     funds: 1200,
-    organization: 72,
-    charisma: 84,
+    organization: 76,
+    charisma: 55,
+  },
+  {
+    id: 'reform',
+    name: 'Labour Party',
+    abbreviation: 'LAB',
+    color: '#DC241F',
+    ideology: 'center-left',
+    leader: 'Daniel Mercer',
+    members: [
+      'Aisha Rahman', 'Tom Calloway', "Grace O'Donnell",
+      'James Whitfield', 'Priya Nair', 'Oliver Stanmore',
+    ],
+    description:
+      'The broad centre-left movement of working people, trade unions and public services: reindustrialisation, a rebuilt NHS, workers\u2019 rights and redistribution.',
+    baseSupport: 34,
+    currentSupport: 34,
+    projectedSeats: 411,
+    funds: 1400,
+    organization: 88,
+    charisma: 78,
   },
   {
     id: 'liberty',
-    name: '自由党',
-    abbreviation: 'LP',
-    color: '#FB8C00',
-    ideology: 'right',
-    leader: '望月 弘',
-    members: ['森田 太郎', '藤田 美纪', '冈本 大辅', '萩原 进'],
-    description: '自由市场拥趸，主张小政府、低税率、放松管制，深受企业家和年轻专业人士青睐。',
-    baseSupport: 20,
-    currentSupport: 20,
-    projectedSeats: 40,
-    funds: 1000,
-    organization: 68,
-    charisma: 88,
-  },
-  {
-    id: 'conservative',
-    name: '国民保守党',
-    abbreviation: 'NCP',
-    color: '#43A047',
-    ideology: 'center-right',
-    leader: '桐生 毅夫',
-    members: ['松本 胜', '井上 和夫', '小林 正道', '斋藤 秀树', '竹中 一郎'],
-    description: '传统价值守护者，主张减税、强军、家庭价值，在乡村和老年人群体中根基深厚。',
-    baseSupport: 19,
-    currentSupport: 19,
-    projectedSeats: 38,
-    funds: 820,
-    organization: 78,
-    charisma: 54,
-  },
-  {
-    id: 'progressive',
-    name: '社会联盟',
-    abbreviation: 'SA',
-    color: '#00897B',
-    ideology: 'center-left',
-    leader: '林 千鹤',
-    members: ['田中 惠子', '佐藤 隆', '木村 真理', '清水 翔太', '小川 惠'],
-    description: '主张社会福利扩大化、环保优先、财富再分配，拥有强大的工会基层组织。',
-    baseSupport: 14.5,
-    currentSupport: 14.5,
-    projectedSeats: 29,
-    funds: 680,
-    organization: 74,
-    charisma: 68,
+    name: 'Liberal Democrats',
+    abbreviation: 'LD',
+    color: '#FDBB30',
+    ideology: 'center',
+    leader: 'Sophie Ashdown',
+    members: [
+      'Hugh Pemberton', 'Nadia Ellis', 'Felicity Trent', 'Alistair Monroe',
+    ],
+    description:
+      'Centrist and socially liberal, strongest in university towns, the South West and suburban middle England. Pro-European, pro-civil-liberties, pro-localism.',
+    baseSupport: 12,
+    currentSupport: 12,
+    projectedSeats: 72,
+    funds: 600,
+    organization: 64,
+    charisma: 66,
   },
   {
     id: 'populist',
-    name: '第一公民阵线',
-    abbreviation: 'FCF',
-    color: '#8E24AA',
-    ideology: 'far-right',
-    leader: '远山 绫子',
-    members: ['石井 雄大', '长谷川 真由', '宫崎 健', '坂口 翔'],
-    description: '民粹主义路线，强调民族主义、反精英、反全球化，以年轻支持者为主力，在蓝领工人和偏远地区有铁杆支持者。',
-    baseSupport: 12,
-    currentSupport: 12,
-    projectedSeats: 24,
-    funds: 900,
+    name: 'Reform UK',
+    abbreviation: 'RFM',
+    color: '#12B6CF',
+    ideology: 'right',
+    leader: 'Nigel Crossley',
+    members: [
+      'Derek Hartley', 'Sandra Whitmore', 'Lee Bancroft', 'Tamsin Drake',
+    ],
+    description:
+      'Populist, anti-establishment and anti-immigration, drawing disaffected voters across the post-industrial North, Midlands and coastal towns. Suffers the classic FPTP squeeze: high vote share, few seats.',
+    baseSupport: 14,
+    currentSupport: 14,
+    projectedSeats: 5,
+    funds: 500,
     organization: 52,
     charisma: 74,
   },
   {
-    id: 'solidarity',
-    name: '联合劳工党',
-    abbreviation: 'ULP',
-    color: '#E53935',
+    id: 'progressive',
+    name: 'Green Party',
+    abbreviation: 'GRN',
+    color: '#6AB023',
     ideology: 'left',
-    leader: '浅野 直人',
-    members: ['高田 一郎', '中岛 优子', '桥本 哲也', '西村 洋一'],
-    description: '无产阶级政党，坚持科学社会主义道路，党内实行民主集中制，主张劳动者权益、反对资本剥削、提倡减税减轻劳动人民负担。组织严密、纪律性强，支持者以中老年工人为主，年轻工人次之，整体支持率不高。',
+    leader: 'Imogen Hale',
+    members: [
+      'Ravi Chandrasekhar', 'Bethany Cole', 'Fraser Dunbar', 'Yasmin Iqbal',
+    ],
+    description:
+      'Environmentalist and social-justice party, prioritising climate action, public ownership of utilities and electoral reform. Strongest in university cities and Brighton.',
     baseSupport: 7,
     currentSupport: 7,
-    projectedSeats: 14,
-    funds: 780,
-    organization: 92,
-    charisma: 48,
+    projectedSeats: 4,
+    funds: 350,
+    organization: 58,
+    charisma: 60,
   },
 ];
