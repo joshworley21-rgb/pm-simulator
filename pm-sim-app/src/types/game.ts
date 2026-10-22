@@ -398,15 +398,15 @@ export type CommitteeId =
 
 /** 委员会 ID 对应中文名 */
 export const COMMITTEE_LABELS: Record<CommitteeId, string> = {
-  cabinet: '内阁委员会',
-  general: '总务委员会',
-  judicial: '法务委员会',
-  foreign: '外务委员会',
-  finance: '财务金融委员会',
-  economy: '经济产业委员会',
-  security: '安全保障委员会',
-  budget: '预算委员会',
-  health: '厚生劳动委员会',
+  cabinet: 'Cabinet Committee',
+  general: 'Public Administration Committee',
+  judicial: 'Justice Committee',
+  foreign: 'Foreign Affairs Committee',
+  finance: 'Treasury Committee',
+  economy: 'Business and Trade Committee',
+  security: 'Defence Committee',
+  budget: 'Public Accounts Committee',
+  health: 'Health and Social Care Committee',
 };
 
 /** 委员会成员 */
