@@ -52,6 +52,26 @@ export const FOREIGN_POOL: ForeignIssue[] = [
       { id: 'renewables', label: 'Pivot to a joint renewables corridor', summary: 'Political win, slower near-term relief.', effects: { economy: 2, cpiInflation: 0.1 } },
     ],
   },
+  {
+    id: 'fi-pm-trudeau-ca',
+    leader: 'Prime Minister Lalonde',
+    country: 'Canada',
+    topic: 'Post-Brexit trade deal ratification',
+    options: [
+      { id: 'sign', label: 'Sign the rollover trade deal', summary: 'Lock in tariff-free access with a major partner.', effects: { economy: 3, approval: 1 } },
+      { id: 'renegotiate', label: 'Demand better agriculture terms', summary: 'Risk delay for a better deal.', effects: { economy: -1, approval: -1, publicServices: 0 } },
+    ],
+  },
+  {
+    id: 'fi-president-saudi',
+    leader: 'Crown Prince Faisal',
+    country: 'Saudi Arabia',
+    topic: 'Arms sales and human rights pressure',
+    options: [
+      { id: 'sell', label: 'Approve the arms sale', summary: 'Jobs and influence, but reputational cost.', effects: { economy: 2, approval: -2, security: 2 } },
+      { id: 'block', label: 'Block on human-rights grounds', summary: 'Moral win, strains an ally.', effects: { approval: 2, economy: -2 } },
+    ],
+  },
 ];
 
 /** PMQs exchanges: the opposition leader and a backbench question. */
