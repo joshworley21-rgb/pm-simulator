@@ -561,6 +561,31 @@ export function reducer(state: GameState, action: Action): GameState {
       };
     }
 
+    case 'ADJUST_SPENDING': {
+      const idx = state.departments.findIndex((d) => d.id === action.deptId);
+      if (idx < 0) return state;
+      const dept = state.departments[idx];
+      const budget = clamp(r1(dept.budget + action.delta), dept.min, dept.max);
+      if (budget === dept.budget) return state;
+      const delta = budget - dept.budget;
+      const departments = state.departments.map((d, i) => (i === idx ? { ...d, budget } : d));
+      // Spending costs the Exchequer; benefits scale with the (step-normalised) delta.
+      const steps = Math.round(delta / dept.step);
+      let fx: Effects = { budgetBalance: -delta };
+      const b = dept.benefit;
+      fx = {
+        approval: (b.approval ?? 0) * steps,
+        publicServices: (b.publicServices ?? 0) * steps,
+        security: (b.security ?? 0) * steps,
+        economy: (b.economy ?? 0) * steps,
+        nhsWaitingList: (b.nhsWaitingList ?? 0) * steps,
+        budgetBalance: -delta,
+      };
+      let next = applyEffects(state, fx);
+      next = { ...next, departments };
+      return next;
+    }
+
     case 'DISMISS_ELECTION':
       return { ...state, isElection: false };
 
