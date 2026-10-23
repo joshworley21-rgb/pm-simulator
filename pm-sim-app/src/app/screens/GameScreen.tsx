@@ -227,6 +227,22 @@ export default function GameScreen() {
             <Text style={[g.muted, { marginBottom: 4 }]}>
               Set department budgets. Raising them costs the Exchequer but delivers results.
             </Text>
+            {(() => {
+              const total = state.departments.reduce((s, d) => s + d.budget, 0);
+              const revenue = 950; // approx. baseline tax revenue in u00a3bn
+              const balance = Math.round(revenue - total);
+              return (
+                <View style={[g.card, { borderColor: balance < 0 ? colors.danger : colors.success }]}>
+                  <Text style={[g.cardTitle, { fontSize: 15 }]}>Total Spend: u00a3{Math.round(total)}bn</Text>
+                  <Text style={{ color: balance < 0 ? colors.danger : colors.success, fontSize: 13, fontWeight: '700', marginTop: 4 }}>
+                    {balance < 0 ? `Over budget by u00a3${-balance}bn` : `Headroom of u00a3${balance}bn`}
+                  </Text>
+                  <Text style={[g.muted, { marginTop: 4, fontSize: 11 }]}>
+                    Revenue (approx) {revenue}bn vs departmental spend {Math.round(total)}bn
+                  </Text>
+                </View>
+              );
+            })()}
             {state.departments.map((d) => (
               <View key={d.id} style={[g.card, { marginTop: 8 }]}>
                 <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>{d.name}</Text>
