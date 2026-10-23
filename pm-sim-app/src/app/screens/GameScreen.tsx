@@ -367,12 +367,53 @@ export default function GameScreen() {
         {/* ECONOMY */}
         {activeTab === 'nation' && (
           <View>
+            {state.stats.marketCrisis && (
+              <View style={[g.card, { borderColor: colors.danger, backgroundColor: '#2a1010' }]}>
+                <Text style={{ color: colors.danger, fontWeight: '800', fontSize: 15 }}>MARKET CRISIS</Text>
+                <Text style={[g.muted, { marginTop: 4 }]}>
+                  Gilt yields have spiked to {state.stats.giltYield}% as markets lose confidence in the government's fiscal plans. Mortgage rates and borrowing costs are surging.
+                </Text>
+              </View>
+            )}
+
+            <View style={g.card}>
+              <Text style={g.cardTitle}>Bank of England & Markets</Text>
+              <Text style={[g.muted, { marginTop: 2, fontSize: 11 }]}>The MPC sets rates independently of Downing Street.</Text>
+              <View style={{ flexDirection: 'row', marginTop: 12 }}>
+                <StatPill label="Base Rate" value={`${state.stats.boeRate}%`} />
+                <StatPill label="Mortgage" value={`${state.stats.mortgageRate}%`} />
+                <StatPill label="10Y Gilt" value={`${state.stats.giltYield}%`} />
+              </View>
+              <View style={{ flexDirection: 'row', marginTop: 10 }}>
+                <StatPill label="Real Wages" value={`${state.stats.realWageGrowth > 0 ? '+' : ''}${state.stats.realWageGrowth}%`} />
+                <StatPill label="House Prices" value={`${state.stats.housePriceChange > 0 ? '+' : ''}${state.stats.housePriceChange}%`} />
+                <StatPill label="Credibility" value={`${Math.round(state.stats.fiscalCredibility)}`} />
+              </View>
+            </View>
+
+            <View style={[g.card, { borderColor: state.stats.rulesBreached > 0 ? colors.danger : colors.success }]}>
+              <Text style={g.cardTitle}>OBR Forecast</Text>
+              <Text style={[g.muted, { marginTop: 4, fontSize: 12 }]}>
+                {state.stats.rulesBreached > 0
+                  ? `Fiscal rules breached (${state.stats.rulesBreached}/2). Markets are pricing a risk premium into gilts.`
+                  : 'Fiscal rules met. The OBR forecast is credible with the markets.'}
+              </Text>
+              <View style={{ flexDirection: 'row', marginTop: 12 }}>
+                <StatPill label="Borrowing" value={`£${state.stats.obrBorrowing}bn`} />
+                <StatPill label="Debt/GDP" value={`${state.stats.obrDebt}%`} />
+              </View>
+              <View style={{ flexDirection: 'row', marginTop: 10 }}>
+                <StatPill label="Growth" value={`${state.stats.obrGrowth}%`} />
+                <StatPill label="Inflation" value={`${state.stats.obrInflation}%`} />
+              </View>
+            </View>
+
             <View style={g.card}>
               <Text style={g.cardTitle}>HM Treasury & Economy</Text>
               <View style={{ flexDirection: 'row', marginTop: 12 }}>
                 <StatPill label="GDP Growth" value={`${state.stats.gdpGrowth}%`} />
                 <StatPill label="CPI Inflation" value={`${state.stats.cpiInflation}%`} />
-                <StatPill label="10Y Gilt" value={`${state.stats.giltYield}%`} />
+                <StatPill label="Wage Growth" value={`${state.stats.wageGrowth}%`} />
               </View>
               <View style={{ flexDirection: 'row', marginTop: 10 }}>
                 <StatPill label="Tax Rate" value={`${state.stats.taxRate}%`} />
