@@ -185,6 +185,8 @@ export interface GameState {
   foreignIssues: ForeignIssue[];
   pmq: PmqQuestion | null;
   budgetDue: boolean;
+  backbenchers: Backbencher[];
+  termLength: number;
 }
 
 export type Action =
