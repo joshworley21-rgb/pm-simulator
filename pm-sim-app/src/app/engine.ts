@@ -151,7 +151,7 @@ function runElection(s: GameState): GameState {
   const approval = clamp(s.metrics.approval + (majority ? swing + 3 : -12), 0, 100);
   const message = `GENERAL ELECTION: ${playerParty?.name ?? '?'} won ${playerSeats} seats ${majority ? '(Working Majority)' : '(Hung Parliament)'}.`;
   // Legacy score from governing quality; a second term rewards survival.
-  const legacyScore = s.legacyScore + Math.round(s.metrics.approval / 10) + Math.round(s.stats.economy / 10) + (majority ? 5 : 0);
+  const legacyScore = s.legacyScore + Math.round(s.metrics.approval / 10) + Math.round(s.metrics.economy / 10) + (majority ? 5 : 0);
   const termsWon = majority ? s.termsWon + 1 : s.termsWon;
   return {
     ...s,
