@@ -400,7 +400,7 @@ export default function GameScreen() {
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
           <View style={{ backgroundColor: colors.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
             <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800', letterSpacing: 1 }}>HM TREASURY - ANNUAL BUDGET</Text>
-            <Text style={[g.title, { fontSize: 22, marginTop: 6 }]}>Set the Nation\u2019s Course</Text>
+            <Text style={[g.title, { fontSize: 22, marginTop: 6 }]}>Set the Nation's Course</Text>
             <Text style={[g.muted, { marginTop: 4 }]}>Choose the package your Chancellor will deliver to the Commons.</Text>
             {BUDGET_PACKAGES.map((b) => (
               <Pressable key={b.id} style={[g.card, { marginTop: 10 }]} onPress={() => dispatch({ type: 'DELIVER_BUDGET', packageId: b.id })}>
