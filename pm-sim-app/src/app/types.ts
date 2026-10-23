@@ -219,5 +219,7 @@ export type Action =
   | { type: 'DISMISS_PMQ' }
   | { type: 'DELIVER_BUDGET'; packageId: string }
   | { type: 'SKIP_BUDGET' }
+  | { type: 'ADJUST_TAX'; taxId: string; delta: number }
+  | { type: 'SET_AUTUMN_TAXES' }
   | { type: 'DISMISS_ELECTION' }
   | { type: 'RESTORE'; state: GameState };
