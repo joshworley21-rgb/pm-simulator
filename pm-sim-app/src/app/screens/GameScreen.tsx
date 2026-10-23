@@ -28,7 +28,7 @@ function budgetLabel(v: number): string {
   return `\u00a3${Math.round(v)}bn surplus`;
 }
 
-type Tab = 'redbox' | 'legislation' | 'nation' | 'parliament' | 'press';
+type Tab = 'redbox' | 'legislation' | 'cabinet' | 'nation' | 'parliament' | 'diplomacy' | 'press';
 
 export default function GameScreen() {
   const { state, dispatch } = useGame();
@@ -86,8 +86,10 @@ export default function GameScreen() {
         {[
           { key: 'redbox', label: `Red Box (${state.redBox.length})` },
           { key: 'legislation', label: 'Bills' },
+          { key: 'cabinet', label: 'Cabinet' },
           { key: 'nation', label: 'Economy' },
           { key: 'parliament', label: 'Westminster' },
+          { key: 'diplomacy', label: 'World' },
           { key: 'press', label: 'Press' },
         ].map((t) => (
           <Pressable
@@ -101,7 +103,7 @@ export default function GameScreen() {
               borderBottomColor: colors.accent,
             }}
           >
-            <Text style={{ color: activeTab === t.key ? colors.text : colors.muted, fontSize: 12, fontWeight: '700' }}>
+            <Text style={{ color: activeTab === t.key ? colors.text : colors.muted, fontSize: 11, fontWeight: '700' }}>
               {t.label}
             </Text>
           </Pressable>
@@ -110,7 +112,7 @@ export default function GameScreen() {
 
       {/* Tab content */}
       <ScrollView style={{ flex: 1, marginTop: 10 }} contentContainerStyle={{ paddingBottom: 30 }}>
-        {/* TAB 1: RED BOX */}
+        {/* RED BOX */}
         {activeTab === 'redbox' && (
           <View>
             <Text style={[g.cardTitle, { marginBottom: 6 }]}>Prime Minister\u2019s Despatch Box</Text>
@@ -132,24 +134,13 @@ export default function GameScreen() {
                 ]}
               >
                 <View style={g.row}>
-                  <Text
-                    style={{
-                      color: d.urgent ? colors.danger : colors.accent,
-                      fontSize: 11,
-                      fontWeight: '800',
-                      letterSpacing: 0.5,
-                      flex: 1,
-                    }}
-                  >
+                  <Text style={{ color: d.urgent ? colors.danger : colors.accent, fontSize: 11, fontWeight: '800', letterSpacing: 0.5, flex: 1 }}>
                     {d.department.toUpperCase()} {d.urgent ? '\u2022 URGENT' : ''}
                   </Text>
                   <Text style={{ color: colors.muted, fontSize: 11 }}>{d.weeksRemaining}w left</Text>
                 </View>
-
                 <Text style={[g.cardTitle, { fontSize: 16, marginTop: 4 }]}>{d.title}</Text>
-                <Text style={[g.muted, { marginTop: 4 }]} numberOfLines={2}>
-                  {d.leadParagraph}
-                </Text>
+                <Text style={[g.muted, { marginTop: 4 }]} numberOfLines={2}>{d.leadParagraph}</Text>
               </Pressable>
             ))}
 
@@ -164,7 +155,7 @@ export default function GameScreen() {
           </View>
         )}
 
-        {/* TAB 2: LEGISLATION */}
+        {/* LEGISLATION */}
         {activeTab === 'legislation' && (
           <View>
             <Text style={[g.cardTitle, { marginBottom: 8 }]}>Legislative Agenda</Text>
@@ -175,9 +166,7 @@ export default function GameScreen() {
                 {state.bills.map((b) => (
                   <View key={b.id} style={[g.card, { marginTop: 6 }]}>
                     <View style={g.row}>
-                      <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800', flex: 1 }}>
-                        {b.department.toUpperCase()}
-                      </Text>
+                      <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800', flex: 1 }}>{b.department.toUpperCase()}</Text>
                       <Text style={{ color: colors.muted, fontSize: 11 }}>{b.weeksToPass}w to division</Text>
                     </View>
                     <Text style={[g.cardTitle, { fontSize: 16, marginTop: 4 }]}>{b.title}</Text>
@@ -191,20 +180,13 @@ export default function GameScreen() {
             {proposable.map((b) => (
               <View key={b.id} style={[g.card, { marginTop: 6 }]}>
                 <View style={g.row}>
-                  <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800', flex: 1 }}>
-                    {b.department.toUpperCase()}
-                  </Text>
+                  <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800', flex: 1 }}>{b.department.toUpperCase()}</Text>
                   <Text style={{ color: colors.muted, fontSize: 11 }}>{fiscalLabel(b.fiscalCost)}</Text>
                 </View>
                 <Text style={[g.cardTitle, { fontSize: 16, marginTop: 4 }]}>{b.title}</Text>
                 <Text style={[g.muted, { marginTop: 4 }]}>{b.description}</Text>
-                <Text style={[g.muted, { marginTop: 6, fontSize: 11 }]}>
-                  Rebellion risk {b.rebellionRisk}%
-                </Text>
-                <Pressable
-                  style={[g.btnGhost, { marginTop: 8, paddingVertical: 8 }]}
-                  onPress={() => dispatch({ type: 'PROPOSE_BILL', billId: b.id })}
-                >
+                <Text style={[g.muted, { marginTop: 6, fontSize: 11 }]}>Rebellion risk {b.rebellionRisk}%</Text>
+                <Pressable style={[g.btnGhost, { marginTop: 8, paddingVertical: 8 }]} onPress={() => dispatch({ type: 'PROPOSE_BILL', billId: b.id })}>
                   <Text style={g.btnGhostText}>Introduce to Parliament</Text>
                 </Pressable>
               </View>
@@ -214,16 +196,39 @@ export default function GameScreen() {
               <>
                 <Text style={[g.muted, { marginTop: 14, marginBottom: 6, fontWeight: '700' }]}>ON THE STATUTE BOOK</Text>
                 {state.passedLaws.map((title, i) => (
-                  <Text key={i} style={{ color: colors.success, fontSize: 14, marginTop: 4 }}>
-                    {'\u2713'} {title}
-                  </Text>
+                  <Text key={i} style={{ color: colors.success, fontSize: 14, marginTop: 4 }}>{'\u2713'} {title}</Text>
                 ))}
               </>
             )}
           </View>
         )}
 
-        {/* TAB 3: ECONOMY */}
+        {/* CABINET */}
+        {activeTab === 'cabinet' && (
+          <View>
+            <Text style={[g.cardTitle, { marginBottom: 4 }]}>Your Cabinet</Text>
+            <Text style={[g.muted, { marginBottom: 4 }]}>Faction unrest: {state.factionUnrest}%</Text>
+            {state.cabinet.map((m) => (
+              <View key={m.name} style={[g.card, { marginTop: 6 }]}>
+                <View style={g.row}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>{m.name}</Text>
+                    <Text style={{ color: colors.muted, fontSize: 12 }}>{m.post} \u2022 {m.faction}</Text>
+                  </View>
+                  <Pressable onPress={() => dispatch({ type: 'SACK_MINISTER', name: m.name })} style={{ padding: 6 }}>
+                    <Text style={{ color: colors.danger, fontSize: 13, fontWeight: '700' }}>Sack</Text>
+                  </Pressable>
+                </View>
+                <View style={{ flexDirection: 'row', marginTop: 8 }}>
+                  <Text style={{ color: colors.muted, fontSize: 11, flex: 1 }}>Loyalty {m.loyalty}</Text>
+                  <Text style={{ color: colors.muted, fontSize: 11 }}>Competence {m.competence}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* ECONOMY */}
         {activeTab === 'nation' && (
           <View>
             <View style={g.card}>
@@ -254,7 +259,7 @@ export default function GameScreen() {
           </View>
         )}
 
-        {/* TAB 4: WESTMINSTER */}
+        {/* WESTMINSTER */}
         {activeTab === 'parliament' && (
           <View>
             <View style={g.card}>
@@ -263,17 +268,9 @@ export default function GameScreen() {
                 Letters of No Confidence lodged: {state.stats.lettersOfNoConfidence} / {threshold} (Threshold)
               </Text>
               <View style={{ height: 8, backgroundColor: colors.bg, borderRadius: 4, marginTop: 8, overflow: 'hidden' }}>
-                <View
-                  style={{
-                    height: 8,
-                    width: `${revoltPct}%`,
-                    backgroundColor: state.stats.lettersOfNoConfidence >= Math.round(threshold * 0.65) ? colors.danger : colors.accent,
-                  }}
-                />
+                <View style={{ height: 8, width: `${revoltPct}%`, backgroundColor: state.stats.lettersOfNoConfidence >= Math.round(threshold * 0.65) ? colors.danger : colors.accent }} />
               </View>
-              <Text style={[g.muted, { marginTop: 6, fontSize: 11 }]}>
-                Reaching the threshold triggers an automatic confidence vote among your own MPs.
-              </Text>
+              <Text style={[g.muted, { marginTop: 6, fontSize: 11 }]}>Reaching the threshold triggers an automatic confidence vote among your own MPs.</Text>
             </View>
 
             <View style={g.card}>
@@ -290,7 +287,27 @@ export default function GameScreen() {
           </View>
         )}
 
-        {/* TAB 5: PRESS */}
+        {/* DIPLOMACY */}
+        {activeTab === 'diplomacy' && (
+          <View>
+            <Text style={[g.cardTitle, { marginBottom: 8 }]}>Foreign Affairs</Text>
+            {state.foreignIssues.length === 0 && <Text style={g.muted}>No outstanding summits or calls.</Text>}
+            {state.foreignIssues.map((f) => (
+              <View key={f.id} style={[g.card, { marginTop: 6 }]}>
+                <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800' }}>{f.country.toUpperCase()} \u2022 {f.leader}</Text>
+                <Text style={[g.cardTitle, { fontSize: 16, marginTop: 4 }]}>{f.topic}</Text>
+                {f.options.map((o) => (
+                  <Pressable key={o.id} style={[g.btnGhost, { marginTop: 8, paddingVertical: 8 }]} onPress={() => dispatch({ type: 'RESOLVE_FOREIGN', issueId: f.id, optionId: o.id })}>
+                    <Text style={g.btnGhostText}>{o.label}</Text>
+                    <Text style={[g.muted, { marginTop: 2 }]}>{o.summary}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* PRESS */}
         {activeTab === 'press' && (
           <View>
             <Text style={[g.cardTitle, { marginBottom: 10 }]}>Fleet Street Headlines</Text>
@@ -304,42 +321,26 @@ export default function GameScreen() {
         )}
       </ScrollView>
 
-      {/* Dossier briefing modal */}
+      {/* Dossier modal */}
       <Modal visible={!!activeDossier} transparent animationType="slide">
         {activeDossier && (
           <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
             <View style={{ backgroundColor: colors.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '90%' }}>
               <View style={g.row}>
-                <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800', letterSpacing: 1, flex: 1 }}>
-                  {activeDossier.department.toUpperCase()} SUBMISSION
-                </Text>
-                <Pressable onPress={() => dispatch({ type: 'CLOSE_DOSSIER' })}>
-                  <Text style={{ color: colors.muted, fontSize: 16, fontWeight: '700' }}>\u2715</Text>
-                </Pressable>
+                <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800', letterSpacing: 1, flex: 1 }}>{activeDossier.department.toUpperCase()} SUBMISSION</Text>
+                <Pressable onPress={() => dispatch({ type: 'CLOSE_DOSSIER' })}><Text style={{ color: colors.muted, fontSize: 16, fontWeight: '700' }}>\u2715</Text></Pressable>
               </View>
-
               <Text style={[g.title, { fontSize: 22, marginTop: 6 }]}>{activeDossier.title}</Text>
-
               <ScrollView style={{ marginTop: 12, maxHeight: 300 }}>
                 <Text style={[g.body, { fontWeight: '700', marginBottom: 8 }]}>{activeDossier.leadParagraph}</Text>
                 <Text style={g.body}>{activeDossier.body}</Text>
               </ScrollView>
-
-              <Text style={[g.cardTitle, { fontSize: 15, marginTop: 16, marginBottom: 8 }]}>
-                Ministerial Determination:
-              </Text>
-
+              <Text style={[g.cardTitle, { fontSize: 15, marginTop: 16, marginBottom: 8 }]}>Ministerial Determination:</Text>
               {activeDossier.choices.map((c) => (
-                <Pressable
-                  key={c.id}
-                  style={[g.card, { marginTop: 6, borderColor: colors.cardBorder }]}
-                  onPress={() => dispatch({ type: 'RESOLVE_DOSSIER', dossierId: activeDossier.id, choiceId: c.id })}
-                >
+                <Pressable key={c.id} style={[g.card, { marginTop: 6, borderColor: colors.cardBorder }]} onPress={() => dispatch({ type: 'RESOLVE_DOSSIER', dossierId: activeDossier.id, choiceId: c.id })}>
                   <Text style={{ color: colors.accent, fontSize: 15, fontWeight: '700' }}>{c.label}</Text>
                   <Text style={[g.body, { fontSize: 13, marginTop: 2 }]}>{c.summary}</Text>
-                  <Text style={[g.muted, { fontSize: 11, fontStyle: 'italic', marginTop: 4 }]}>
-                    Advice: {c.advice}
-                  </Text>
+                  <Text style={[g.muted, { fontSize: 11, fontStyle: 'italic', marginTop: 4 }]}>Advice: {c.advice}</Text>
                 </Pressable>
               ))}
             </View>
@@ -347,18 +348,34 @@ export default function GameScreen() {
         )}
       </Modal>
 
-      {/* Game over overlay */}
+      {/* PMQs modal */}
+      <Modal visible={!!state.pmq} transparent animationType="slide">
+        {state.pmq && (
+          <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
+            <View style={{ backgroundColor: colors.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
+              <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800', letterSpacing: 1 }}>PRIME MINISTER\u2019S QUESTIONS</Text>
+              <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>{state.pmq.from}</Text>
+              <Text style={[g.body, { marginTop: 10, fontWeight: '600' }]}>{state.pmq.question}</Text>
+              <Text style={[g.cardTitle, { fontSize: 15, marginTop: 16, marginBottom: 8 }]}>Your response:</Text>
+              {state.pmq.options.map((o) => (
+                <Pressable key={o.id} style={[g.card, { marginTop: 6 }]} onPress={() => dispatch({ type: 'ANSWER_PMQ', optionId: o.id })}>
+                  <Text style={{ color: colors.accent, fontSize: 15, fontWeight: '700' }}>{o.label}</Text>
+                </Pressable>
+              ))}
+              <Pressable style={g.btn} onPress={() => dispatch({ type: 'DISMISS_PMQ' })}><Text style={g.btnText}>Skip</Text></Pressable>
+            </View>
+          </View>
+        )}
+      </Modal>
+
+      {/* Game over */}
       <Modal visible={!!state.gameOver} transparent animationType="fade">
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.85)', padding: 24 }}>
           <View style={{ backgroundColor: colors.bg, borderRadius: 16, padding: 24, borderColor: colors.danger, borderWidth: 1, width: '100%' }}>
             <Text style={{ color: colors.danger, fontSize: 22, fontWeight: '800', textAlign: 'center' }}>ELECTION DEFEAT</Text>
             <Text style={[g.body, { textAlign: 'center', marginTop: 12 }]}>{state.gameOver}</Text>
-            <Text style={[g.muted, { textAlign: 'center', marginTop: 8 }]}>
-              Your premiership has come to an end. The backbenches have spoken.
-            </Text>
-            <Pressable style={g.btn} onPress={restart}>
-              <Text style={g.btnText}>Return to Main Menu</Text>
-            </Pressable>
+            <Text style={[g.muted, { textAlign: 'center', marginTop: 8 }]}>Your premiership has come to an end. The backbenches have spoken.</Text>
+            <Pressable style={g.btn} onPress={restart}><Text style={g.btnText}>Return to Main Menu</Text></Pressable>
           </View>
         </View>
       </Modal>
