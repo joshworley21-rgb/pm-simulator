@@ -491,7 +491,7 @@ export function reducer(state: GameState, action: Action): GameState {
       return resignMinister(state, action.name);
 
     case 'APPOINT_MINISTER': {
-      // Open the picker (no auto-selection).
+      // Store the target post, then let the UI show the candidate picker.
       return { ...state, ministerPicker: action.post };
     }
 
@@ -500,9 +500,10 @@ export function reducer(state: GameState, action: Action): GameState {
     }
 
     case 'CONFIRM_APPOINT': {
-      const post = state.ministerPicker === null ? action.post : (state.ministerPicker as string);
-      const candidate = state.backbenchers.find((b) => b.name === state.ministerPicker);
+      const name = state.ministerPicker;
+      const candidate = state.backbenchers.find((b) => b.name === name);
       if (!candidate) return state;
+      const post = action.post;
       const minister: Minister = {
         name: candidate.name,
         post,
