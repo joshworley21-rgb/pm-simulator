@@ -96,8 +96,13 @@ export default function GameScreen() {
         </View>
       )}
 
-      {/* Desk tabs */}
-      <View style={{ flexDirection: 'row', marginTop: 12, borderBottomWidth: 1, borderBottomColor: colors.cardBorder }}>
+      {/* Desk tabs (horizontally scrollable to avoid clipping) */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={{ marginTop: 12, borderBottomWidth: 1, borderBottomColor: colors.cardBorder, flexGrow: 0 }}
+        contentContainerStyle={{ alignItems: 'center' }}
+      >
         {[
           { key: 'redbox', label: `Red Box (${state.redBox.length})` },
           { key: 'legislation', label: 'Bills' },
@@ -113,19 +118,22 @@ export default function GameScreen() {
             key={t.key}
             onPress={() => setActiveTab(t.key as Tab)}
             style={{
-              flex: 1,
               paddingVertical: 10,
+              paddingHorizontal: 12,
               alignItems: 'center',
               borderBottomWidth: activeTab === t.key ? 2 : 0,
               borderBottomColor: colors.accent,
             }}
           >
-            <Text style={{ color: activeTab === t.key ? colors.text : colors.muted, fontSize: 11, fontWeight: '700' }}>
+            <Text
+              numberOfLines={1}
+              style={{ color: activeTab === t.key ? colors.text : colors.muted, fontSize: 13, fontWeight: '700' }}
+            >
               {t.label}
             </Text>
           </Pressable>
         ))}
-      </View>
+      </ScrollView>
 
       {/* Tab content */}
       <ScrollView style={{ flex: 1, marginTop: 10 }} contentContainerStyle={{ paddingBottom: 30 }}>
