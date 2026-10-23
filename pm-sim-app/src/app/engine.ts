@@ -385,6 +385,11 @@ function resignMinister(s: GameState, name: string): GameState {
   };
 }
 
+/** Purdah: the pre-election quiet period when policy/nominal actions are locked. */
+function inPurdah(s: GameState): boolean {
+  return s.phase === 'playing' && s.turnsUntilElection <= 6;
+}
+
 export function reducer(state: GameState, action: Action): GameState {
   switch (action.type) {
     case 'NEW_GAME':
