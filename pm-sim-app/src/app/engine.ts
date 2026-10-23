@@ -6,6 +6,7 @@ import { DEFAULT_CABINET, FOREIGN_POOL, PMQ_POOL, BACKBENCHERS } from './politic
 import { BUDGET_PACKAGES } from './budget';
 import { INITIAL_TAXES, TAX_YIELD_PER_POINT } from './taxes';
 import { INITIAL_DEPARTMENTS } from './spending';
+import { advanceEconomy } from './economy';
 import type { Region } from './data';
 
 export const FPTP_EXPONENT = 2.5;
