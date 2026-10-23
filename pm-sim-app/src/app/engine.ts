@@ -1,7 +1,7 @@
 import type { GameState, Action, Party, Effects, Dossier, Bill, Minister } from './types';
 import { INITIAL_PARTIES, INITIAL_RELATIONS, REGIONS, DOSSIER_POOL } from './data';
 import { BILL_POOL } from './bills';
-import { DEFAULT_CABINET, FOREIGN_POOL, PMQ_POOL } from './politics';
+import { DEFAULT_CABINET, FOREIGN_POOL, PMQ_POOL, BACKBENCHERS } from './politics';
 import { BUDGET_PACKAGES } from './budget';
 import type { Region } from './data';
 
