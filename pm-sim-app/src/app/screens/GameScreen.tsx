@@ -62,7 +62,7 @@ export default function GameScreen() {
             {player?.firstName} {player?.lastName}
           </Text>
           <Text style={{ color: party?.color, fontSize: 12, fontWeight: '700' }}>
-            {party?.name} \u2022 Week {state.week}
+            {party?.name} • Week {state.week}
           </Text>
         </View>
 
