@@ -369,6 +369,43 @@ export default function GameScreen() {
         )}
       </Modal>
 
+      {/* Budget modal */}
+      <Modal visible={state.budgetDue} transparent animationType="slide">
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
+          <View style={{ backgroundColor: colors.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
+            <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800', letterSpacing: 1 }}>HM TREASURY \u2014 ANNUAL BUDGET</Text>
+            <Text style={[g.title, { fontSize: 22, marginTop: 6 }]}>Set the Nation\u2019s Course</Text>
+            <Text style={[g.muted, { marginTop: 4 }]}>Choose the package your Chancellor will deliver to the Commons.</Text>
+            {BUDGET_PACKAGES.map((b) => (
+              <Pressable key={b.id} style={[g.card, { marginTop: 10 }]} onPress={() => dispatch({ type: 'DELIVER_BUDGET', packageId: b.id })}>
+                <Text style={{ color: colors.accent, fontSize: 15, fontWeight: '700' }}>{b.title}</Text>
+                <Text style={[g.muted, { marginTop: 4 }]}>{b.description}</Text>
+              </Pressable>
+            ))}
+            <Pressable style={g.btn} onPress={() => dispatch({ type: 'SKIP_BUDGET' })}><Text style={g.btnText}>Defer Budget</Text></Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Election results modal */}
+      <Modal visible={state.isElection && !state.gameOver} transparent animationType="fade">
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.85)', padding: 24 }}>
+          <View style={{ backgroundColor: colors.bg, borderRadius: 16, padding: 24, width: '100%' }}>
+            <Text style={{ color: colors.accent, fontSize: 22, fontWeight: '800', textAlign: 'center' }}>GENERAL ELECTION</Text>
+            <View style={{ marginTop: 16 }}>
+              {rankedParties.map((p) => (
+                <View key={p.id} style={[g.row, { marginTop: 8 }]}>
+                  <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: p.color, marginRight: 8 }} />
+                  <Text style={{ color: colors.text, flex: 1, fontSize: 14 }}>{p.name}</Text>
+                  <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700' }}>{p.seats} seats</Text>
+                </View>
+              ))}
+            </View>
+            <Pressable style={g.btn} onPress={() => dispatch({ type: 'DISMISS_ELECTION' })}><Text style={g.btnText}>Continue Governing</Text></Pressable>
+          </View>
+        </View>
+      </Modal>
+
       {/* Game over */}
       <Modal visible={!!state.gameOver} transparent animationType="fade">
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.85)', padding: 24 }}>
