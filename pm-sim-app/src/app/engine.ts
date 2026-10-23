@@ -74,6 +74,7 @@ export function createInitialState(): GameState {
     termLength: 60,
     taxes: INITIAL_TAXES.map((t) => ({ ...t })),
     fiscalEventKind: null,
+    departments: INITIAL_DEPARTMENTS.map((d) => ({ ...d })),
   };
 }
 
