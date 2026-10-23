@@ -110,17 +110,15 @@ export interface Bill {
   kicker: string;
 }
 
-/** A cabinet minister, driven by loyalty/competence and able to rebel or leak. */
 export interface Minister {
   name: string;
   post: string;
   partyId: string;
-  loyalty: number;    // 0-100
-  competence: number; // 0-100
+  loyalty: number;
+  competence: number;
   faction: string;
 }
 
-/** A foreign leader / issue the PM can engage with. */
 export interface ForeignIssue {
   id: string;
   leader: string;
@@ -129,12 +127,19 @@ export interface ForeignIssue {
   options: { id: string; label: string; effects: Effects; summary: string }[];
 }
 
-/** A PMQs exchange. */
 export interface PmqQuestion {
   id: string;
-  from: string; // party abbreviation or name
+  from: string;
   question: string;
   options: { id: string; label: string; effects: Effects }[];
+}
+
+export interface BudgetPackage {
+  id: string;
+  title: string;
+  description: string;
+  effects: Effects;
+  kicker: string;
 }
 
 export interface Player {
@@ -166,9 +171,10 @@ export interface GameState {
   seed: number;
   gameOver: string | null;
   cabinet: Minister[];
-  factionUnrest: number; // 0-100 anger within the party
+  factionUnrest: number;
   foreignIssues: ForeignIssue[];
   pmq: PmqQuestion | null;
+  budgetDue: boolean;
 }
 
 export type Action =
@@ -184,4 +190,7 @@ export type Action =
   | { type: 'RESOLVE_FOREIGN'; issueId: string; optionId: string }
   | { type: 'ANSWER_PMQ'; optionId: string }
   | { type: 'DISMISS_PMQ' }
+  | { type: 'DELIVER_BUDGET'; packageId: string }
+  | { type: 'SKIP_BUDGET' }
+  | { type: 'DISMISS_ELECTION' }
   | { type: 'RESTORE'; state: GameState };
