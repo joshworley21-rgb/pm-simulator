@@ -533,6 +533,31 @@ export default function GameScreen() {
                 </View>
               ))}
             </View>
+
+            {Object.keys(state.regionSeats).length > 0 && (
+              <>
+                <Text style={[g.cardTitle, { marginTop: 16, marginBottom: 6 }]}>Regional Swing</Text>
+                <ScrollView style={{ maxHeight: 180 }}>
+                  {REGIONS.map((r) => {
+                    const seats = state.regionSeats[r.id] ?? {};
+                    let winnerId = '';
+                    let best = -1;
+                    for (const [pid, n] of Object.entries(seats)) {
+                      if (n > best) { best = n; winnerId = pid; }
+                    }
+                    const winner = state.parties.find((p) => p.id === winnerId);
+                    return (
+                      <View key={r.id} style={[g.row, { marginTop: 6 }]}>
+                        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: winner?.color ?? colors.cardBorder, marginRight: 6 }} />
+                        <Text style={{ color: colors.text, flex: 1, fontSize: 13 }}>{r.name}</Text>
+                        <Text style={{ color: colors.muted, fontSize: 12 }}>{winner?.abbreviation ?? '—'}</Text>
+                      </View>
+                    );
+                  })}
+                </ScrollView>
+              </>
+            )}
+
             <Pressable style={g.btn} onPress={() => dispatch({ type: 'DISMISS_ELECTION' })}><Text style={g.btnText}>Continue Governing</Text></Pressable>
           </View>
         </View>
