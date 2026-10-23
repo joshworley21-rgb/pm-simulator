@@ -511,6 +511,7 @@ export function reducer(state: GameState, action: Action): GameState {
       next = {
         ...next,
         budgetDue: false,
+        fiscalEventKind: null,
         log: [`BUDGET: ${pkg.title} delivered by the Chancellor.`, ...next.log].slice(0, 50),
         headlines: [{ paper: 'The National Standard', title: pkg.kicker, stance: 'centrist' }, ...next.headlines].slice(0, 4),
       };
@@ -521,8 +522,41 @@ export function reducer(state: GameState, action: Action): GameState {
       return {
         ...state,
         budgetDue: false,
-        log: [`BUDGET DEFERRED: The Chancellor postponed the statement.`, ...state.log].slice(0, 50),
+        fiscalEventKind: null,
+        log: [`FISCAL EVENT DEFERRED: The Chancellor postponed the statement.`, ...state.log].slice(0, 50),
       };
+
+    case 'ADJUST_TAX': {
+      const idx = state.taxes.findIndex((t) => t.id === action.taxId);
+      if (idx < 0) return state;
+      const tax = state.taxes[idx];
+      const rate = clamp(r1(tax.rate + action.delta), tax.min, tax.max);
+      if (rate === tax.rate) return state; // no change
+      const taxes = state.taxes.map((t, i) => (i === idx ? { ...t, rate } : t));
+      const delta = rate - tax.rate;
+      // Fiscal yield: raising tax improves the budget, lowers approval; vice versa.
+      const yieldChange = delta * (TAX_YIELD_PER_POINT[tax.id] ?? 0);
+      const approvalChange = -delta * tax.popularityWeight;
+      let next = applyEffects(state, {
+        approval: approvalChange,
+        budgetBalance: yieldChange,
+        taxRate: tax.id === 'income' ? delta : 0,
+      });
+      next = { ...next, taxes };
+      return next;
+    }
+
+    case 'SET_AUTUMN_TAXES': {
+      // The Autumn Statement delivers the tax changes set since the last Budget.
+      const taxRate = clamp(r1(state.taxes.reduce((s, t) => s + (t.id === 'income' ? 0 : 0), state.stats.taxRate)), 15, 60);
+      return {
+        ...state,
+        budgetDue: false,
+        fiscalEventKind: null,
+        log: [`AUTUMN STATEMENT: Tax measures delivered.`, ...state.log].slice(0, 50),
+        headlines: [{ paper: 'The National Standard', title: 'AUTUMN STATEMENT: CHANCELLOR SETS OUT TAX PLAN', stance: 'centrist' }, ...state.headlines].slice(0, 4),
+      };
+    }
 
     case 'DISMISS_ELECTION':
       return { ...state, isElection: false };
