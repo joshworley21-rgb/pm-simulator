@@ -548,7 +548,6 @@ export function reducer(state: GameState, action: Action): GameState {
 
     case 'SET_AUTUMN_TAXES': {
       // The Autumn Statement delivers the tax changes set since the last Budget.
-      const taxRate = clamp(r1(state.taxes.reduce((s, t) => s + (t.id === 'income' ? 0 : 0), state.stats.taxRate)), 15, 60);
       return {
         ...state,
         budgetDue: false,
