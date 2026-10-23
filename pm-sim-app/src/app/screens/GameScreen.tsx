@@ -42,7 +42,7 @@ export default function GameScreen() {
 
   const inFlightIds = new Set(state.bills.map((b) => b.id));
   const passedTitles = new Set(state.passedLaws);
-  const proposable = BILL_POOL.filter((b) => !inFlightIds.has(b.id) && !passedTitles.has(b.title));
+  const proposable = [...BILL_POOL, ...BILL_POOL_2].filter((b) => !inFlightIds.has(b.id) && !passedTitles.has(b.title));
 
   const threshold = state.stats.lettersThreshold || 15;
   const revoltPct = Math.min(100, Math.round((state.stats.lettersOfNoConfidence / threshold) * 100));
