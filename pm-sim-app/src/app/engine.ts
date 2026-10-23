@@ -66,6 +66,7 @@ export function createInitialState(): GameState {
     factionUnrest: 20,
     foreignIssues: [],
     pmq: null,
+    budgetDue: false,
   };
 }
 
