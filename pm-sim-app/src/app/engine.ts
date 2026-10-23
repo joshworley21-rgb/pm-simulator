@@ -67,6 +67,8 @@ export function createInitialState(): GameState {
     foreignIssues: [],
     pmq: null,
     budgetDue: false,
+    backbenchers: BACKBENCHERS.map((b) => ({ ...b })),
+    termLength: 60,
   };
 }
 
