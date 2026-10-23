@@ -16,10 +16,12 @@ export default function CreateScreen() {
   const [lastName, setLastName] = useState('');
   const [partyId, setPartyId] = useState<string>('reform');
   const [background, setBackground] = useState(BACKGROUNDS[0]);
+  const [termLength, setTermLength] = useState<number>(60);
 
   const canStart = firstName.trim().length > 0 && lastName.trim().length > 0;
 
   const start = () => {
+    dispatch({ type: 'SET_TERM_LENGTH', weeks: termLength });
     dispatch({
       type: 'CREATE_PLAYER',
       player: { firstName: firstName.trim(), lastName: lastName.trim(), partyId, background },
