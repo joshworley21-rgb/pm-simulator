@@ -116,7 +116,7 @@ export default function GameScreen() {
         {/* RED BOX */}
         {activeTab === 'redbox' && (
           <View>
-            <Text style={[g.cardTitle, { marginBottom: 6 }]}>Prime Minister\u2019s Despatch Box</Text>
+            <Text style={[g.cardTitle, { marginBottom: 6 }]}>Prime Minister's Despatch Box</Text>
             <Text style={[g.muted, { marginBottom: 12 }]}>
               Whitehall policy submissions and urgent crises awaiting your determination.
             </Text>
