@@ -6,6 +6,15 @@ export type RootStackParamList = {
 
 export type Ideology = 'left' | 'centre-left' | 'centre' | 'centre-right' | 'right';
 
+export type Department =
+  | 'Number 10'
+  | 'HM Treasury'
+  | 'Home Office'
+  | 'DHSC (Health)'
+  | 'Foreign Office'
+  | 'Ministry of Defence'
+  | 'Energy & Net Zero';
+
 export interface Party {
   id: string;
   name: string;
@@ -26,6 +35,15 @@ export interface Relation {
   score: number;
 }
 
+export interface NationalStats {
+  cpiInflation: number;
+  gdpGrowth: number;
+  giltYield: number;
+  nhsWaitingList: number;
+  netMigration: number;
+  lettersOfNoConfidence: number;
+}
+
 export interface Metrics {
   approval: number;
   partyConfidence: number;
@@ -42,26 +60,33 @@ export interface Effects {
   security?: number;
   partyConfidence?: number;
   mediaAttention?: number;
+  cpiInflation?: number;
+  gdpGrowth?: number;
+  giltYield?: number;
+  nhsWaitingList?: number;
+  netMigration?: number;
+  lettersDelta?: number;
   supportDelta?: Record<string, number>;
-  relationDelta?: Record<string, number>;
   fundsDelta?: number;
 }
 
-export interface Choice {
+export interface DossierChoice {
   id: string;
-  text: string;
-  consequence: string;
+  label: string;
+  summary: string;
+  advice: string;
   effects: Effects;
 }
 
-export interface GameEvent {
+export interface Dossier {
   id: string;
   title: string;
-  summary: string;
-  sourceParty?: string;
-  severity: 1 | 2 | 3 | 4 | 5;
-  dialogs: { speaker: string | null; text: string }[];
-  choices: Choice[];
+  department: Department;
+  urgent: boolean;
+  weeksRemaining: number;
+  leadParagraph: string;
+  body: string;
+  choices: DossierChoice[];
 }
 
 export interface Player {
@@ -79,15 +104,14 @@ export interface GameState {
   parties: Party[];
   relations: Relation[];
   metrics: Metrics;
+  stats: NationalStats;
   week: number;
   turnsUntilElection: number;
   isElection: boolean;
-  activeEvent: GameEvent | null;
-  dialogIndex: number;
-  showChoices: boolean;
-  chosenId: string | null;
-  pendingChoice: Choice | null;
+  redBox: Dossier[];
+  selectedDossierId: string | null;
   lastOutcome: string | null;
+  headlines: { paper: string; title: string; stance: 'left' | 'centrist' | 'right' }[];
   log: string[];
 }
 
@@ -95,7 +119,7 @@ export type Action =
   | { type: 'NEW_GAME' }
   | { type: 'CREATE_PLAYER'; player: Player }
   | { type: 'START_TURN' }
-  | { type: 'ADVANCE_DIALOG' }
-  | { type: 'CHOOSE'; choiceId: string }
-  | { type: 'DISMISS_EVENT' }
+  | { type: 'OPEN_DOSSIER'; dossierId: string }
+  | { type: 'CLOSE_DOSSIER' }
+  | { type: 'RESOLVE_DOSSIER'; dossierId: string; choiceId: string }
   | { type: 'RESTORE'; state: GameState };
