@@ -5,7 +5,7 @@ import { PROPORTIONAL_BLOCKS } from '../config/districtConfig';
 import { findPersonPreset } from '../data/keyPeoplePresets';
 
 /** 所有的都道府县名称列表（从选区配置自动收集） */
-const ALL_PREFECTURES = PROPORTIONAL_BLOCKS.flatMap(b => b.prefectures);
+const ALL_PREFECTURES = PROPORTIONAL_BLOCKS.flatMap(b => b.regions);
 
 /** 基于名称的确定性伪随机 */
 function seededRandom(seed: string): () => number {
