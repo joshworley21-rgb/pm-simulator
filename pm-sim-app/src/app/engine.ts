@@ -160,6 +160,7 @@ function runElection(s: GameState): GameState {
     isElection: true,
     legacyScore,
     termsWon,
+    regionSeats: detail.byRegion,
     log: [message, ...s.log].slice(0, 50),
   };
 }
