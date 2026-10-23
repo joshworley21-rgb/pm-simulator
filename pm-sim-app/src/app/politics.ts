@@ -1,4 +1,14 @@
-import type { Minister, ForeignIssue, PmqQuestion } from './types';
+import type { Minister, ForeignIssue, PmqQuestion, Backbencher } from './types';
+
+/** Backbench Labour MPs available for promotion to cabinet. */
+export const BACKBENCHERS: Backbencher[] = [
+  { name: 'Chloe Hartigan', partyId: 'reform', faction: 'Soft Left', loyalty: 72, competence: 76, ambition: 81 },
+  { name: 'Marcus Drey', partyId: 'reform', faction: 'Centrist', loyalty: 84, competence: 71, ambition: 68 },
+  { name: 'Elena Marchetti', partyId: 'reform', faction: 'Soft Left', loyalty: 66, competence: 82, ambition: 79 },
+  { name: 'Dev Patel', partyId: 'reform', faction: 'Left', loyalty: 55, competence: 79, ambition: 88 },
+  { name: 'Rachel Osei', partyId: 'reform', faction: 'Centrist', loyalty: 81, competence: 74, ambition: 71 },
+  { name: 'Tom Ashworth', partyId: 'reform', faction: 'Left', loyalty: 60, competence: 66, ambition: 75 },
+];
 
 /** Initial cabinet for a Labour PM (the default starting majority). */
 export const DEFAULT_CABINET: Minister[] = [
