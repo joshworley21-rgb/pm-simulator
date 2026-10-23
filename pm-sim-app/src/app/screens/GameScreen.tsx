@@ -430,20 +430,38 @@ export default function GameScreen() {
         )}
       </Modal>
 
-      {/* Budget modal */}
+      {/* Budget / Autumn Statement modal */}
       <Modal visible={state.budgetDue} transparent animationType="slide">
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
           <View style={{ backgroundColor: colors.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
-            <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800', letterSpacing: 1 }}>HM TREASURY - ANNUAL BUDGET</Text>
-            <Text style={[g.title, { fontSize: 22, marginTop: 6 }]}>Set the Nation's Course</Text>
-            <Text style={[g.muted, { marginTop: 4 }]}>Choose the package your Chancellor will deliver to the Commons.</Text>
-            {BUDGET_PACKAGES.map((b) => (
-              <Pressable key={b.id} style={[g.card, { marginTop: 10 }]} onPress={() => dispatch({ type: 'DELIVER_BUDGET', packageId: b.id })}>
-                <Text style={{ color: colors.accent, fontSize: 15, fontWeight: '700' }}>{b.title}</Text>
-                <Text style={[g.muted, { marginTop: 4 }]}>{b.description}</Text>
-              </Pressable>
-            ))}
-            <Pressable style={g.btn} onPress={() => dispatch({ type: 'SKIP_BUDGET' })}><Text style={g.btnText}>Defer Budget</Text></Pressable>
+            {state.fiscalEventKind === 'autumn' ? (
+              <>
+                <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800', letterSpacing: 1 }}>HM TREASURY - AUTUMN STATEMENT</Text>
+                <Text style={[g.title, { fontSize: 22, marginTop: 6 }]}>Autumn Statement</Text>
+                <Text style={[g.muted, { marginTop: 4 }]}>
+                  The mid-year fiscal event. Your tax levers (Taxes tab) are where you set the rates; confine today's statement to locking them in.
+                </Text>
+                <Pressable style={g.btn} onPress={() => dispatch({ type: 'SET_AUTUMN_TAXES' })}>
+                  <Text style={g.btnText}>Deliver Autumn Statement</Text>
+                </Pressable>
+                <Pressable style={g.btnGhost} onPress={() => dispatch({ type: 'SKIP_BUDGET' })}>
+                  <Text style={g.btnGhostText}>Defer</Text>
+                </Pressable>
+              </>
+            ) : (
+              <>
+                <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800', letterSpacing: 1 }}>HM TREASURY - THE BUDGET</Text>
+                <Text style={[g.title, { fontSize: 22, marginTop: 6 }]}>Set the Nation's Course</Text>
+                <Text style={[g.muted, { marginTop: 4 }]}>Choose the package your Chancellor will deliver to the Commons.</Text>
+                {BUDGET_PACKAGES.map((b) => (
+                  <Pressable key={b.id} style={[g.card, { marginTop: 10 }]} onPress={() => dispatch({ type: 'DELIVER_BUDGET', packageId: b.id })}>
+                    <Text style={{ color: colors.accent, fontSize: 15, fontWeight: '700' }}>{b.title}</Text>
+                    <Text style={[g.muted, { marginTop: 4 }]}>{b.description}</Text>
+                  </Pressable>
+                ))}
+                <Pressable style={g.btn} onPress={() => dispatch({ type: 'SKIP_BUDGET' })}><Text style={g.btnText}>Defer Budget</Text></Pressable>
+              </>
+            )}
           </View>
         </View>
       </Modal>
