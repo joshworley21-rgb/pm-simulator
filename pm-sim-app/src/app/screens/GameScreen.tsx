@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useGame } from '../state';
 import { g, colors } from '../theme';
 import { BILL_POOL } from '../bills';
+import { BUDGET_PACKAGES } from '../budget';
 import type { RootStackParamList } from '../types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Game'>;
