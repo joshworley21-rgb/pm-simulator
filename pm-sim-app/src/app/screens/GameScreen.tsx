@@ -65,6 +65,9 @@ export default function GameScreen() {
           <Text style={{ color: party?.color, fontSize: 12, fontWeight: '700' }}>
             {party?.name} • Week {state.week}
           </Text>
+          <Text style={{ color: colors.muted, fontSize: 11 }}>
+            Election in {state.turnsUntilElection} weeks • Legacy {state.legacyScore}
+          </Text>
         </View>
 
         <Pressable
