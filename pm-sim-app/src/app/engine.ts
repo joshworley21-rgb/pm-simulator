@@ -139,7 +139,8 @@ function electSeatsDetailed(parties: Party[], regions: Region[]): {
 }
 
 function runElection(s: GameState): GameState {
-  const seats = electSeats(s.parties, REGIONS);
+  const detail = electSeatsDetailed(s.parties, REGIONS);
+  const seats = detail.totals;
   const parties = s.parties.map((p) => ({ ...p, seats: seats[p.id] ?? 0 }));
   const playerParty = parties.find((p) => p.id === s.player?.partyId);
   const playerSeats = playerParty?.seats ?? 0;
