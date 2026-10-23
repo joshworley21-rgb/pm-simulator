@@ -199,6 +199,8 @@ export interface GameState {
   budgetDue: boolean;
   backbenchers: Backbencher[];
   termLength: number;
+  taxes: TaxLever[];
+  fiscalEventKind: 'budget' | 'autumn' | null;
 }
 
 export type Action =
