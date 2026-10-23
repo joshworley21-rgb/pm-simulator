@@ -7,6 +7,7 @@ import { g, colors } from '../theme';
 import { BILL_POOL } from '../bills';
 import { BILL_POOL_2 } from '../bills2';
 import { BUDGET_PACKAGES } from '../budget';
+import { REGIONS } from '../data';
 import type { RootStackParamList } from '../types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Game'>;
