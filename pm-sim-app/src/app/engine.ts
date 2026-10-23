@@ -77,6 +77,8 @@ export function createInitialState(): GameState {
     departments: INITIAL_DEPARTMENTS.map((d) => ({ ...d })),
     legacyScore: 0,
     termsWon: 0,
+    regionSeats: {},
+    ministerPicker: null,
   };
 }
 
