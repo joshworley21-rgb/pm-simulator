@@ -36,12 +36,16 @@ export interface Relation {
 }
 
 export interface NationalStats {
-  cpiInflation: number;
-  gdpGrowth: number;
-  giltYield: number;
-  nhsWaitingList: number;
-  netMigration: number;
-  lettersOfNoConfidence: number;
+  cpiInflation: number;       // %
+  gdpGrowth: number;          // %
+  giltYield: number;          // %
+  nhsWaitingList: number;     // millions
+  netMigration: number;       // thousands / yr
+  lettersOfNoConfidence: number; // 0..54
+  taxRate: number;            // combined headline tax rate %
+  debtToGdp: number;          // %
+  unemployment: number;       // %
+  budgetBalance: number;      // £bn / yr (negative = deficit)
 }
 
 export interface Metrics {
@@ -66,6 +70,10 @@ export interface Effects {
   nhsWaitingList?: number;
   netMigration?: number;
   lettersDelta?: number;
+  taxRate?: number;
+  debtToGdp?: number;
+  unemployment?: number;
+  budgetBalance?: number;
   supportDelta?: Record<string, number>;
   fundsDelta?: number;
 }
@@ -87,6 +95,18 @@ export interface Dossier {
   leadParagraph: string;
   body: string;
   choices: DossierChoice[];
+}
+
+export interface Bill {
+  id: string;
+  title: string;
+  department: Department;
+  description: string;
+  fiscalCost: number;    // £bn/yr (negative = raises revenue)
+  weeksToPass: number;   // remaining weeks until division
+  rebellionRisk: number; // 0..100 backbench anger
+  effects: Effects;      // applied on passage
+  kicker: string;        // headline on passage
 }
 
 export interface Player {
@@ -111,6 +131,8 @@ export interface GameState {
   redBox: Dossier[];
   selectedDossierId: string | null;
   lastOutcome: string | null;
+  bills: Bill[];          // in-flight legislation
+  passedLaws: string[];   // enacted laws
   headlines: { paper: string; title: string; stance: 'left' | 'centrist' | 'right' }[];
   log: string[];
 }
@@ -122,4 +144,5 @@ export type Action =
   | { type: 'OPEN_DOSSIER'; dossierId: string }
   | { type: 'CLOSE_DOSSIER' }
   | { type: 'RESOLVE_DOSSIER'; dossierId: string; choiceId: string }
+  | { type: 'PROPOSE_BILL'; billId: string }
   | { type: 'RESTORE'; state: GameState };
