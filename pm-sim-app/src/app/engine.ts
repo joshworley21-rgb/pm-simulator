@@ -524,6 +524,7 @@ export function reducer(state: GameState, action: Action): GameState {
       return { ...state, pmq: null };
 
     case 'DELIVER_BUDGET': {
+      if (inPurdah(state)) return state;
       const pkg = BUDGET_PACKAGES.find((b) => b.id === action.packageId);
       if (!pkg) return state;
       let next = applyEffects(state, pkg.effects);
