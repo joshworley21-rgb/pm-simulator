@@ -86,6 +86,15 @@ export default function GameScreen() {
         <StatPill label="Economy" value={`${Math.round(state.metrics.economy)}`} />
       </View>
 
+      {state.turnsUntilElection <= 6 && (
+        <View style={[g.card, { marginTop: 10, borderColor: colors.danger, backgroundColor: '#251522' }]}>
+          <Text style={{ color: colors.danger, fontWeight: '800', fontSize: 14 }}>PURDAH IN EFFECT</Text>
+          <Text style={[g.muted, { marginTop: 4 }]}>
+            The pre-election quiet period has begun. New bills, tax and spending changes are suspended until after polling day.
+          </Text>
+        </View>
+      )}
+
       {/* Desk tabs */}
       <View style={{ flexDirection: 'row', marginTop: 12, borderBottomWidth: 1, borderBottomColor: colors.cardBorder }}>
         {[
