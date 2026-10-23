@@ -6,7 +6,6 @@ import { useGame } from '../state';
 import { g, colors } from '../theme';
 import { BILL_POOL } from '../bills';
 import { BUDGET_PACKAGES } from '../budget';
-import { INITIAL_TAXES } from '../taxes';
 import type { RootStackParamList } from '../types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Game'>;
