@@ -486,6 +486,29 @@ export function reducer(state: GameState, action: Action): GameState {
     case 'DISMISS_PMQ':
       return { ...state, pmq: null };
 
+    case 'DELIVER_BUDGET': {
+      const pkg = BUDGET_PACKAGES.find((b) => b.id === action.packageId);
+      if (!pkg) return state;
+      let next = applyEffects(state, pkg.effects);
+      next = {
+        ...next,
+        budgetDue: false,
+        log: [`BUDGET: ${pkg.title} delivered by the Chancellor.`, ...next.log].slice(0, 50),
+        headlines: [{ paper: 'The National Standard', title: pkg.kicker, stance: 'centrist' }, ...next.headlines].slice(0, 4),
+      };
+      return next;
+    }
+
+    case 'SKIP_BUDGET':
+      return {
+        ...state,
+        budgetDue: false,
+        log: [`BUDGET DEFERRED: The Chancellor postponed the statement.`, ...state.log].slice(0, 50),
+      };
+
+    case 'DISMISS_ELECTION':
+      return { ...state, isElection: false };
+
     default:
       return state;
   }
