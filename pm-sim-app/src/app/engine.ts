@@ -552,7 +552,7 @@ export function reducer(state: GameState, action: Action): GameState {
         ...next,
         pmq: null,
         log: [`PMQS: Answered a question from ${q.from}.`, ...next.log].slice(0, 50),
-        headlines: [{ paper: 'The Clarion', title: `PMQS: PM FACES ${q.from.toUpperCase()} ON THE ECONOMY`, stance: 'left' }, ...next.headlines].slice(0, 4),
+        headlines: [{ paper: 'The Clarion', title: `PMQS: PM FACES ${q.from.toUpperCase()} ON THE ECONOMY`, stance: 'left' as const }, ...next.headlines].slice(0, 4),
       };
     }
 
