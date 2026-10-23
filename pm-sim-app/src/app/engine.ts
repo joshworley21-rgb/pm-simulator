@@ -339,6 +339,11 @@ export function advanceWeek(s: GameState): GameState {
     }
   }
 
+  // 8b. Annual Budget (every 12 weeks).
+  if (next.week % 12 === 0 && !next.gameOver) {
+    next.budgetDue = true;
+  }
+
   // 9. Election countdown.
   const turnsUntilElection = next.turnsUntilElection - 1;
   next = { ...next, turnsUntilElection };
