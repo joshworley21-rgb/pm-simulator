@@ -435,7 +435,8 @@ export function reducer(state: GameState, action: Action): GameState {
     }
 
     case 'PROPOSE_BILL': {
-      const blueprint = BILL_POOL.find((b) => b.id === action.billId);
+      const allBills = [...BILL_POOL, ...BILL_POOL_2];
+      const blueprint = allBills.find((b) => b.id === action.billId);
       if (!blueprint) return state;
       const already = state.bills.some((b) => b.id === blueprint.id) || state.passedLaws.includes(blueprint.title);
       if (already) return state;
