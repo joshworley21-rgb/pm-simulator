@@ -321,7 +321,7 @@ export default function GameScreen() {
             {state.foreignIssues.length === 0 && <Text style={g.muted}>No outstanding summits or calls.</Text>}
             {state.foreignIssues.map((f) => (
               <View key={f.id} style={[g.card, { marginTop: 6 }]}>
-                <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800' }}>{f.country.toUpperCase()} \u2022 {f.leader}</Text>
+                <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800' }}>{f.country.toUpperCase()} | {f.leader}</Text>
                 <Text style={[g.cardTitle, { fontSize: 16, marginTop: 4 }]}>{f.topic}</Text>
                 {f.options.map((o) => (
                   <Pressable key={o.id} style={[g.btnGhost, { marginTop: 8, paddingVertical: 8 }]} onPress={() => dispatch({ type: 'RESOLVE_FOREIGN', issueId: f.id, optionId: o.id })}>
