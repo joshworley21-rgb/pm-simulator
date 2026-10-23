@@ -439,22 +439,29 @@ export function reducer(state: GameState, action: Action): GameState {
       return resignMinister(state, action.name);
 
     case 'APPOINT_MINISTER': {
-      // Simplest implementation: promote the highest-loyalty backbencher into the open post.
       const post = action.post;
-      const candidate: Minister = {
-        name: 'Newly promoted MP',
+      const candidates = state.backbenchers.filter((b) => b.partyId === state.player?.partyId);
+      if (candidates.length === 0) return state;
+      // Promote the most loyal (with a competence tilt) available backbencher.
+      const candidate = [...candidates].sort((a, b) => (b.loyalty + b.competence * 0.4) - (a.loyalty + a.competence * 0.4))[0];
+      const minister: Minister = {
+        name: candidate.name,
         post,
-        partyId: state.player?.partyId ?? 'reform',
-        loyalty: 65,
-        competence: 60,
-        faction: 'Centrist',
+        partyId: candidate.partyId,
+        loyalty: candidate.loyalty,
+        competence: candidate.competence,
+        faction: candidate.faction,
       };
       return {
         ...state,
-        cabinet: [...state.cabinet, candidate],
+        cabinet: [...state.cabinet, minister],
+        backbenchers: state.backbenchers.filter((b) => b.name !== candidate.name),
         log: [`CABINET: ${candidate.name} appointed ${post}.`, ...state.log].slice(0, 50),
       };
     }
+
+    case 'SET_TERM_LENGTH':
+      return { ...state, termLength: action.weeks, turnsUntilElection: action.weeks };
 
     case 'RESOLVE_FOREIGN': {
       const issue = state.foreignIssues.find((f) => f.id === action.issueId);
