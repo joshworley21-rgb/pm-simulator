@@ -195,6 +195,7 @@ function applyEffects(s: GameState, fx: Effects): GameState {
     mediaAttention: clamp(s.metrics.mediaAttention + (fx.mediaAttention ?? 0), 0, 100),
   };
   const stats = {
+    ...s.stats,
     cpiInflation: r1(Math.max(0.4, s.stats.cpiInflation + (fx.cpiInflation ?? 0))),
     gdpGrowth: r1(s.stats.gdpGrowth + (fx.gdpGrowth ?? 0)),
     giltYield: Math.max(1.0, r1(s.stats.giltYield + (fx.giltYield ?? 0))),
