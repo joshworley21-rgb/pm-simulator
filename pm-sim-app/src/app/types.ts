@@ -36,16 +36,17 @@ export interface Relation {
 }
 
 export interface NationalStats {
-  cpiInflation: number;       // %
-  gdpGrowth: number;          // %
-  giltYield: number;          // %
-  nhsWaitingList: number;     // millions
-  netMigration: number;       // thousands / yr
-  lettersOfNoConfidence: number; // 0..54
-  taxRate: number;            // combined headline tax rate %
-  debtToGdp: number;          // %
-  unemployment: number;       // %
-  budgetBalance: number;      // £bn / yr (negative = deficit)
+  cpiInflation: number;
+  gdpGrowth: number;
+  giltYield: number;
+  nhsWaitingList: number;
+  netMigration: number;
+  lettersOfNoConfidence: number;
+  lettersThreshold: number;   // 15% of parliamentary party (min 15)
+  taxRate: number;
+  debtToGdp: number;
+  unemployment: number;
+  budgetBalance: number;
 }
 
 export interface Metrics {
@@ -102,11 +103,11 @@ export interface Bill {
   title: string;
   department: Department;
   description: string;
-  fiscalCost: number;    // £bn/yr (negative = raises revenue)
-  weeksToPass: number;   // remaining weeks until division
-  rebellionRisk: number; // 0..100 backbench anger
-  effects: Effects;      // applied on passage
-  kicker: string;        // headline on passage
+  fiscalCost: number;
+  weeksToPass: number;
+  rebellionRisk: number;
+  effects: Effects;
+  kicker: string;
 }
 
 export interface Player {
@@ -131,10 +132,12 @@ export interface GameState {
   redBox: Dossier[];
   selectedDossierId: string | null;
   lastOutcome: string | null;
-  bills: Bill[];          // in-flight legislation
-  passedLaws: string[];   // enacted laws
+  bills: Bill[];
+  passedLaws: string[];
   headlines: { paper: string; title: string; stance: 'left' | 'centrist' | 'right' }[];
   log: string[];
+  seed: number;
+  gameOver: string | null;
 }
 
 export type Action =
