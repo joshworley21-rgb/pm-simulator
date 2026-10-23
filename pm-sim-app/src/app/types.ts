@@ -201,6 +201,7 @@ export interface GameState {
   termLength: number;
   taxes: TaxLever[];
   fiscalEventKind: 'budget' | 'autumn' | null;
+  departments: SpendingDept[];
 }
 
 export type Action =
