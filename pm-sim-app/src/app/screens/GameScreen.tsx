@@ -70,7 +70,7 @@ export default function GameScreen() {
           style={[g.btn, { marginTop: 0, paddingVertical: 10, paddingHorizontal: 14 }]}
           onPress={() => dispatch({ type: 'START_TURN' })}
         >
-          <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>Advance Week \u2192</Text>
+          <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>Advance Week →</Text>
         </Pressable>
       </View>
 
