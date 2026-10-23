@@ -610,7 +610,7 @@ export function reducer(state: GameState, action: Action): GameState {
         budgetDue: false,
         fiscalEventKind: null,
         log: [`AUTUMN STATEMENT: Tax measures delivered.`, ...state.log].slice(0, 50),
-        headlines: [{ paper: 'The National Standard', title: 'AUTUMN STATEMENT: CHANCELLOR SETS OUT TAX PLAN', stance: 'centrist' }, ...state.headlines].slice(0, 4),
+        headlines: [{ paper: 'The National Standard', title: 'AUTUMN STATEMENT: CHANCELLOR SETS OUT TAX PLAN', stance: 'centrist' as const }, ...state.headlines].slice(0, 4),
       };
     }
 
