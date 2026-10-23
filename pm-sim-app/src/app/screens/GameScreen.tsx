@@ -208,7 +208,7 @@ export default function GameScreen() {
         {activeTab === 'cabinet' && (
           <View>
             <Text style={[g.cardTitle, { marginBottom: 4 }]}>Your Cabinet</Text>
-            <Text style={[g.muted, { marginBottom: 4 }]}>Faction unrest: {state.factionUnrest}%</Text>
+            <Text style={[g.muted, { marginBottom: 8 }]}>Faction unrest: {state.factionUnrest}% \u2014 manage your team to keep the party behind you.</Text>
             {state.cabinet.map((m) => (
               <View key={m.name} style={[g.card, { marginTop: 6 }]}>
                 <View style={g.row}>
@@ -226,6 +226,32 @@ export default function GameScreen() {
                 </View>
               </View>
             ))}
+
+            {state.backbenchers.length > 0 && state.cabinet.length < 8 && (
+              <>
+                <Text style={[g.muted, { marginTop: 16, marginBottom: 6, fontWeight: '700' }]}>BACKBENCHERS AWAITING PROMOTION</Text>
+                {state.backbenchers.map((b) => (
+                  <View key={b.name} style={[g.card, { marginTop: 6 }]}>
+                    <View style={g.row}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>{b.name}</Text>
+                        <Text style={{ color: colors.muted, fontSize: 12 }}>{b.faction} \u2022 ambition {b.ambition}</Text>
+                      </View>
+                      <Pressable
+                        onPress={() => dispatch({ type: 'APPOINT_MINISTER', post: 'Minister of State' })}
+                        style={{ padding: 6 }}
+                      >
+                        <Text style={{ color: colors.accent, fontSize: 13, fontWeight: '700' }}>Promote</Text>
+                      </Pressable>
+                    </View>
+                    <View style={{ flexDirection: 'row', marginTop: 6 }}>
+                      <Text style={{ color: colors.muted, fontSize: 11, flex: 1 }}>Loyalty {b.loyalty}</Text>
+                      <Text style={{ color: colors.muted, fontSize: 11 }}>Competence {b.competence}</Text>
+                    </View>
+                  </View>
+                ))}
+              </>
+            )}
           </View>
         )}
 
