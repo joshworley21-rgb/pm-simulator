@@ -58,17 +58,25 @@ export default function CreateScreen() {
             key={p.id}
             onPress={() => setPartyId(p.id)}
             style={[
-              g.card,
-              { borderColor: selected ? colors.accent : colors.cardBorder, marginTop: 10 },
+              {
+                backgroundColor: selected ? colors.accentSoft : colors.card,
+                borderColor: selected ? colors.accent : colors.cardBorder,
+                borderWidth: 2,
+                borderRadius: 12,
+                padding: 12,
+                marginTop: 8,
+                flexDirection: 'row',
+                alignItems: 'center',
+              },
             ]}
           >
-            <View style={g.row}>
-              <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: p.color, marginRight: 10 }} />
-              <View style={{ flex: 1 }}>
-                <Text style={g.cardTitle}>{p.name}</Text>
-                <Text style={g.muted}>{p.description}</Text>
-              </View>
+            <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: p.color, marginRight: 12 }} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700' }}>{p.name}</Text>
             </View>
+            {selected && (
+              <Text style={{ color: colors.accent, fontSize: 18, fontWeight: '800' }}>✓</Text>
+            )}
           </Pressable>
         );
       })}
@@ -127,7 +135,7 @@ export default function CreateScreen() {
       </Text>
 
       <Pressable
-        style={[g.btn, { opacity: canStart ? 1 : 0.4 }]}
+        style={[g.btn, { opacity: canStart ? 1 : 0.4, marginTop: 24 }]}
         disabled={!canStart}
         onPress={start}
       >
