@@ -30,7 +30,7 @@ function budgetLabel(v: number): string {
   return `\u00a3${Math.round(v)}bn surplus`;
 }
 
-type Tab = 'redbox' | 'legislation' | 'cabinet' | 'nation' | 'parliament' | 'diplomacy' | 'press';
+type Tab = 'redbox' | 'legislation' | 'taxes' | 'cabinet' | 'nation' | 'parliament' | 'diplomacy' | 'press';
 
 export default function GameScreen() {
   const { state, dispatch } = useGame();
