@@ -344,9 +344,15 @@ export function advanceWeek(s: GameState): GameState {
     }
   }
 
-  // 8b. Annual Budget (every 12 weeks).
-  if (next.week % 12 === 0 && !next.gameOver) {
-    next.budgetDue = true;
+  // 8b. Two fiscal events per year: Autumn Statement (week % 6 == 0) and Budget (week % 12 == 0).
+  if (!next.gameOver) {
+    if (next.week % 12 === 0) {
+      next.budgetDue = true;
+      next.fiscalEventKind = 'budget';
+    } else if (next.week % 6 === 0) {
+      next.budgetDue = true;
+      next.fiscalEventKind = 'autumn';
+    }
   }
 
   // 9. Election countdown.
