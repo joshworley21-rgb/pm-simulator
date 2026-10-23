@@ -149,7 +149,7 @@ export default function GameScreen() {
               <View style={[g.card, { alignItems: 'center', padding: 24 }]}>
                 <Text style={{ color: colors.success, fontSize: 18, fontWeight: '800' }}>Red Box Cleared</Text>
                 <Text style={[g.muted, { textAlign: 'center', marginTop: 6 }]}>
-                  All ministerial papers dispatched for this week. Tap \u2018Advance Week\u2019 to continue.
+                  All ministerial papers dispatched for this week. Tap ‘Advance Week’ to continue.
                 </Text>
               </View>
             )}
