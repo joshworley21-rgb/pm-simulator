@@ -119,6 +119,16 @@ export interface Minister {
   faction: string;
 }
 
+/** A backbench MP available for promotion to cabinet. */
+export interface Backbencher {
+  name: string;
+  partyId: string;
+  faction: string;
+  loyalty: number;
+  competence: number;
+  ambition: number;
+}
+
 export interface ForeignIssue {
   id: string;
   leader: string;
