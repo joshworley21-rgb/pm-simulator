@@ -118,6 +118,26 @@ function electSeats(parties: Party[], regions: Region[]): Record<string, number>
   return totals;
 }
 
+function electSeatsDetailed(parties: Party[], regions: Region[]): {
+  totals: Record<string, number>;
+  byRegion: Record<string, Record<string, number>>;
+} {
+  const totals: Record<string, number> = {};
+  for (const p of parties) totals[p.id] = 0;
+  const byRegion: Record<string, Record<string, number>> = {};
+  for (const region of regions) {
+    const weights: Record<string, number> = {};
+    for (const p of parties) {
+      const share = Math.max(0, region.support[p.id] ?? 0);
+      weights[p.id] = Math.pow(share, FPTP_EXPONENT);
+    }
+    const alloc = largestRemainder(weights, region.seats);
+    byRegion[region.id] = alloc;
+    for (const p of parties) totals[p.id] += alloc[p.id] ?? 0;
+  }
+  return { totals, byRegion };
+}
+
 function runElection(s: GameState): GameState {
   const seats = electSeats(s.parties, REGIONS);
   const parties = s.parties.map((p) => ({ ...p, seats: seats[p.id] ?? 0 }));
