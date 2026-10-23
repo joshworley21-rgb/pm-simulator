@@ -322,7 +322,7 @@ export default function GameScreen() {
                         <Text style={{ color: colors.muted, fontSize: 12 }}>{b.faction} | ambition {b.ambition}</Text>
                       </View>
                       <Pressable
-                        onPress={() => dispatch({ type: 'APPOINT_MINISTER', post: 'Minister of State' })}
+                        onPress={() => dispatch({ type: 'PICK_MINISTER', name: b.name })}
                         style={{ padding: 6 }}
                       >
                         <Text style={{ color: colors.accent, fontSize: 13, fontWeight: '700' }}>Promote</Text>
