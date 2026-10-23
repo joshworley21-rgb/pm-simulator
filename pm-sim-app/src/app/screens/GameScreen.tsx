@@ -88,6 +88,7 @@ export default function GameScreen() {
         {[
           { key: 'redbox', label: `Red Box (${state.redBox.length})` },
           { key: 'legislation', label: 'Bills' },
+          { key: 'taxes', label: 'Taxes' },
           { key: 'cabinet', label: 'Cabinet' },
           { key: 'nation', label: 'Economy' },
           { key: 'parliament', label: 'Westminster' },
