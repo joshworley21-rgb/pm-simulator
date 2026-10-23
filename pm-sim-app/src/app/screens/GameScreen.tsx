@@ -171,7 +171,7 @@ export default function GameScreen() {
                       <Text style={{ color: colors.muted, fontSize: 11 }}>{b.weeksToPass}w to division</Text>
                     </View>
                     <Text style={[g.cardTitle, { fontSize: 16, marginTop: 4 }]}>{b.title}</Text>
-                    <Text style={[g.muted, { marginTop: 4 }]}>{fiscalLabel(b.fiscalCost)} \u2022 rebellion risk {b.rebellionRisk}%</Text>
+                    <Text style={[g.muted, { marginTop: 4 }]}>{fiscalLabel(b.fiscalCost)} | rebellion risk {b.rebellionRisk}%</Text>
                   </View>
                 ))}
               </>
