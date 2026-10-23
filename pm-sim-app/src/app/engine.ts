@@ -354,7 +354,7 @@ export function advanceWeek(s: GameState): GameState {
       ...next,
       cabinet: mins,
       log: [`CABINET LEAK: A minister briefed against the government.`, ...next.log].slice(0, 50),
-      headlines: [{ paper: 'The Courier', title: 'CABINET RIFT AS MINISTER BRIEFS AGAINST PM', stance: 'right' }, ...next.headlines].slice(0, 4),
+      headlines: [{ paper: 'The Courier', title: 'CABINET RIFT AS MINISTER BRIEFS AGAINST PM', stance: 'right' as const }, ...next.headlines].slice(0, 4),
     };
   }
 
