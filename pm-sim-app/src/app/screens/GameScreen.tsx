@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useGame } from '../state';
 import { g, colors } from '../theme';
 import { BILL_POOL } from '../bills';
+import { BILL_POOL_2 } from '../bills2';
 import { BUDGET_PACKAGES } from '../budget';
 import type { RootStackParamList } from '../types';
 
