@@ -502,9 +502,6 @@ export function reducer(state: GameState, action: Action): GameState {
     case 'CONFIRM_APPOINT': {
       const post = state.ministerPicker === null ? action.post : (state.ministerPicker as string);
       const candidate = state.backbenchers.find((b) => b.name === state.ministerPicker);
-      if (!candidate && state.ministerPicker) {
-        // Fall back: pick the best available.
-      }
       if (!candidate) return state;
       const minister: Minister = {
         name: candidate.name,
