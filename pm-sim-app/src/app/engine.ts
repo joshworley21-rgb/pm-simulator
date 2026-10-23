@@ -447,6 +447,9 @@ export function reducer(state: GameState, action: Action): GameState {
     }
 
     case 'PROPOSE_BILL': {
+      if (inPurdah(state)) {
+        return { ...state, log: [`PURDAH: Cannot introduce bills during the pre-election quiet period.`, ...state.log].slice(0, 50) };
+      }
       const allBills = [...BILL_POOL, ...BILL_POOL_2];
       const blueprint = allBills.find((b) => b.id === action.billId);
       if (!blueprint) return state;
