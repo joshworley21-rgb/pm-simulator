@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { GameState, Action } from './types';
 import { createInitialState, reducer } from './engine';
 
-const STORAGE_KEY = 'pm-sim-save-v6';
+const STORAGE_KEY = 'pm-sim-save-v7';
 
 interface Ctx {
   state: GameState;
