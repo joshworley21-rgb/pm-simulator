@@ -47,6 +47,21 @@ export interface NationalStats {
   debtToGdp: number;
   unemployment: number;
   budgetBalance: number;
+  // --- Monetary policy (Bank of England) ---
+  boeRate: number;              // BoE base rate (%)
+  mortgageRate: number;         // typical 2yr fixed mortgage (%)
+  // --- Real economy ---
+  wageGrowth: number;           // nominal wage growth (% y/y)
+  realWageGrowth: number;       // wageGrowth - cpiInflation
+  housePriceChange: number;     // house price change (% y/y)
+  // --- Fiscal credibility & OBR ---
+  fiscalCredibility: number;    // 0-100, markets' view of fiscal discipline
+  rulesBreached: number;        // 0-2 fiscal rules broken
+  marketCrisis: boolean;        // gilt spike + low credibility = crisis
+  obrBorrowing: number;         // £bn forecast
+  obrDebt: number;              // % GDP forecast
+  obrGrowth: number;            // % forecast
+  obrInflation: number;         // % forecast
 }
 
 export interface Metrics {
