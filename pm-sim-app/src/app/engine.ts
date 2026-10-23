@@ -1,8 +1,7 @@
-import type { GameState, Action, Party, Effects } from './types';
-import { INITIAL_PARTIES, INITIAL_RELATIONS, REGIONS, EVENTS } from './data';
+import type { GameState, Action, Party, Effects, Dossier } from './types';
+import { INITIAL_PARTIES, INITIAL_RELATIONS, REGIONS, DOSSIER_POOL } from './data';
 import type { Region } from './data';
 
-/** FPTP cube-law exponent — tune this to adjust Lab/Con/LD/Reform seat totals. */
 export const FPTP_EXPONENT = 2.5;
 
 function clamp(n: number, min: number, max: number): number {
@@ -15,16 +14,19 @@ export function createInitialState(): GameState {
     player: null,
     parties: INITIAL_PARTIES.map((p) => ({ ...p })),
     relations: INITIAL_RELATIONS.map((r) => ({ ...r })),
-    metrics: { approval: 45, partyConfidence: 55, economy: 58, publicServices: 52, security: 60, mediaAttention: 40 },
+    metrics: { approval: 48, partyConfidence: 62, economy: 55, publicServices: 50, security: 58, mediaAttention: 35 },
+    stats: { cpiInflation: 2.8, gdpGrowth: 1.1, giltYield: 4.15, nhsWaitingList: 7.2, netMigration: 420, lettersOfNoConfidence: 8 },
     week: 1,
     turnsUntilElection: 60,
     isElection: false,
-    activeEvent: null,
-    dialogIndex: 0,
-    showChoices: false,
-    chosenId: null,
-    pendingChoice: null,
+    redBox: [{ ...DOSSIER_POOL[0] }, { ...DOSSIER_POOL[2] }],
+    selectedDossierId: null,
     lastOutcome: null,
+    headlines: [
+      { paper: 'The National Standard', title: 'NEW PRIME MINISTER SETS OUT DOWNING STREET AGENDA', stance: 'centrist' },
+      { paper: 'The Clarion', title: 'UNIONS WARN: FUND OUR SCHOOLS AND HOSPITALS NOW', stance: 'left' },
+      { paper: 'The Courier', title: 'CAN NEW PM CONTROL SPENDING AND DEFEND THE SHIRES?', stance: 'right' },
+    ],
     log: [],
   };
 }
@@ -73,9 +75,9 @@ function runElection(s: GameState): GameState {
   const playerParty = parties.find((p) => p.id === s.player?.partyId);
   const playerSeats = playerParty?.seats ?? 0;
   const majority = playerSeats >= 326;
-  const swing = Math.round((playerSeats - 411) / 40);
-  const approval = clamp(s.metrics.approval + (majority ? swing + 2 : -10), 0, 100);
-  const message = `General election: ${playerParty?.name ?? '?'} won ${playerSeats} seats${majority ? ' \u2014 a majority.' : ' \u2014 no majority.'}`;
+  const swing = Math.round((playerSeats - 350) / 30);
+  const approval = clamp(s.metrics.approval + (majority ? swing + 3 : -12), 0, 100);
+  const message = `GENERAL ELECTION: ${playerParty?.name ?? '?'} won ${playerSeats} seats ${majority ? '(Working Majority)' : '(Hung Parliament)'}.`;
   return {
     ...s,
     parties,
@@ -92,10 +94,6 @@ function applyEffects(s: GameState, fx: Effects): GameState {
     currentSupport: clamp(p.currentSupport + (fx.supportDelta?.[p.id] ?? 0), 1, 60),
     funds: Math.max(0, p.funds + (fx.fundsDelta ?? 0)),
   }));
-  const relations = s.relations.map((r) => {
-    const delta = fx.relationDelta?.[`${r.from}>${r.to}`] ?? 0;
-    return delta ? { ...r, score: clamp(r.score + delta, -100, 100) } : r;
-  });
   const metrics = {
     approval: clamp(s.metrics.approval + (fx.approval ?? 0), 0, 100),
     partyConfidence: clamp(s.metrics.partyConfidence + (fx.partyConfidence ?? 0), 0, 100),
@@ -104,56 +102,74 @@ function applyEffects(s: GameState, fx: Effects): GameState {
     security: clamp(s.metrics.security + (fx.security ?? 0), 0, 100),
     mediaAttention: clamp(s.metrics.mediaAttention + (fx.mediaAttention ?? 0), 0, 100),
   };
-  return { ...s, parties, relations, metrics };
+  const stats = {
+    cpiInflation: Math.max(0.5, Math.round((s.stats.cpiInflation + (fx.cpiInflation ?? 0)) * 10) / 10),
+    gdpGrowth: Math.round((s.stats.gdpGrowth + (fx.gdpGrowth ?? 0)) * 10) / 10,
+    giltYield: Math.max(1.0, Math.round((s.stats.giltYield + (fx.giltYield ?? 0)) * 100) / 100),
+    nhsWaitingList: Math.max(2.0, Math.round((s.stats.nhsWaitingList + (fx.nhsWaitingList ?? 0)) * 10) / 10),
+    netMigration: Math.max(50, s.stats.netMigration + (fx.netMigration ?? 0)),
+    lettersOfNoConfidence: clamp(s.stats.lettersOfNoConfidence + (fx.lettersDelta ?? 0), 0, 54),
+  };
+  return { ...s, parties, metrics, stats };
 }
 
 function advanceWeek(s: GameState): GameState {
-  if (s.activeEvent) return s;
-
-  let next: GameState = { ...s, week: s.week + 1, lastOutcome: null, isElection: false };
+  let next: GameState = {
+    ...s,
+    week: s.week + 1,
+    selectedDossierId: null,
+    lastOutcome: null,
+    isElection: false,
+  };
 
   const eco = next.metrics.economy;
-  let approval = next.metrics.approval + (eco >= 55 ? 1 : eco <= 45 ? -1 : 0);
-  let partyConfidence = next.metrics.partyConfidence + (approval >= 50 ? 1 : -1);
-  approval = clamp(approval, 0, 100);
-  partyConfidence = clamp(partyConfidence, 0, 100);
-  next = { ...next, metrics: { ...next.metrics, approval, partyConfidence } };
+  const serv = next.metrics.publicServices;
+  let approval = next.metrics.approval + (eco >= 58 ? 1 : eco <= 44 ? -1 : 0) + (serv >= 55 ? 1 : serv <= 42 ? -1 : 0);
+  let confidence = next.metrics.partyConfidence + (approval >= 50 ? 1 : -1);
 
-  const turnsUntilElection = s.turnsUntilElection - 1;
+  let letters = next.stats.lettersOfNoConfidence;
+  if (confidence < 40) letters += 2;
+  else if (confidence > 60 && letters > 0) letters -= 1;
+  letters = clamp(letters, 0, 54);
+
+  approval = clamp(approval, 0, 100);
+  confidence = clamp(confidence, 0, 100);
+  next = {
+    ...next,
+    metrics: { ...next.metrics, approval, partyConfidence: confidence },
+    stats: { ...next.stats, lettersOfNoConfidence: letters },
+  };
+
+  // Age dossiers; escalate ignored urgent crises.
+  const remaining: Dossier[] = [];
+  for (const d of next.redBox) {
+    if (d.weeksRemaining <= 1) {
+      if (d.urgent) {
+        next = applyEffects(next, { approval: -3, partyConfidence: -2, mediaAttention: 10 });
+        next.log = [`CRISIS ESCALATION: ${d.title} went unanswered and damaged the government.`, ...(next.log ?? [])].slice(0, 50);
+      }
+      // Non-urgent dossiers with no time left simply lapse.
+    } else {
+      remaining.push({ ...d, weeksRemaining: d.weeksRemaining - 1 });
+    }
+  }
+
+  // Draw one fresh dossier (if room) into the Red Box.
+  const activeIds = new Set(remaining.map((d) => d.id));
+  const available = DOSSIER_POOL.filter((d) => !activeIds.has(d.id));
+  if (available.length > 0 && remaining.length < 4) {
+    const pick = available[Math.floor(Math.random() * available.length)];
+    remaining.push({ ...pick });
+  }
+  next.redBox = remaining;
+
+  const turnsUntilElection = next.turnsUntilElection - 1;
   next = { ...next, turnsUntilElection };
 
   if (turnsUntilElection <= 0) {
     next = runElection(next);
-  } else if (next.week % 3 === 0) {
-    const idx = Math.floor((next.week / 3) % EVENTS.length);
-    next = { ...next, activeEvent: EVENTS[idx], dialogIndex: 0, showChoices: false, chosenId: null, pendingChoice: null };
   }
 
-  return next;
-}
-
-function advanceDialog(s: GameState): GameState {
-  if (!s.activeEvent) return s;
-  if (s.dialogIndex + 1 >= s.activeEvent.dialogs.length) {
-    return { ...s, showChoices: true };
-  }
-  return { ...s, dialogIndex: s.dialogIndex + 1 };
-}
-
-function choose(s: GameState, choiceId: string): GameState {
-  const ev = s.activeEvent;
-  if (!ev) return s;
-  const choice = ev.choices.find((c) => c.id === choiceId);
-  if (!choice) return s;
-  let next = applyEffects(s, choice.effects);
-  next = {
-    ...next,
-    showChoices: false,
-    chosenId: choiceId,
-    pendingChoice: choice,
-    lastOutcome: choice.consequence,
-    log: [`${ev.title}: ${choice.consequence}`, ...next.log].slice(0, 50),
-  };
   return next;
 }
 
@@ -161,14 +177,15 @@ export function reducer(state: GameState, action: Action): GameState {
   switch (action.type) {
     case 'NEW_GAME':
       return { ...createInitialState(), phase: 'create' };
+
     case 'RESTORE':
       return { ...action.state };
+
     case 'CREATE_PLAYER': {
       const fullName = `${action.player.firstName} ${action.player.lastName}`;
       const parties = state.parties.map((p) =>
         p.id === action.player.partyId ? { ...p, leader: fullName } : p,
       );
-      // Initial election: seat the government before week 1 begins.
       const seats = electSeats(parties, REGIONS);
       const withSeats = parties.map((p) => ({ ...p, seats: seats[p.id] ?? 0 }));
       const mySeats = withSeats.find((p) => p.id === action.player.partyId)?.seats ?? 0;
@@ -177,17 +194,41 @@ export function reducer(state: GameState, action: Action): GameState {
         player: action.player,
         parties: withSeats,
         phase: 'playing',
-        log: [`${fullName} becomes Prime Minister with ${mySeats} seats.`, ...state.log].slice(0, 50),
+        log: [`${fullName} enters Downing Street with ${mySeats} seats in the Commons.`, ...state.log].slice(0, 50),
       };
     }
+
     case 'START_TURN':
       return advanceWeek(state);
-    case 'ADVANCE_DIALOG':
-      return advanceDialog(state);
-    case 'CHOOSE':
-      return choose(state, action.choiceId);
-    case 'DISMISS_EVENT':
-      return { ...state, activeEvent: null, dialogIndex: 0, showChoices: false, chosenId: null, pendingChoice: null };
+
+    case 'OPEN_DOSSIER':
+      return { ...state, selectedDossierId: action.dossierId };
+
+    case 'CLOSE_DOSSIER':
+      return { ...state, selectedDossierId: null };
+
+    case 'RESOLVE_DOSSIER': {
+      const dossier = state.redBox.find((d) => d.id === action.dossierId);
+      if (!dossier) return state;
+      const choice = dossier.choices.find((c) => c.id === action.choiceId);
+      if (!choice) return state;
+
+      let next = applyEffects(state, choice.effects);
+      next = {
+        ...next,
+        redBox: next.redBox.filter((d) => d.id !== action.dossierId),
+        selectedDossierId: null,
+        lastOutcome: `${dossier.title}: ${choice.label} \u2014 ${choice.summary}`,
+        log: [`[${dossier.department}] ${dossier.title}: ${choice.label}`, ...next.log].slice(0, 50),
+        headlines: [
+          { paper: 'The National Standard', title: `${choice.label.toUpperCase()}: PM SIGNS OFF POLICY`, stance: 'centrist' },
+          { paper: 'The Clarion', title: `GOVERNMENT DECISION ON ${dossier.department.toUpperCase()} DRAWS MIXED REACTION`, stance: 'left' },
+          { paper: 'The Courier', title: `WHITEHALL REACTS AS PM CHOOSES COURSE ON ${dossier.title.toUpperCase()}`, stance: 'right' },
+        ],
+      };
+      return next;
+    }
+
     default:
       return state;
   }
