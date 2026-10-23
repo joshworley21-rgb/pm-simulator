@@ -206,6 +206,39 @@ export default function GameScreen() {
           </View>
         )}
 
+        {/* TAXES */}
+        {activeTab === 'taxes' && (
+          <View>
+            <Text style={[g.cardTitle, { marginBottom: 6 }]}>HM Revenue & Customs</Text>
+            <Text style={[g.muted, { marginBottom: 4 }]}>
+              Adjust the headline tax rates. Raising taxes improves the public finances but hurts your approval.
+            </Text>
+            {state.taxes.map((t) => (
+              <View key={t.id} style={[g.card, { marginTop: 8 }]}>
+                <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>{t.name}</Text>
+                <View style={[g.row, { marginTop: 10 }]}>
+                  <Pressable
+                    style={[g.btnGhost, { marginTop: 0, paddingVertical: 8, paddingHorizontal: 14 }]}
+                    onPress={() => dispatch({ type: 'ADJUST_TAX', taxId: t.id, delta: -t.step })}
+                  >
+                    <Text style={g.btnGhostText}>-</Text>
+                  </Pressable>
+                  <Text style={{ color: colors.accent, fontSize: 22, fontWeight: '800', flex: 1, textAlign: 'center' }}>{t.rate}%</Text>
+                  <Pressable
+                    style={[g.btnGhost, { marginTop: 0, paddingVertical: 8, paddingHorizontal: 14 }]}
+                    onPress={() => dispatch({ type: 'ADJUST_TAX', taxId: t.id, delta: t.step })}
+                  >
+                    <Text style={g.btnGhostText}>+</Text>
+                  </Pressable>
+                </View>
+                <Text style={[g.muted, { marginTop: 6, fontSize: 11 }]}>
+                  Range {t.min}-{t.max}% - popularity weight {t.popularityWeight}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+
         {/* CABINET */}
         {activeTab === 'cabinet' && (
           <View>
