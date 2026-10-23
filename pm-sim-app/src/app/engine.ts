@@ -124,7 +124,7 @@ function runElection(s: GameState): GameState {
     parties,
     metrics: { ...s.metrics, approval },
     stats: { ...s.stats, lettersOfNoConfidence: 0, lettersThreshold: resignationThreshold(playerSeats) },
-    turnsUntilElection: 60,
+    turnsUntilElection: s.termLength || 60,
     isElection: true,
     log: [message, ...s.log].slice(0, 50),
   };
