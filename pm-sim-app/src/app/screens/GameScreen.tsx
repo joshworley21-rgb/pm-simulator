@@ -380,7 +380,7 @@ export default function GameScreen() {
         {state.pmq && (
           <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
             <View style={{ backgroundColor: colors.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
-              <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800', letterSpacing: 1 }}>PRIME MINISTER\u2019S QUESTIONS</Text>
+              <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800', letterSpacing: 1 }}>PRIME MINISTER'S QUESTIONS</Text>
               <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>{state.pmq.from}</Text>
               <Text style={[g.body, { marginTop: 10, fontWeight: '600' }]}>{state.pmq.question}</Text>
               <Text style={[g.cardTitle, { fontSize: 15, marginTop: 16, marginBottom: 8 }]}>Your response:</Text>
