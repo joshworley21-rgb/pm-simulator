@@ -1,0 +1,75 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+      - uk-rebuild
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: pm-sim-app
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: pm-sim-app/package-lock.json
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Align Expo native dependencies
+        run: npx expo install react-native-screens react-native-safe-area-context @react-native-async-storage/async-storage
+
+      - name: Generate Android native project
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Bundle JavaScript & assets offline
+        run: |
+          mkdir -p android/app/src/main/assets
+          npx expo export:embed \
+            --platform android \
+            --dev false \
+            --entry-file index.ts \
+            --bundle-output android/app/src/main/assets/index.android.bundle \
+            --assets-dest android/app/src/main/res
+
+      - name: Ensure release build uses debug keystore
+        run: |
+          sed -i 's/signingConfig signingConfigs.release/signingConfig signingConfigs.debug/g' android/app/build.gradle || true
+          sed -i '/buildTypes {/,/release {/ { /release {/a \
+            signingConfig signingConfigs.debug
+          }' android/app/build.gradle || true
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x android/gradlew
+
+      - name: Build standalone APK
+        run: cd android && ./gradlew assembleRelease --no-daemon
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pm-sim-app
+          path: pm-sim-app/android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error

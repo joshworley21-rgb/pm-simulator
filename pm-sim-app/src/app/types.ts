@@ -6,6 +6,15 @@ export type RootStackParamList = {
 
 export type Ideology = 'left' | 'centre-left' | 'centre' | 'centre-right' | 'right';
 
+export type Department =
+  | 'Number 10'
+  | 'HM Treasury'
+  | 'Home Office'
+  | 'DHSC (Health)'
+  | 'Foreign Office'
+  | 'Ministry of Defence'
+  | 'Energy & Net Zero';
+
 export interface Party {
   id: string;
   name: string;
@@ -26,6 +35,20 @@ export interface Relation {
   score: number;
 }
 
+export interface NationalStats {
+  cpiInflation: number;
+  gdpGrowth: number;
+  giltYield: number;
+  nhsWaitingList: number;
+  netMigration: number;
+  lettersOfNoConfidence: number;
+  lettersThreshold: number;
+  taxRate: number;
+  debtToGdp: number;
+  unemployment: number;
+  budgetBalance: number;
+}
+
 export interface Metrics {
   approval: number;
   partyConfidence: number;
@@ -42,26 +65,91 @@ export interface Effects {
   security?: number;
   partyConfidence?: number;
   mediaAttention?: number;
+  cpiInflation?: number;
+  gdpGrowth?: number;
+  giltYield?: number;
+  nhsWaitingList?: number;
+  netMigration?: number;
+  lettersDelta?: number;
+  taxRate?: number;
+  debtToGdp?: number;
+  unemployment?: number;
+  budgetBalance?: number;
   supportDelta?: Record<string, number>;
-  relationDelta?: Record<string, number>;
   fundsDelta?: number;
 }
 
-export interface Choice {
+export interface DossierChoice {
   id: string;
-  text: string;
-  consequence: string;
+  label: string;
+  summary: string;
+  advice: string;
   effects: Effects;
 }
 
-export interface GameEvent {
+export interface Dossier {
   id: string;
   title: string;
-  summary: string;
-  sourceParty?: string;
-  severity: 1 | 2 | 3 | 4 | 5;
-  dialogs: { speaker: string | null; text: string }[];
-  choices: Choice[];
+  department: Department;
+  urgent: boolean;
+  weeksRemaining: number;
+  leadParagraph: string;
+  body: string;
+  choices: DossierChoice[];
+}
+
+export interface Bill {
+  id: string;
+  title: string;
+  department: Department;
+  description: string;
+  fiscalCost: number;
+  weeksToPass: number;
+  rebellionRisk: number;
+  effects: Effects;
+  kicker: string;
+}
+
+export interface Minister {
+  name: string;
+  post: string;
+  partyId: string;
+  loyalty: number;
+  competence: number;
+  faction: string;
+}
+
+/** A backbench MP available for promotion to cabinet. */
+export interface Backbencher {
+  name: string;
+  partyId: string;
+  faction: string;
+  loyalty: number;
+  competence: number;
+  ambition: number;
+}
+
+export interface ForeignIssue {
+  id: string;
+  leader: string;
+  country: string;
+  topic: string;
+  options: { id: string; label: string; effects: Effects; summary: string }[];
+}
+
+export interface PmqQuestion {
+  id: string;
+  from: string;
+  question: string;
+  options: { id: string; label: string; effects: Effects }[];
+}
+
+export interface BudgetPackage {
+  id: string;
+  title: string;
+  description: string;
+  effects: Effects;
+  kicker: string;
 }
 
 export interface Player {
@@ -79,23 +167,43 @@ export interface GameState {
   parties: Party[];
   relations: Relation[];
   metrics: Metrics;
+  stats: NationalStats;
   week: number;
   turnsUntilElection: number;
   isElection: boolean;
-  activeEvent: GameEvent | null;
-  dialogIndex: number;
-  showChoices: boolean;
-  chosenId: string | null;
-  pendingChoice: Choice | null;
+  redBox: Dossier[];
+  selectedDossierId: string | null;
   lastOutcome: string | null;
+  bills: Bill[];
+  passedLaws: string[];
+  headlines: { paper: string; title: string; stance: 'left' | 'centrist' | 'right' }[];
   log: string[];
+  seed: number;
+  gameOver: string | null;
+  cabinet: Minister[];
+  factionUnrest: number;
+  foreignIssues: ForeignIssue[];
+  pmq: PmqQuestion | null;
+  budgetDue: boolean;
+  backbenchers: Backbencher[];
+  termLength: number;
 }
 
 export type Action =
   | { type: 'NEW_GAME' }
   | { type: 'CREATE_PLAYER'; player: Player }
   | { type: 'START_TURN' }
-  | { type: 'ADVANCE_DIALOG' }
-  | { type: 'CHOOSE'; choiceId: string }
-  | { type: 'DISMISS_EVENT' }
+  | { type: 'SET_TERM_LENGTH'; weeks: number }
+  | { type: 'OPEN_DOSSIER'; dossierId: string }
+  | { type: 'CLOSE_DOSSIER' }
+  | { type: 'RESOLVE_DOSSIER'; dossierId: string; choiceId: string }
+  | { type: 'PROPOSE_BILL'; billId: string }
+  | { type: 'SACK_MINISTER'; name: string }
+  | { type: 'APPOINT_MINISTER'; post: string }
+  | { type: 'RESOLVE_FOREIGN'; issueId: string; optionId: string }
+  | { type: 'ANSWER_PMQ'; optionId: string }
+  | { type: 'DISMISS_PMQ' }
+  | { type: 'DELIVER_BUDGET'; packageId: string }
+  | { type: 'SKIP_BUDGET' }
+  | { type: 'DISMISS_ELECTION' }
   | { type: 'RESTORE'; state: GameState };
