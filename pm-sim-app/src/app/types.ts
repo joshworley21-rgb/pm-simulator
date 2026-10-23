@@ -193,6 +193,7 @@ export type Action =
   | { type: 'NEW_GAME' }
   | { type: 'CREATE_PLAYER'; player: Player }
   | { type: 'START_TURN' }
+  | { type: 'SET_TERM_LENGTH'; weeks: number }
   | { type: 'OPEN_DOSSIER'; dossierId: string }
   | { type: 'CLOSE_DOSSIER' }
   | { type: 'RESOLVE_DOSSIER'; dossierId: string; choiceId: string }
