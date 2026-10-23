@@ -578,6 +578,7 @@ export function reducer(state: GameState, action: Action): GameState {
     }
 
     case 'ADJUST_SPENDING': {
+      if (inPurdah(state)) return state;
       const idx = state.departments.findIndex((d) => d.id === action.deptId);
       if (idx < 0) return state;
       const dept = state.departments[idx];
