@@ -44,15 +44,32 @@ jobs:
       - name: Generate Android native project
         run: npx expo prebuild --platform android --no-install
 
+      - name: Bundle JavaScript & assets offline
+        run: |
+          mkdir -p android/app/src/main/assets
+          npx expo export:embed \
+            --platform android \
+            --dev false \
+            --entry-file index.ts \
+            --bundle-output android/app/src/main/assets/index.android.bundle \
+            --assets-dest android/app/src/main/res
+
+      - name: Ensure release build uses debug keystore
+        run: |
+          sed -i 's/signingConfig signingConfigs.release/signingConfig signingConfigs.debug/g' android/app/build.gradle || true
+          sed -i '/buildTypes {/,/release {/ { /release {/a \
+            signingConfig signingConfigs.debug
+          }' android/app/build.gradle || true
+
       - name: Make Gradle wrapper executable
         run: chmod +x android/gradlew
 
-      - name: Build debug APK
-        run: cd android && ./gradlew assembleDebug --no-daemon
+      - name: Build standalone APK
+        run: cd android && ./gradlew assembleRelease --no-daemon
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: pm-sim-app-debug
-          path: pm-sim-app/android/app/build/outputs/apk/debug/app-debug.apk
+          name: pm-sim-app
+          path: pm-sim-app/android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
