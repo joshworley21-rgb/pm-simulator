@@ -1,8 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, ScrollView, Modal } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useGame } from '../state';
 import { g, colors } from '../theme';
 import { BILL_POOL } from '../bills';
+import type { RootStackParamList } from '../types';
+
+type Nav = NativeStackNavigationProp<RootStackParamList, 'Game'>;
 
 function StatPill({ label, value }: { label: string; value: string | number }) {
   return (
@@ -27,6 +32,7 @@ type Tab = 'redbox' | 'legislation' | 'nation' | 'parliament' | 'press';
 
 export default function GameScreen() {
   const { state, dispatch } = useGame();
+  const nav = useNavigation<Nav>();
   const [activeTab, setActiveTab] = useState<Tab>('redbox');
   const player = state.player;
   const party = state.parties.find((p) => p.id === player?.partyId);
@@ -36,6 +42,14 @@ export default function GameScreen() {
   const inFlightIds = new Set(state.bills.map((b) => b.id));
   const passedTitles = new Set(state.passedLaws);
   const proposable = BILL_POOL.filter((b) => !inFlightIds.has(b.id) && !passedTitles.has(b.title));
+
+  const threshold = state.stats.lettersThreshold || 15;
+  const revoltPct = Math.min(100, Math.round((state.stats.lettersOfNoConfidence / threshold) * 100));
+
+  const restart = () => {
+    dispatch({ type: 'NEW_GAME' });
+    nav.navigate('Menu');
+  };
 
   return (
     <View style={[g.screen, { paddingBottom: 0 }]}>
@@ -185,7 +199,7 @@ export default function GameScreen() {
                 <Text style={[g.cardTitle, { fontSize: 16, marginTop: 4 }]}>{b.title}</Text>
                 <Text style={[g.muted, { marginTop: 4 }]}>{b.description}</Text>
                 <Text style={[g.muted, { marginTop: 6, fontSize: 11 }]}>
-                  Rebellion risk {b.rebellionRisk}% \u2022 \n
+                  Rebellion risk {b.rebellionRisk}%
                 </Text>
                 <Pressable
                   style={[g.btnGhost, { marginTop: 8, paddingVertical: 8 }]}
@@ -246,17 +260,20 @@ export default function GameScreen() {
             <View style={g.card}>
               <Text style={g.cardTitle}>1922 Committee Revolt Meter</Text>
               <Text style={[g.muted, { marginTop: 4 }]}>
-                Letters of No Confidence lodged: {state.stats.lettersOfNoConfidence} / 54 (Threshold)
+                Letters of No Confidence lodged: {state.stats.lettersOfNoConfidence} / {threshold} (Threshold)
               </Text>
               <View style={{ height: 8, backgroundColor: colors.bg, borderRadius: 4, marginTop: 8, overflow: 'hidden' }}>
                 <View
                   style={{
                     height: 8,
-                    width: `${(state.stats.lettersOfNoConfidence / 54) * 100}%`,
-                    backgroundColor: state.stats.lettersOfNoConfidence > 35 ? colors.danger : colors.accent,
+                    width: `${revoltPct}%`,
+                    backgroundColor: state.stats.lettersOfNoConfidence >= Math.round(threshold * 0.65) ? colors.danger : colors.accent,
                   }}
                 />
               </View>
+              <Text style={[g.muted, { marginTop: 6, fontSize: 11 }]}>
+                Reaching the threshold triggers an automatic confidence vote among your own MPs.
+              </Text>
             </View>
 
             <View style={g.card}>
@@ -328,6 +345,22 @@ export default function GameScreen() {
             </View>
           </View>
         )}
+      </Modal>
+
+      {/* Game over overlay */}
+      <Modal visible={!!state.gameOver} transparent animationType="fade">
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.85)', padding: 24 }}>
+          <View style={{ backgroundColor: colors.bg, borderRadius: 16, padding: 24, borderColor: colors.danger, borderWidth: 1, width: '100%' }}>
+            <Text style={{ color: colors.danger, fontSize: 22, fontWeight: '800', textAlign: 'center' }}>ELECTION DEFEAT</Text>
+            <Text style={[g.body, { textAlign: 'center', marginTop: 12 }]}>{state.gameOver}</Text>
+            <Text style={[g.muted, { textAlign: 'center', marginTop: 8 }]}>
+              Your premiership has come to an end. The backbenches have spoken.
+            </Text>
+            <Pressable style={g.btn} onPress={restart}>
+              <Text style={g.btnText}>Return to Main Menu</Text>
+            </Pressable>
+          </View>
+        </View>
       </Modal>
     </View>
   );
