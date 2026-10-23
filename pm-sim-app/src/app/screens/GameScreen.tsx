@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, Pressable, ScrollView, Modal } from 'react-native';
 import { useGame } from '../state';
 import { g, colors } from '../theme';
+import { BILL_POOL } from '../bills';
 
 function StatPill({ label, value }: { label: string; value: string | number }) {
   return (
@@ -12,13 +13,29 @@ function StatPill({ label, value }: { label: string; value: string | number }) {
   );
 }
 
+function fiscalLabel(v: number): string {
+  if (v < 0) return `Raises \u00a3${-v}bn/yr`;
+  return `Costs \u00a3${v}bn/yr`;
+}
+
+function budgetLabel(v: number): string {
+  if (v < 0) return `\u00a3${Math.round(Math.abs(v))}bn deficit`;
+  return `\u00a3${Math.round(v)}bn surplus`;
+}
+
+type Tab = 'redbox' | 'legislation' | 'nation' | 'parliament' | 'press';
+
 export default function GameScreen() {
   const { state, dispatch } = useGame();
-  const [activeTab, setActiveTab] = useState<'redbox' | 'nation' | 'parliament' | 'press'>('redbox');
+  const [activeTab, setActiveTab] = useState<Tab>('redbox');
   const player = state.player;
   const party = state.parties.find((p) => p.id === player?.partyId);
   const activeDossier = state.redBox.find((d) => d.id === state.selectedDossierId);
   const rankedParties = [...state.parties].sort((a, b) => b.seats - a.seats);
+
+  const inFlightIds = new Set(state.bills.map((b) => b.id));
+  const passedTitles = new Set(state.passedLaws);
+  const proposable = BILL_POOL.filter((b) => !inFlightIds.has(b.id) && !passedTitles.has(b.title));
 
   return (
     <View style={[g.screen, { paddingBottom: 0 }]}>
@@ -47,20 +64,21 @@ export default function GameScreen() {
         <StatPill label="Approval" value={`${Math.round(state.metrics.approval)}%`} />
         <StatPill label="Party Conf" value={`${Math.round(state.metrics.partyConfidence)}%`} />
         <StatPill label="Inflation" value={`${state.stats.cpiInflation}%`} />
-        <StatPill label="NHS Wait" value={`${state.stats.nhsWaitingList}m`} />
+        <StatPill label="Economy" value={`${Math.round(state.metrics.economy)}`} />
       </View>
 
       {/* Desk tabs */}
       <View style={{ flexDirection: 'row', marginTop: 12, borderBottomWidth: 1, borderBottomColor: colors.cardBorder }}>
         {[
           { key: 'redbox', label: `Red Box (${state.redBox.length})` },
-          { key: 'nation', label: 'Indicators' },
+          { key: 'legislation', label: 'Bills' },
+          { key: 'nation', label: 'Economy' },
           { key: 'parliament', label: 'Westminster' },
           { key: 'press', label: 'Press' },
         ].map((t) => (
           <Pressable
             key={t.key}
-            onPress={() => setActiveTab(t.key as 'redbox' | 'nation' | 'parliament' | 'press')}
+            onPress={() => setActiveTab(t.key as Tab)}
             style={{
               flex: 1,
               paddingVertical: 10,
@@ -69,7 +87,7 @@ export default function GameScreen() {
               borderBottomColor: colors.accent,
             }}
           >
-            <Text style={{ color: activeTab === t.key ? colors.text : colors.muted, fontSize: 13, fontWeight: '700' }}>
+            <Text style={{ color: activeTab === t.key ? colors.text : colors.muted, fontSize: 12, fontWeight: '700' }}>
               {t.label}
             </Text>
           </Pressable>
@@ -132,7 +150,66 @@ export default function GameScreen() {
           </View>
         )}
 
-        {/* TAB 2: STATE OF THE NATION */}
+        {/* TAB 2: LEGISLATION */}
+        {activeTab === 'legislation' && (
+          <View>
+            <Text style={[g.cardTitle, { marginBottom: 8 }]}>Legislative Agenda</Text>
+
+            {state.bills.length > 0 && (
+              <>
+                <Text style={[g.muted, { marginBottom: 6, fontWeight: '700' }]}>IN PARLIAMENT</Text>
+                {state.bills.map((b) => (
+                  <View key={b.id} style={[g.card, { marginTop: 6 }]}>
+                    <View style={g.row}>
+                      <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800', flex: 1 }}>
+                        {b.department.toUpperCase()}
+                      </Text>
+                      <Text style={{ color: colors.muted, fontSize: 11 }}>{b.weeksToPass}w to division</Text>
+                    </View>
+                    <Text style={[g.cardTitle, { fontSize: 16, marginTop: 4 }]}>{b.title}</Text>
+                    <Text style={[g.muted, { marginTop: 4 }]}>{fiscalLabel(b.fiscalCost)} \u2022 rebellion risk {b.rebellionRisk}%</Text>
+                  </View>
+                ))}
+              </>
+            )}
+
+            <Text style={[g.muted, { marginTop: 14, marginBottom: 6, fontWeight: '700' }]}>PROPOSE NEW LEGISLATION</Text>
+            {proposable.map((b) => (
+              <View key={b.id} style={[g.card, { marginTop: 6 }]}>
+                <View style={g.row}>
+                  <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800', flex: 1 }}>
+                    {b.department.toUpperCase()}
+                  </Text>
+                  <Text style={{ color: colors.muted, fontSize: 11 }}>{fiscalLabel(b.fiscalCost)}</Text>
+                </View>
+                <Text style={[g.cardTitle, { fontSize: 16, marginTop: 4 }]}>{b.title}</Text>
+                <Text style={[g.muted, { marginTop: 4 }]}>{b.description}</Text>
+                <Text style={[g.muted, { marginTop: 6, fontSize: 11 }]}>
+                  Rebellion risk {b.rebellionRisk}% \u2022 \n
+                </Text>
+                <Pressable
+                  style={[g.btnGhost, { marginTop: 8, paddingVertical: 8 }]}
+                  onPress={() => dispatch({ type: 'PROPOSE_BILL', billId: b.id })}
+                >
+                  <Text style={g.btnGhostText}>Introduce to Parliament</Text>
+                </Pressable>
+              </View>
+            ))}
+
+            {state.passedLaws.length > 0 && (
+              <>
+                <Text style={[g.muted, { marginTop: 14, marginBottom: 6, fontWeight: '700' }]}>ON THE STATUTE BOOK</Text>
+                {state.passedLaws.map((title, i) => (
+                  <Text key={i} style={{ color: colors.success, fontSize: 14, marginTop: 4 }}>
+                    {'\u2713'} {title}
+                  </Text>
+                ))}
+              </>
+            )}
+          </View>
+        )}
+
+        {/* TAB 3: ECONOMY */}
         {activeTab === 'nation' && (
           <View>
             <View style={g.card}>
@@ -140,22 +217,30 @@ export default function GameScreen() {
               <View style={{ flexDirection: 'row', marginTop: 12 }}>
                 <StatPill label="GDP Growth" value={`${state.stats.gdpGrowth}%`} />
                 <StatPill label="CPI Inflation" value={`${state.stats.cpiInflation}%`} />
-                <StatPill label="10Y Gilt Yield" value={`${state.stats.giltYield}%`} />
+                <StatPill label="10Y Gilt" value={`${state.stats.giltYield}%`} />
               </View>
+              <View style={{ flexDirection: 'row', marginTop: 10 }}>
+                <StatPill label="Tax Rate" value={`${state.stats.taxRate}%`} />
+                <StatPill label="Debt/GDP" value={`${state.stats.debtToGdp}%`} />
+                <StatPill label="Unemployment" value={`${state.stats.unemployment}%`} />
+              </View>
+              <Text style={[g.body, { marginTop: 12, fontWeight: '700', color: state.stats.budgetBalance < 0 ? colors.danger : colors.success }]}>
+                Budget: {budgetLabel(state.stats.budgetBalance)}
+              </Text>
             </View>
 
             <View style={g.card}>
               <Text style={g.cardTitle}>Public Services & Society</Text>
               <View style={{ flexDirection: 'row', marginTop: 12 }}>
-                <StatPill label="NHS Waiting List" value={`${state.stats.nhsWaitingList}m`} />
+                <StatPill label="NHS Waiting" value={`${state.stats.nhsWaitingList}m`} />
                 <StatPill label="Net Migration" value={`${state.stats.netMigration}k`} />
-                <StatPill label="Security Index" value={`${Math.round(state.metrics.security)}`} />
+                <StatPill label="Security" value={`${Math.round(state.metrics.security)}`} />
               </View>
             </View>
           </View>
         )}
 
-        {/* TAB 3: WESTMINSTER */}
+        {/* TAB 4: WESTMINSTER */}
         {activeTab === 'parliament' && (
           <View>
             <View style={g.card}>
@@ -188,7 +273,7 @@ export default function GameScreen() {
           </View>
         )}
 
-        {/* TAB 4: PRESS GALLERY */}
+        {/* TAB 5: PRESS */}
         {activeTab === 'press' && (
           <View>
             <Text style={[g.cardTitle, { marginBottom: 10 }]}>Fleet Street Headlines</Text>
