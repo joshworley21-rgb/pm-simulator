@@ -520,7 +520,10 @@ export default function GameScreen() {
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.85)', padding: 24 }}>
           <View style={{ backgroundColor: colors.bg, borderRadius: 16, padding: 24, width: '100%' }}>
             <Text style={{ color: colors.accent, fontSize: 22, fontWeight: '800', textAlign: 'center' }}>GENERAL ELECTION</Text>
-            <View style={{ marginTop: 16 }}>
+            <Text style={{ color: colors.muted, fontSize: 13, textAlign: 'center', marginTop: 4 }}>
+              Terms won: {state.termsWon} • Legacy score: {state.legacyScore}
+            </Text>
+            <View style={{ marginTop: 12 }}>
               {rankedParties.map((p) => (
                 <View key={p.id} style={[g.row, { marginTop: 8 }]}>
                   <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: p.color, marginRight: 8 }} />
