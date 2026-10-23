@@ -86,4 +86,24 @@ export const PMQ_POOL: PmqQuestion[] = [
       { id: 'attack', label: 'Turn it on Reform UK', effects: { approval: 1, supportDelta: { populist: -3 } } },
     ],
   },
+  {
+    id: 'pmq-cost-of-living',
+    from: 'Opposition Leader',
+    question: 'Families are choosing between heating and eating. Mortgage rates are stuck high. What does the Prime Minister say to voters who feel abandoned?',
+    options: [
+      { id: 'defend', label: 'Point to falling inflation', effects: { approval: 1, economy: 0 } },
+      { id: 'own', label: 'Acknowledge the squeeze and announce help', effects: { approval: 2, fundsDelta: -100 } },
+      { id: 'attack', label: 'Blame global shocks', effects: { approval: -1 } },
+    ],
+  },
+  {
+    id: 'pmq-housing',
+    from: 'Backbench MP',
+    question: 'Young people in my constituency cannot afford a home. When will the Prime Minister stand up to the nimbys and build houses?',
+    options: [
+      { id: 'defend', label: 'Highlight planning reform', effects: { approval: 1, economy: 1 } },
+      { id: 'own', label: 'Commit to a 1.5m home target', effects: { approval: 2, publicServices: 1, partyConfidence: -1 } },
+      { id: 'attack', label: 'Blame council blockers', effects: { approval: 0, mediaAttention: 8 } },
+    ],
+  },
 ];
