@@ -537,6 +537,23 @@ export default function GameScreen() {
         </View>
       </Modal>
 
+      {/* Minister picker modal */}
+      <Modal visible={!!state.ministerPicker} transparent animationType="slide">
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
+          <View style={{ backgroundColor: colors.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
+            <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800', letterSpacing: 1 }}>CABINET PROMOTION</Text>
+            <Text style={[g.title, { fontSize: 20, marginTop: 6 }]}>{state.ministerPicker}</Text>
+            <Text style={[g.muted, { marginTop: 4 }]}>Choose the post for this appointment.</Text>
+            {['Chancellor of the Exchequer', 'Home Secretary', 'Health Secretary', 'Foreign Secretary', 'Defence Secretary', 'Education Secretary', 'Minister of State'].map((post) => (
+              <Pressable key={post} style={[g.card, { marginTop: 8 }]} onPress={() => dispatch({ type: 'CONFIRM_APPOINT', post })}>
+                <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>{post}</Text>
+              </Pressable>
+            ))}
+            <Pressable style={g.btn} onPress={() => dispatch({ type: 'CANCEL_APPOINT' })}><Text style={g.btnText}>Cancel</Text></Pressable>
+          </View>
+        </View>
+      </Modal>
+
       {/* Game over */}
       <Modal visible={!!state.gameOver} transparent animationType="fade">
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.85)', padding: 24 }}>
