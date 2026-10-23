@@ -206,6 +206,42 @@ export default function GameScreen() {
           </View>
         )}
 
+        {/* SPENDING */}
+        {activeTab === 'spending' && (
+          <View>
+            <Text style={[g.cardTitle, { marginBottom: 6 }]}>Departmental Spending</Text>
+            <Text style={[g.muted, { marginBottom: 4 }]}>
+              Set department budgets. Raising them costs the Exchequer but delivers results.
+            </Text>
+            {state.departments.map((d) => (
+              <View key={d.id} style={[g.card, { marginTop: 8 }]}>
+                <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>{d.name}</Text>
+                <Text style={[g.muted, { marginTop: 2 }]}>{d.desc}</Text>
+                <View style={[g.row, { marginTop: 10 }]}>
+                  <Pressable
+                    style={[g.btnGhost, { marginTop: 0, paddingVertical: 8, paddingHorizontal: 14 }]}
+                    onPress={() => dispatch({ type: 'ADJUST_SPENDING', deptId: d.id, delta: -d.step })}
+                  >
+                    <Text style={g.btnGhostText}>-</Text>
+                  </Pressable>
+                  <Text style={{ color: colors.accent, fontSize: 20, fontWeight: '800', flex: 1, textAlign: 'center' }}>
+                    £{d.budget}bn
+                  </Text>
+                  <Pressable
+                    style={[g.btnGhost, { marginTop: 0, paddingVertical: 8, paddingHorizontal: 14 }]}
+                    onPress={() => dispatch({ type: 'ADJUST_SPENDING', deptId: d.id, delta: d.step })}
+                  >
+                    <Text style={g.btnGhostText}>+</Text>
+                  </Pressable>
+                </View>
+                <Text style={[g.muted, { marginTop: 6, fontSize: 11 }]}>
+                  Range £{d.min}-£{d.max}bn
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+
         {/* TAXES */}
         {activeTab === 'taxes' && (
           <View>
