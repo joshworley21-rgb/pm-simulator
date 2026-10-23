@@ -1,8 +1,11 @@
-import type { GameState, Action, Party, Effects, Dossier } from './types';
+import type { GameState, Action, Party, Effects, Dossier, Bill } from './types';
 import { INITIAL_PARTIES, INITIAL_RELATIONS, REGIONS, DOSSIER_POOL } from './data';
+import { BILL_POOL } from './bills';
 import type { Region } from './data';
 
 export const FPTP_EXPONENT = 2.5;
+
+const r1 = (n: number) => Math.round(n * 10) / 10;
 
 function clamp(n: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, n));
@@ -15,13 +18,26 @@ export function createInitialState(): GameState {
     parties: INITIAL_PARTIES.map((p) => ({ ...p })),
     relations: INITIAL_RELATIONS.map((r) => ({ ...r })),
     metrics: { approval: 48, partyConfidence: 62, economy: 55, publicServices: 50, security: 58, mediaAttention: 35 },
-    stats: { cpiInflation: 2.8, gdpGrowth: 1.1, giltYield: 4.15, nhsWaitingList: 7.2, netMigration: 420, lettersOfNoConfidence: 8 },
+    stats: {
+      cpiInflation: 2.8,
+      gdpGrowth: 1.1,
+      giltYield: 4.15,
+      nhsWaitingList: 7.2,
+      netMigration: 420,
+      lettersOfNoConfidence: 8,
+      taxRate: 33,
+      debtToGdp: 98,
+      unemployment: 4.2,
+      budgetBalance: -75,
+    },
     week: 1,
     turnsUntilElection: 60,
     isElection: false,
     redBox: [{ ...DOSSIER_POOL[0] }, { ...DOSSIER_POOL[2] }],
     selectedDossierId: null,
     lastOutcome: null,
+    bills: [],
+    passedLaws: [],
     headlines: [
       { paper: 'The National Standard', title: 'NEW PRIME MINISTER SETS OUT DOWNING STREET AGENDA', stance: 'centrist' },
       { paper: 'The Clarion', title: 'UNIONS WARN: FUND OUR SCHOOLS AND HOSPITALS NOW', stance: 'left' },
@@ -103,14 +119,98 @@ function applyEffects(s: GameState, fx: Effects): GameState {
     mediaAttention: clamp(s.metrics.mediaAttention + (fx.mediaAttention ?? 0), 0, 100),
   };
   const stats = {
-    cpiInflation: Math.max(0.5, Math.round((s.stats.cpiInflation + (fx.cpiInflation ?? 0)) * 10) / 10),
-    gdpGrowth: Math.round((s.stats.gdpGrowth + (fx.gdpGrowth ?? 0)) * 10) / 10,
-    giltYield: Math.max(1.0, Math.round((s.stats.giltYield + (fx.giltYield ?? 0)) * 100) / 100),
-    nhsWaitingList: Math.max(2.0, Math.round((s.stats.nhsWaitingList + (fx.nhsWaitingList ?? 0)) * 10) / 10),
+    cpiInflation: r1(Math.max(0.4, s.stats.cpiInflation + (fx.cpiInflation ?? 0))),
+    gdpGrowth: r1(s.stats.gdpGrowth + (fx.gdpGrowth ?? 0)),
+    giltYield: Math.max(1.0, r1(s.stats.giltYield + (fx.giltYield ?? 0))),
+    nhsWaitingList: r1(Math.max(2.0, s.stats.nhsWaitingList + (fx.nhsWaitingList ?? 0))),
     netMigration: Math.max(50, s.stats.netMigration + (fx.netMigration ?? 0)),
     lettersOfNoConfidence: clamp(s.stats.lettersOfNoConfidence + (fx.lettersDelta ?? 0), 0, 54),
+    taxRate: r1(clamp(s.stats.taxRate + (fx.taxRate ?? 0), 15, 60)),
+    debtToGdp: r1(Math.max(30, s.stats.debtToGdp + (fx.debtToGdp ?? 0))),
+    unemployment: r1(Math.max(1.5, s.stats.unemployment + (fx.unemployment ?? 0))),
+    budgetBalance: r1(s.stats.budgetBalance + (fx.budgetBalance ?? 0)),
   };
   return { ...s, parties, metrics, stats };
+}
+
+/** Polling: party support is pulled by approval and drifts back to baseline. */
+function driftPolling(s: GameState): GameState {
+  const parties = s.parties.map((p) => {
+    let target = p.baseSupport;
+    if (p.id === s.player?.partyId) {
+      target = clamp(p.baseSupport + (s.metrics.approval - 50) / 5, 5, 55);
+    } else {
+      target = p.baseSupport + (Math.random() * 2 - 1);
+    }
+    const next = p.currentSupport + (target - p.currentSupport) * 0.15;
+    return { ...p, currentSupport: r1(clamp(next, 1, 60)) };
+  });
+  return { ...s, parties };
+}
+
+/** Weekly fiscal reconciliation: deficits/debt feed back into gilt yields and confidence. */
+function weeklyEconomy(s: GameState): GameState {
+  const st = s.stats;
+  let gilt = st.giltYield;
+  let debt = st.debtToGdp;
+  let confidence = s.metrics.partyConfidence;
+
+  if (st.budgetBalance < -100) { gilt += 0.15; debt += 1.5; confidence -= 1; }
+  else if (st.budgetBalance < -40) { gilt += 0.05; debt += 0.5; }
+  else if (st.budgetBalance > 20) { gilt -= 0.05; debt -= 0.5; }
+  if (debt > 100) gilt += 0.1;
+
+  // High inflation erodes approval; unemployment drags it too.
+  let approval = s.metrics.approval;
+  if (st.cpiInflation > 4) approval -= 1;
+  if (st.unemployment > 6) approval -= 1;
+  approval = clamp(approval, 0, 100);
+
+  return {
+    ...s,
+    stats: { ...st, giltYield: Math.max(1.0, r1(gilt)), debtToGdp: r1(Math.max(30, debt)) },
+    metrics: { ...s.metrics, approval, partyConfidence: clamp(confidence, 0, 100) },
+  };
+}
+
+/** Resolve a bill at division: pass/fail depends on majority; rebellion feeds letters. */
+function resolveBill(s: GameState, bill: Bill): GameState {
+  const party = s.parties.find((p) => p.id === s.player?.partyId);
+  const seats = party?.seats ?? 0;
+
+  let passed: boolean;
+  if (seats >= 360) passed = true;
+  else if (seats >= 326) passed = Math.random() < 0.92;
+  else if (seats >= 300) passed = Math.random() < 0.6;
+  else passed = false;
+
+  let letters = s.stats.lettersOfNoConfidence + Math.round(bill.rebellionRisk / 8);
+  const headlines = s.headlines;
+  let next = s;
+
+  if (passed) {
+    next = applyEffects(next, bill.effects);
+    next = {
+      ...next,
+      stats: { ...next.stats, budgetBalance: r1(next.stats.budgetBalance - bill.fiscalCost) },
+      passedLaws: [bill.title, ...next.passedLaws],
+      log: [`LAW PASSED: ${bill.title}`, ...(next.log ?? [])].slice(0, 50),
+      headlines: [
+        { paper: 'The National Standard', title: bill.kicker, stance: 'centrist' },
+        ...headlines,
+      ].slice(0, 4),
+    };
+  } else {
+    next = applyEffects(next, { approval: -2, partyConfidence: -2 });
+    letters += Math.round(bill.rebellionRisk / 4);
+    next = {
+      ...next,
+      log: [`BILL DEFEATED: ${bill.title}`, ...(next.log ?? [])].slice(0, 50),
+    };
+  }
+
+  next = { ...next, stats: { ...next.stats, lettersOfNoConfidence: clamp(letters, 0, 54) } };
+  return next;
 }
 
 function advanceWeek(s: GameState): GameState {
@@ -122,25 +222,7 @@ function advanceWeek(s: GameState): GameState {
     isElection: false,
   };
 
-  const eco = next.metrics.economy;
-  const serv = next.metrics.publicServices;
-  let approval = next.metrics.approval + (eco >= 58 ? 1 : eco <= 44 ? -1 : 0) + (serv >= 55 ? 1 : serv <= 42 ? -1 : 0);
-  let confidence = next.metrics.partyConfidence + (approval >= 50 ? 1 : -1);
-
-  let letters = next.stats.lettersOfNoConfidence;
-  if (confidence < 40) letters += 2;
-  else if (confidence > 60 && letters > 0) letters -= 1;
-  letters = clamp(letters, 0, 54);
-
-  approval = clamp(approval, 0, 100);
-  confidence = clamp(confidence, 0, 100);
-  next = {
-    ...next,
-    metrics: { ...next.metrics, approval, partyConfidence: confidence },
-    stats: { ...next.stats, lettersOfNoConfidence: letters },
-  };
-
-  // Age dossiers; escalate ignored urgent crises.
+  // 1. Age dossiers; escalate ignored urgent crises.
   const remaining: Dossier[] = [];
   for (const d of next.redBox) {
     if (d.weeksRemaining <= 1) {
@@ -148,13 +230,34 @@ function advanceWeek(s: GameState): GameState {
         next = applyEffects(next, { approval: -3, partyConfidence: -2, mediaAttention: 10 });
         next.log = [`CRISIS ESCALATION: ${d.title} went unanswered and damaged the government.`, ...(next.log ?? [])].slice(0, 50);
       }
-      // Non-urgent dossiers with no time left simply lapse.
     } else {
       remaining.push({ ...d, weeksRemaining: d.weeksRemaining - 1 });
     }
   }
 
-  // Draw one fresh dossier (if room) into the Red Box.
+  // 2. Advance bills; resolve those reaching division.
+  const stillActive: Bill[] = [];
+  for (const b of next.bills) {
+    if (b.weeksToPass <= 1) {
+      next = resolveBill(next, b);
+    } else {
+      stillActive.push({ ...b, weeksToPass: b.weeksToPass - 1 });
+    }
+  }
+  next.bills = stillActive;
+
+  // 3. Polling & fiscal feedback.
+  next = weeklyEconomy(next);
+  next = driftPolling(next);
+
+  // 4. 1922 letters follow confidence.
+  let letters = next.stats.lettersOfNoConfidence;
+  if (next.metrics.partyConfidence < 40) letters += 2;
+  else if (next.metrics.partyConfidence > 60 && letters > 0) letters -= 1;
+  letters = clamp(letters, 0, 54);
+  next = { ...next, stats: { ...next.stats, lettersOfNoConfidence: letters } };
+
+  // 5. Draw one fresh dossier into the Red Box.
   const activeIds = new Set(remaining.map((d) => d.id));
   const available = DOSSIER_POOL.filter((d) => !activeIds.has(d.id));
   if (available.length > 0 && remaining.length < 4) {
@@ -163,9 +266,9 @@ function advanceWeek(s: GameState): GameState {
   }
   next.redBox = remaining;
 
+  // 6. Election countdown.
   const turnsUntilElection = next.turnsUntilElection - 1;
   next = { ...next, turnsUntilElection };
-
   if (turnsUntilElection <= 0) {
     next = runElection(next);
   }
@@ -227,6 +330,19 @@ export function reducer(state: GameState, action: Action): GameState {
         ],
       };
       return next;
+    }
+
+    case 'PROPOSE_BILL': {
+      const blueprint = BILL_POOL.find((b) => b.id === action.billId);
+      if (!blueprint) return state;
+      const already = state.bills.some((b) => b.id === blueprint.id) || state.passedLaws.includes(blueprint.title);
+      if (already) return state;
+      const bill: Bill = { ...blueprint, weeksToPass: blueprint.weeksToPass };
+      return {
+        ...state,
+        bills: [...state.bills, bill],
+        log: [`BILL INTRODUCED: ${bill.title} (will face a division in ${bill.weeksToPass} weeks)`, ...state.log].slice(0, 50),
+      };
     }
 
     default:
