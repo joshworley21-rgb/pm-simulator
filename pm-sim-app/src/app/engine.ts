@@ -1,6 +1,7 @@
-import type { GameState, Action, Party, Effects, Dossier, Bill } from './types';
+import type { GameState, Action, Party, Effects, Dossier, Bill, Minister } from './types';
 import { INITIAL_PARTIES, INITIAL_RELATIONS, REGIONS, DOSSIER_POOL } from './data';
 import { BILL_POOL } from './bills';
+import { DEFAULT_CABINET, FOREIGN_POOL, PMQ_POOL } from './politics';
 import type { Region } from './data';
 
 export const FPTP_EXPONENT = 2.5;
@@ -11,12 +12,11 @@ function clamp(n: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, n));
 }
 
-/** Realistic 1922 threshold = 15% of the parliamentary party (min 15). */
 function resignationThreshold(seats: number): number {
   return Math.max(15, Math.round(seats * 0.15));
 }
 
-/** Deterministic LCG PRNG so saves/replays reproduce identical worlds. */
+/** Deterministic LCG PRNG. */
 function nextRandom(seed: number): { v: number; s: number } {
   const a = 1664525;
   const c = 1013904223;
@@ -61,6 +61,10 @@ export function createInitialState(): GameState {
     log: [],
     seed: 20260211,
     gameOver: null,
+    cabinet: DEFAULT_CABINET.map((m) => ({ ...m })),
+    factionUnrest: 20,
+    foreignIssues: [],
+    pmq: null,
   };
 }
 
@@ -115,11 +119,7 @@ function runElection(s: GameState): GameState {
     ...s,
     parties,
     metrics: { ...s.metrics, approval },
-    stats: {
-      ...s.stats,
-      lettersOfNoConfidence: 0, // fresh mandate resets the revolt
-      lettersThreshold: resignationThreshold(playerSeats),
-    },
+    stats: { ...s.stats, lettersOfNoConfidence: 0, lettersThreshold: resignationThreshold(playerSeats) },
     turnsUntilElection: 60,
     isElection: true,
     log: [message, ...s.log].slice(0, 50),
@@ -225,7 +225,7 @@ function resolveBill(s: GameState, bill: Bill, rng: () => number): GameState {
   return next;
 }
 
-function advanceWeek(s: GameState): GameState {
+export function advanceWeek(s: GameState): GameState {
   let seed = (s.seed ?? 20260211) >>> 0;
   const rng = (): number => {
     const r = nextRandom(seed);
@@ -254,36 +254,32 @@ function advanceWeek(s: GameState): GameState {
     }
   }
 
-  // 2. Advance bills; resolve those reaching division.
+  // 2. Advance bills.
   const stillActive: Bill[] = [];
   for (const b of next.bills) {
-    if (b.weeksToPass <= 1) {
-      next = resolveBill(next, b, rng);
-    } else {
-      stillActive.push({ ...b, weeksToPass: b.weeksToPass - 1 });
-    }
+    if (b.weeksToPass <= 1) next = resolveBill(next, b, rng);
+    else stillActive.push({ ...b, weeksToPass: b.weeksToPass - 1 });
   }
   next.bills = stillActive;
 
-  // 3. Economy & polling feedback.
+  // 3. Economy & polling.
   next = weeklyEconomy(next);
   next = driftPolling(next, rng);
 
-  // 4. 1922 letters follow confidence.
+  // 4. 1922 letters.
   let letters = next.stats.lettersOfNoConfidence;
   if (next.metrics.partyConfidence < 40) letters += 2;
   else if (next.metrics.partyConfidence > 60 && letters > 0) letters -= 1;
   letters = clamp(letters, 0, 99);
   next = { ...next, stats: { ...next.stats, lettersOfNoConfidence: letters } };
 
-  // 5. Confidence vote if the threshold is crossed.
+  // 5. Confidence vote.
   const threshold = next.stats.lettersThreshold || 15;
   if (letters >= threshold && !next.gameOver) {
     const conf = next.metrics.partyConfidence;
     const chance = conf >= 60 ? 0.9 : conf >= 50 ? 0.7 : conf >= 40 ? 0.5 : 0.25;
     const survive = rng() < chance;
     const name = next.player ? `${next.player.firstName} ${next.player.lastName}` : 'The Prime Minister';
-
     if (survive) {
       next = {
         ...next,
@@ -302,7 +298,26 @@ function advanceWeek(s: GameState): GameState {
     }
   }
 
-  // 6. Draw one fresh dossier into the Red Box.
+  // 6. Cabinet faction unrest and possible leak/resignation.
+  let unrest = next.factionUnrest;
+  if (next.metrics.partyConfidence < 40) unrest += 3;
+  else if (next.metrics.partyConfidence > 60) unrest -= 1;
+  unrest = clamp(unrest, 0, 100);
+  next = { ...next, factionUnrest: unrest };
+
+  // Occasional minister leak.
+  if (next.cabinet.length > 0 && !next.gameOver && rng() < 0.12) {
+    const idx = Math.floor(rng() * next.cabinet.length);
+    const mins = next.cabinet.map((m, i) => (i === idx ? { ...m, loyalty: clamp(m.loyalty - 10, 0, 100) } : m));
+    next = {
+      ...next,
+      cabinet: mins,
+      log: [`CABINET LEAK: A minister briefed against the government.`, ...next.log].slice(0, 50),
+      headlines: [{ paper: 'The Courier', title: 'CABINET RIFT AS MINISTER BRIEFS AGAINST PM', stance: 'right' }, ...next.headlines].slice(0, 4),
+    };
+  }
+
+  // 7. Draw fresh dossier.
   const activeIds = new Set(remaining.map((d) => d.id));
   const available = DOSSIER_POOL.filter((d) => !activeIds.has(d.id));
   if (available.length > 0 && remaining.length < 4) {
@@ -311,15 +326,35 @@ function advanceWeek(s: GameState): GameState {
   }
   next.redBox = remaining;
 
-  // 7. Election countdown.
+  // 8. Every ~5 weeks, PMQs or a foreign call arises.
+  if (next.week % 5 === 0 && !next.gameOver && !next.pmq) {
+    next.pmq = PMQ_POOL[Math.floor(rng() * PMQ_POOL.length)];
+  }
+  if (next.week % 7 === 0 && !next.gameOver && next.foreignIssues.length < 2) {
+    const fi = FOREIGN_POOL[Math.floor(rng() * FOREIGN_POOL.length)];
+    if (!next.foreignIssues.some((f) => f.id === fi.id)) {
+      next.foreignIssues = [...next.foreignIssues, { ...fi }];
+    }
+  }
+
+  // 9. Election countdown.
   const turnsUntilElection = next.turnsUntilElection - 1;
   next = { ...next, turnsUntilElection };
-  if (turnsUntilElection <= 0 && !next.gameOver) {
-    next = runElection(next);
-  }
+  if (turnsUntilElection <= 0 && !next.gameOver) next = runElection(next);
 
   next.seed = seed >>> 0;
   return next;
+}
+
+function resignMinister(s: GameState, name: string): GameState {
+  const m = s.cabinet.find((x) => x.name === name);
+  if (!m) return s;
+  return {
+    ...s,
+    cabinet: s.cabinet.filter((x) => x.name !== name),
+    factionUnrest: clamp(s.factionUnrest + 8, 0, 100),
+    log: [`CABINET: ${m.name} sacked as ${m.post}.`, ...s.log].slice(0, 50),
+  };
 }
 
 export function reducer(state: GameState, action: Action): GameState {
@@ -362,7 +397,6 @@ export function reducer(state: GameState, action: Action): GameState {
       if (!dossier) return state;
       const choice = dossier.choices.find((c) => c.id === action.choiceId);
       if (!choice) return state;
-
       let next = applyEffects(state, choice.effects);
       next = {
         ...next,
@@ -391,6 +425,59 @@ export function reducer(state: GameState, action: Action): GameState {
         log: [`BILL INTRODUCED: ${bill.title} (will face a division in ${bill.weeksToPass} weeks)`, ...state.log].slice(0, 50),
       };
     }
+
+    case 'SACK_MINISTER':
+      return resignMinister(state, action.name);
+
+    case 'APPOINT_MINISTER': {
+      // Simplest implementation: promote the highest-loyalty backbencher into the open post.
+      const post = action.post;
+      const candidate: Minister = {
+        name: 'Newly promoted MP',
+        post,
+        partyId: state.player?.partyId ?? 'reform',
+        loyalty: 65,
+        competence: 60,
+        faction: 'Centrist',
+      };
+      return {
+        ...state,
+        cabinet: [...state.cabinet, candidate],
+        log: [`CABINET: ${candidate.name} appointed ${post}.`, ...state.log].slice(0, 50),
+      };
+    }
+
+    case 'RESOLVE_FOREIGN': {
+      const issue = state.foreignIssues.find((f) => f.id === action.issueId);
+      if (!issue) return state;
+      const opt = issue.options.find((o) => o.id === action.optionId);
+      if (!opt) return state;
+      let next = applyEffects(state, opt.effects);
+      next = {
+        ...next,
+        foreignIssues: next.foreignIssues.filter((f) => f.id !== action.issueId),
+        log: [`DIPLOMACY: ${issue.country} (${issue.leader}) \u2014 ${opt.label}`, ...next.log].slice(0, 50),
+        headlines: [{ paper: 'The National Standard', title: `${issue.country.toUpperCase()}: PM MEETS ${issue.leader.toUpperCase()}`, stance: 'centrist' }, ...next.headlines].slice(0, 4),
+      };
+      return next;
+    }
+
+    case 'ANSWER_PMQ': {
+      const q = state.pmq;
+      if (!q) return state;
+      const opt = q.options.find((o) => o.id === action.optionId);
+      if (!opt) return state;
+      const next = applyEffects(state, opt.effects);
+      return {
+        ...next,
+        pmq: null,
+        log: [`PMQS: Answered a question from ${q.from}.`, ...next.log].slice(0, 50),
+        headlines: [{ paper: 'The Clarion', title: `PMQS: PM FACES ${q.from.toUpperCase()} ON THE ECONOMY`, stance: 'left' }, ...next.headlines].slice(0, 4),
+      };
+    }
+
+    case 'DISMISS_PMQ':
+      return { ...state, pmq: null };
 
     default:
       return state;
