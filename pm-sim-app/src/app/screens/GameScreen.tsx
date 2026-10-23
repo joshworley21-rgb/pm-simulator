@@ -229,13 +229,13 @@ export default function GameScreen() {
             </Text>
             {(() => {
               const total = state.departments.reduce((s, d) => s + d.budget, 0);
-              const revenue = 950; // approx. baseline tax revenue in u00a3bn
+              const revenue = 950; // approx. baseline tax revenue in £bn
               const balance = Math.round(revenue - total);
               return (
                 <View style={[g.card, { borderColor: balance < 0 ? colors.danger : colors.success }]}>
-                  <Text style={[g.cardTitle, { fontSize: 15 }]}>Total Spend: u00a3{Math.round(total)}bn</Text>
+                  <Text style={[g.cardTitle, { fontSize: 15 }]}>Total Spend: £{Math.round(total)}bn</Text>
                   <Text style={{ color: balance < 0 ? colors.danger : colors.success, fontSize: 13, fontWeight: '700', marginTop: 4 }}>
-                    {balance < 0 ? `Over budget by u00a3${-balance}bn` : `Headroom of u00a3${balance}bn`}
+                    {balance < 0 ? `Over budget by £${-balance}bn` : `Headroom of £${balance}bn`}
                   </Text>
                   <Text style={[g.muted, { marginTop: 4, fontSize: 11 }]}>
                     Revenue (approx) {revenue}bn vs departmental spend {Math.round(total)}bn
