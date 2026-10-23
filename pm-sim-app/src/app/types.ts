@@ -42,7 +42,7 @@ export interface NationalStats {
   nhsWaitingList: number;
   netMigration: number;
   lettersOfNoConfidence: number;
-  lettersThreshold: number;   // 15% of parliamentary party (min 15)
+  lettersThreshold: number;
   taxRate: number;
   debtToGdp: number;
   unemployment: number;
@@ -110,6 +110,33 @@ export interface Bill {
   kicker: string;
 }
 
+/** A cabinet minister, driven by loyalty/competence and able to rebel or leak. */
+export interface Minister {
+  name: string;
+  post: string;
+  partyId: string;
+  loyalty: number;    // 0-100
+  competence: number; // 0-100
+  faction: string;
+}
+
+/** A foreign leader / issue the PM can engage with. */
+export interface ForeignIssue {
+  id: string;
+  leader: string;
+  country: string;
+  topic: string;
+  options: { id: string; label: string; effects: Effects; summary: string }[];
+}
+
+/** A PMQs exchange. */
+export interface PmqQuestion {
+  id: string;
+  from: string; // party abbreviation or name
+  question: string;
+  options: { id: string; label: string; effects: Effects }[];
+}
+
 export interface Player {
   firstName: string;
   lastName: string;
@@ -138,6 +165,10 @@ export interface GameState {
   log: string[];
   seed: number;
   gameOver: string | null;
+  cabinet: Minister[];
+  factionUnrest: number; // 0-100 anger within the party
+  foreignIssues: ForeignIssue[];
+  pmq: PmqQuestion | null;
 }
 
 export type Action =
@@ -148,4 +179,9 @@ export type Action =
   | { type: 'CLOSE_DOSSIER' }
   | { type: 'RESOLVE_DOSSIER'; dossierId: string; choiceId: string }
   | { type: 'PROPOSE_BILL'; billId: string }
+  | { type: 'SACK_MINISTER'; name: string }
+  | { type: 'APPOINT_MINISTER'; post: string }
+  | { type: 'RESOLVE_FOREIGN'; issueId: string; optionId: string }
+  | { type: 'ANSWER_PMQ'; optionId: string }
+  | { type: 'DISMISS_PMQ' }
   | { type: 'RESTORE'; state: GameState };
