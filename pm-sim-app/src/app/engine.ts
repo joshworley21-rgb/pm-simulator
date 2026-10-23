@@ -70,6 +70,8 @@ export function createInitialState(): GameState {
     budgetDue: false,
     backbenchers: BACKBENCHERS.map((b) => ({ ...b })),
     termLength: 60,
+    taxes: INITIAL_TAXES.map((t) => ({ ...t })),
+    fiscalEventKind: null,
   };
 }
 
