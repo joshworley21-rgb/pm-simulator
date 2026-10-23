@@ -97,6 +97,35 @@ export default function CreateScreen() {
         })}
       </ScrollView>
 
+      <Text style={[g.cardTitle, { marginTop: 24 }]}>Campaign Length</Text>
+      <View style={{ flexDirection: 'row', marginTop: 10 }}>
+        {[36, 48, 60, 72].map((w) => {
+          const selected = w === termLength;
+          return (
+            <Pressable
+              key={w}
+              onPress={() => setTermLength(w)}
+              style={{
+                backgroundColor: selected ? colors.accentSoft : colors.card,
+                borderColor: selected ? colors.accent : colors.cardBorder,
+                borderWidth: 1,
+                borderRadius: 20,
+                paddingHorizontal: 16,
+                paddingVertical: 10,
+                marginRight: 8,
+              }}
+            >
+              <Text style={{ color: selected ? colors.text : colors.muted, fontWeight: '600' }}>
+                {w / 12} yrs
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <Text style={[g.muted, { marginTop: 8, fontSize: 12 }]}>
+        Weeks until the next general election (12 weeks ≈ one year).
+      </Text>
+
       <Pressable
         style={[g.btn, { opacity: canStart ? 1 : 0.4 }]}
         disabled={!canStart}
