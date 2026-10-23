@@ -11,6 +11,20 @@ function clamp(n: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, n));
 }
 
+/** Realistic 1922 threshold = 15% of the parliamentary party (min 15). */
+function resignationThreshold(seats: number): number {
+  return Math.max(15, Math.round(seats * 0.15));
+}
+
+/** Deterministic LCG PRNG so saves/replays reproduce identical worlds. */
+function nextRandom(seed: number): { v: number; s: number } {
+  const a = 1664525;
+  const c = 1013904223;
+  const m = 4294967296;
+  const n = (a * seed + c) % m;
+  return { v: n / m, s: n };
+}
+
 export function createInitialState(): GameState {
   return {
     phase: 'menu',
@@ -25,6 +39,7 @@ export function createInitialState(): GameState {
       nhsWaitingList: 7.2,
       netMigration: 420,
       lettersOfNoConfidence: 8,
+      lettersThreshold: 15,
       taxRate: 33,
       debtToGdp: 98,
       unemployment: 4.2,
@@ -44,6 +59,8 @@ export function createInitialState(): GameState {
       { paper: 'The Courier', title: 'CAN NEW PM CONTROL SPENDING AND DEFEND THE SHIRES?', stance: 'right' },
     ],
     log: [],
+    seed: 20260211,
+    gameOver: null,
   };
 }
 
@@ -98,6 +115,11 @@ function runElection(s: GameState): GameState {
     ...s,
     parties,
     metrics: { ...s.metrics, approval },
+    stats: {
+      ...s.stats,
+      lettersOfNoConfidence: 0, // fresh mandate resets the revolt
+      lettersThreshold: resignationThreshold(playerSeats),
+    },
     turnsUntilElection: 60,
     isElection: true,
     log: [message, ...s.log].slice(0, 50),
@@ -124,7 +146,8 @@ function applyEffects(s: GameState, fx: Effects): GameState {
     giltYield: Math.max(1.0, r1(s.stats.giltYield + (fx.giltYield ?? 0))),
     nhsWaitingList: r1(Math.max(2.0, s.stats.nhsWaitingList + (fx.nhsWaitingList ?? 0))),
     netMigration: Math.max(50, s.stats.netMigration + (fx.netMigration ?? 0)),
-    lettersOfNoConfidence: clamp(s.stats.lettersOfNoConfidence + (fx.lettersDelta ?? 0), 0, 54),
+    lettersOfNoConfidence: clamp(s.stats.lettersOfNoConfidence + (fx.lettersDelta ?? 0), 0, 99),
+    lettersThreshold: s.stats.lettersThreshold,
     taxRate: r1(clamp(s.stats.taxRate + (fx.taxRate ?? 0), 15, 60)),
     debtToGdp: r1(Math.max(30, s.stats.debtToGdp + (fx.debtToGdp ?? 0))),
     unemployment: r1(Math.max(1.5, s.stats.unemployment + (fx.unemployment ?? 0))),
@@ -133,14 +156,13 @@ function applyEffects(s: GameState, fx: Effects): GameState {
   return { ...s, parties, metrics, stats };
 }
 
-/** Polling: party support is pulled by approval and drifts back to baseline. */
-function driftPolling(s: GameState): GameState {
+function driftPolling(s: GameState, rng: () => number): GameState {
   const parties = s.parties.map((p) => {
     let target = p.baseSupport;
     if (p.id === s.player?.partyId) {
       target = clamp(p.baseSupport + (s.metrics.approval - 50) / 5, 5, 55);
     } else {
-      target = p.baseSupport + (Math.random() * 2 - 1);
+      target = p.baseSupport + (rng() * 2 - 1);
     }
     const next = p.currentSupport + (target - p.currentSupport) * 0.15;
     return { ...p, currentSupport: r1(clamp(next, 1, 60)) };
@@ -148,7 +170,6 @@ function driftPolling(s: GameState): GameState {
   return { ...s, parties };
 }
 
-/** Weekly fiscal reconciliation: deficits/debt feed back into gilt yields and confidence. */
 function weeklyEconomy(s: GameState): GameState {
   const st = s.stats;
   let gilt = st.giltYield;
@@ -160,7 +181,6 @@ function weeklyEconomy(s: GameState): GameState {
   else if (st.budgetBalance > 20) { gilt -= 0.05; debt -= 0.5; }
   if (debt > 100) gilt += 0.1;
 
-  // High inflation erodes approval; unemployment drags it too.
   let approval = s.metrics.approval;
   if (st.cpiInflation > 4) approval -= 1;
   if (st.unemployment > 6) approval -= 1;
@@ -173,19 +193,17 @@ function weeklyEconomy(s: GameState): GameState {
   };
 }
 
-/** Resolve a bill at division: pass/fail depends on majority; rebellion feeds letters. */
-function resolveBill(s: GameState, bill: Bill): GameState {
+function resolveBill(s: GameState, bill: Bill, rng: () => number): GameState {
   const party = s.parties.find((p) => p.id === s.player?.partyId);
   const seats = party?.seats ?? 0;
 
   let passed: boolean;
   if (seats >= 360) passed = true;
-  else if (seats >= 326) passed = Math.random() < 0.92;
-  else if (seats >= 300) passed = Math.random() < 0.6;
+  else if (seats >= 326) passed = rng() < 0.92;
+  else if (seats >= 300) passed = rng() < 0.6;
   else passed = false;
 
   let letters = s.stats.lettersOfNoConfidence + Math.round(bill.rebellionRisk / 8);
-  const headlines = s.headlines;
   let next = s;
 
   if (passed) {
@@ -195,25 +213,26 @@ function resolveBill(s: GameState, bill: Bill): GameState {
       stats: { ...next.stats, budgetBalance: r1(next.stats.budgetBalance - bill.fiscalCost) },
       passedLaws: [bill.title, ...next.passedLaws],
       log: [`LAW PASSED: ${bill.title}`, ...(next.log ?? [])].slice(0, 50),
-      headlines: [
-        { paper: 'The National Standard', title: bill.kicker, stance: 'centrist' },
-        ...headlines,
-      ].slice(0, 4),
+      headlines: [{ paper: 'The National Standard', title: bill.kicker, stance: 'centrist' }, ...next.headlines].slice(0, 4),
     };
   } else {
     next = applyEffects(next, { approval: -2, partyConfidence: -2 });
     letters += Math.round(bill.rebellionRisk / 4);
-    next = {
-      ...next,
-      log: [`BILL DEFEATED: ${bill.title}`, ...(next.log ?? [])].slice(0, 50),
-    };
+    next = { ...next, log: [`BILL DEFEATED: ${bill.title}`, ...(next.log ?? [])].slice(0, 50) };
   }
 
-  next = { ...next, stats: { ...next.stats, lettersOfNoConfidence: clamp(letters, 0, 54) } };
+  next = { ...next, stats: { ...next.stats, lettersOfNoConfidence: clamp(letters, 0, 99) } };
   return next;
 }
 
 function advanceWeek(s: GameState): GameState {
+  let seed = (s.seed ?? 20260211) >>> 0;
+  const rng = (): number => {
+    const r = nextRandom(seed);
+    seed = r.s;
+    return r.v;
+  };
+
   let next: GameState = {
     ...s,
     week: s.week + 1,
@@ -239,40 +258,67 @@ function advanceWeek(s: GameState): GameState {
   const stillActive: Bill[] = [];
   for (const b of next.bills) {
     if (b.weeksToPass <= 1) {
-      next = resolveBill(next, b);
+      next = resolveBill(next, b, rng);
     } else {
       stillActive.push({ ...b, weeksToPass: b.weeksToPass - 1 });
     }
   }
   next.bills = stillActive;
 
-  // 3. Polling & fiscal feedback.
+  // 3. Economy & polling feedback.
   next = weeklyEconomy(next);
-  next = driftPolling(next);
+  next = driftPolling(next, rng);
 
   // 4. 1922 letters follow confidence.
   let letters = next.stats.lettersOfNoConfidence;
   if (next.metrics.partyConfidence < 40) letters += 2;
   else if (next.metrics.partyConfidence > 60 && letters > 0) letters -= 1;
-  letters = clamp(letters, 0, 54);
+  letters = clamp(letters, 0, 99);
   next = { ...next, stats: { ...next.stats, lettersOfNoConfidence: letters } };
 
-  // 5. Draw one fresh dossier into the Red Box.
+  // 5. Confidence vote if the threshold is crossed.
+  const threshold = next.stats.lettersThreshold || 15;
+  if (letters >= threshold && !next.gameOver) {
+    const conf = next.metrics.partyConfidence;
+    const chance = conf >= 60 ? 0.9 : conf >= 50 ? 0.7 : conf >= 40 ? 0.5 : 0.25;
+    const survive = rng() < chance;
+    const name = next.player ? `${next.player.firstName} ${next.player.lastName}` : 'The Prime Minister';
+
+    if (survive) {
+      next = {
+        ...next,
+        stats: { ...next.stats, lettersOfNoConfidence: Math.round(threshold * 0.2) },
+        metrics: { ...next.metrics, partyConfidence: clamp(conf - 5, 0, 100) },
+        log: [`CONFIDENCE VOTE: ${name} SURVIVES a leadership challenge.`, ...next.log].slice(0, 50),
+        headlines: [{ paper: 'The National Standard', title: 'PM SURVIVES CONFIDENCE VOTE BUT EMERGES WOUNDED', stance: 'centrist' }, ...next.headlines].slice(0, 4),
+      };
+    } else {
+      next = {
+        ...next,
+        gameOver: `${name} lost a vote of no confidence among their own MPs and was forced to resign.`,
+        stats: { ...next.stats, lettersOfNoConfidence: threshold },
+        log: [`CONFIDENCE VOTE: ${name} LOSES and is forced to resign.`, ...next.log].slice(0, 50),
+      };
+    }
+  }
+
+  // 6. Draw one fresh dossier into the Red Box.
   const activeIds = new Set(remaining.map((d) => d.id));
   const available = DOSSIER_POOL.filter((d) => !activeIds.has(d.id));
   if (available.length > 0 && remaining.length < 4) {
-    const pick = available[Math.floor(Math.random() * available.length)];
+    const pick = available[Math.floor(rng() * available.length)];
     remaining.push({ ...pick });
   }
   next.redBox = remaining;
 
-  // 6. Election countdown.
+  // 7. Election countdown.
   const turnsUntilElection = next.turnsUntilElection - 1;
   next = { ...next, turnsUntilElection };
-  if (turnsUntilElection <= 0) {
+  if (turnsUntilElection <= 0 && !next.gameOver) {
     next = runElection(next);
   }
 
+  next.seed = seed >>> 0;
   return next;
 }
 
@@ -297,6 +343,7 @@ export function reducer(state: GameState, action: Action): GameState {
         player: action.player,
         parties: withSeats,
         phase: 'playing',
+        stats: { ...state.stats, lettersThreshold: resignationThreshold(mySeats) },
         log: [`${fullName} enters Downing Street with ${mySeats} seats in the Commons.`, ...state.log].slice(0, 50),
       };
     }
