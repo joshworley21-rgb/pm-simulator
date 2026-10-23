@@ -231,6 +231,7 @@ export type Action =
   | { type: 'PROPOSE_BILL'; billId: string }
   | { type: 'SACK_MINISTER'; name: string }
   | { type: 'APPOINT_MINISTER'; post: string }
+  | { type: 'APPOINT_MINISTER_BY_NAME'; name: string }
   | { type: 'PICK_MINISTER'; name: string }
   | { type: 'CONFIRM_APPOINT'; post: string }
   | { type: 'CANCEL_APPOINT' }
