@@ -3,6 +3,7 @@ import { INITIAL_PARTIES, INITIAL_RELATIONS, REGIONS, DOSSIER_POOL } from './dat
 import { BILL_POOL } from './bills';
 import { DEFAULT_CABINET, FOREIGN_POOL, PMQ_POOL, BACKBENCHERS } from './politics';
 import { BUDGET_PACKAGES } from './budget';
+import { INITIAL_TAXES, TAX_YIELD_PER_POINT } from './taxes';
 import type { Region } from './data';
 
 export const FPTP_EXPONENT = 2.5;
