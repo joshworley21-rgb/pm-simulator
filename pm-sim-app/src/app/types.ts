@@ -244,5 +244,4 @@ export type Action =
   | { type: 'SET_AUTUMN_TAXES' }
   | { type: 'ADJUST_SPENDING'; deptId: string; delta: number }
   | { type: 'DISMISS_ELECTION' }
-  | { type: 'DISMISS_ELECTION' }
   | { type: 'RESTORE'; state: GameState };
