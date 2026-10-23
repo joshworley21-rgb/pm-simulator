@@ -47,7 +47,7 @@ export default function MenuScreen() {
       </View>
 
       <Text style={[g.muted, { textAlign: 'center', marginTop: 24 }]}>
-        A work-in-progress rebuild. Tap \u2018New Game\u2019 to begin.
+        A work-in-progress rebuild. Tap 'New Game' to begin.
       </Text>
     </ScrollView>
   );

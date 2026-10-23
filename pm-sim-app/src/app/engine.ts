@@ -217,7 +217,7 @@ function resolveBill(s: GameState, bill: Bill, rng: () => number): GameState {
       stats: { ...next.stats, budgetBalance: r1(next.stats.budgetBalance - bill.fiscalCost) },
       passedLaws: [bill.title, ...next.passedLaws],
       log: [`LAW PASSED: ${bill.title}`, ...(next.log ?? [])].slice(0, 50),
-      headlines: [{ paper: 'The National Standard', title: bill.kicker, stance: 'centrist' }, ...next.headlines].slice(0, 4),
+      headlines: [{ paper: 'The National Standard', title: bill.kicker, stance: 'centrist' as const }, ...next.headlines].slice(0, 4),
     };
   } else {
     next = applyEffects(next, { approval: -2, partyConfidence: -2 });
@@ -290,7 +290,7 @@ export function advanceWeek(s: GameState): GameState {
         stats: { ...next.stats, lettersOfNoConfidence: Math.round(threshold * 0.2) },
         metrics: { ...next.metrics, partyConfidence: clamp(conf - 5, 0, 100) },
         log: [`CONFIDENCE VOTE: ${name} SURVIVES a leadership challenge.`, ...next.log].slice(0, 50),
-        headlines: [{ paper: 'The National Standard', title: 'PM SURVIVES CONFIDENCE VOTE BUT EMERGES WOUNDED', stance: 'centrist' }, ...next.headlines].slice(0, 4),
+        headlines: [{ paper: 'The National Standard', title: 'PM SURVIVES CONFIDENCE VOTE BUT EMERGES WOUNDED', stance: 'centrist' as const }, ...next.headlines].slice(0, 4),
       };
     } else {
       next = {
@@ -317,7 +317,7 @@ export function advanceWeek(s: GameState): GameState {
       ...next,
       cabinet: mins,
       log: [`CABINET LEAK: A minister briefed against the government.`, ...next.log].slice(0, 50),
-      headlines: [{ paper: 'The Courier', title: 'CABINET RIFT AS MINISTER BRIEFS AGAINST PM', stance: 'right' }, ...next.headlines].slice(0, 4),
+      headlines: [{ paper: 'The Courier', title: 'CABINET RIFT AS MINISTER BRIEFS AGAINST PM', stance: 'right' as const }, ...next.headlines].slice(0, 4),
     };
   }
 
@@ -473,7 +473,7 @@ export function reducer(state: GameState, action: Action): GameState {
         ...next,
         foreignIssues: next.foreignIssues.filter((f) => f.id !== action.issueId),
         log: [`DIPLOMACY: ${issue.country} (${issue.leader}) \u2014 ${opt.label}`, ...next.log].slice(0, 50),
-        headlines: [{ paper: 'The National Standard', title: `${issue.country.toUpperCase()}: PM MEETS ${issue.leader.toUpperCase()}`, stance: 'centrist' }, ...next.headlines].slice(0, 4),
+        headlines: [{ paper: 'The National Standard', title: `${issue.country.toUpperCase()}: PM MEETS ${issue.leader.toUpperCase()}`, stance: 'centrist' as const }, ...next.headlines].slice(0, 4),
       };
       return next;
     }
@@ -488,7 +488,7 @@ export function reducer(state: GameState, action: Action): GameState {
         ...next,
         pmq: null,
         log: [`PMQS: Answered a question from ${q.from}.`, ...next.log].slice(0, 50),
-        headlines: [{ paper: 'The Clarion', title: `PMQS: PM FACES ${q.from.toUpperCase()} ON THE ECONOMY`, stance: 'left' }, ...next.headlines].slice(0, 4),
+        headlines: [{ paper: 'The Clarion', title: `PMQS: PM FACES ${q.from.toUpperCase()} ON THE ECONOMY`, stance: 'left' as const }, ...next.headlines].slice(0, 4),
       };
     }
 
@@ -503,7 +503,7 @@ export function reducer(state: GameState, action: Action): GameState {
         ...next,
         budgetDue: false,
         log: [`BUDGET: ${pkg.title} delivered by the Chancellor.`, ...next.log].slice(0, 50),
-        headlines: [{ paper: 'The National Standard', title: pkg.kicker, stance: 'centrist' }, ...next.headlines].slice(0, 4),
+        headlines: [{ paper: 'The National Standard', title: pkg.kicker, stance: 'centrist' as const }, ...next.headlines].slice(0, 4),
       };
       return next;
     }

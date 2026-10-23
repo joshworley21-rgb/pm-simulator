@@ -62,7 +62,7 @@ export default function GameScreen() {
             {player?.firstName} {player?.lastName}
           </Text>
           <Text style={{ color: party?.color, fontSize: 12, fontWeight: '700' }}>
-            {party?.name} \u2022 Week {state.week}
+            {party?.name} - Week {state.week}
           </Text>
         </View>
 
@@ -70,7 +70,7 @@ export default function GameScreen() {
           style={[g.btn, { marginTop: 0, paddingVertical: 10, paddingHorizontal: 14 }]}
           onPress={() => dispatch({ type: 'START_TURN' })}
         >
-          <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>Advance Week \u2192</Text>
+          <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>Advance Week →</Text>
         </Pressable>
       </View>
 
@@ -82,8 +82,8 @@ export default function GameScreen() {
         <StatPill label="Economy" value={`${Math.round(state.metrics.economy)}`} />
       </View>
 
-      {/* Desk tabs */}
-      <View style={{ flexDirection: 'row', marginTop: 12, borderBottomWidth: 1, borderBottomColor: colors.cardBorder }}>
+      {/* Desk tabs (horizontally scrollable to avoid clipping) */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12, borderBottomWidth: 1, borderBottomColor: colors.cardBorder, flexGrow: 0 }} contentContainerStyle={{ alignItems: 'center' }}>
         {[
           { key: 'redbox', label: `Red Box (${state.redBox.length})` },
           { key: 'legislation', label: 'Bills' },
@@ -97,26 +97,26 @@ export default function GameScreen() {
             key={t.key}
             onPress={() => setActiveTab(t.key as Tab)}
             style={{
-              flex: 1,
               paddingVertical: 10,
+              paddingHorizontal: 12,
               alignItems: 'center',
               borderBottomWidth: activeTab === t.key ? 2 : 0,
               borderBottomColor: colors.accent,
             }}
           >
-            <Text style={{ color: activeTab === t.key ? colors.text : colors.muted, fontSize: 11, fontWeight: '700' }}>
+            <Text numberOfLines={1} style={{ color: activeTab === t.key ? colors.text : colors.muted, fontSize: 13, fontWeight: '700' }}>
               {t.label}
             </Text>
           </Pressable>
         ))}
-      </View>
+      </ScrollView>
 
       {/* Tab content */}
       <ScrollView style={{ flex: 1, marginTop: 10 }} contentContainerStyle={{ paddingBottom: 30 }}>
         {/* RED BOX */}
         {activeTab === 'redbox' && (
           <View>
-            <Text style={[g.cardTitle, { marginBottom: 6 }]}>Prime Minister\u2019s Despatch Box</Text>
+            <Text style={[g.cardTitle, { marginBottom: 6 }]}>Prime Minister's Despatch Box</Text>
             <Text style={[g.muted, { marginBottom: 12 }]}>
               Whitehall policy submissions and urgent crises awaiting your determination.
             </Text>
@@ -149,7 +149,7 @@ export default function GameScreen() {
               <View style={[g.card, { alignItems: 'center', padding: 24 }]}>
                 <Text style={{ color: colors.success, fontSize: 18, fontWeight: '800' }}>Red Box Cleared</Text>
                 <Text style={[g.muted, { textAlign: 'center', marginTop: 6 }]}>
-                  All ministerial papers dispatched for this week. Tap \u2018Advance Week\u2019 to continue.
+                  All ministerial papers dispatched for this week. Tap 'Advance Week' to continue.
                 </Text>
               </View>
             )}
@@ -171,7 +171,7 @@ export default function GameScreen() {
                       <Text style={{ color: colors.muted, fontSize: 11 }}>{b.weeksToPass}w to division</Text>
                     </View>
                     <Text style={[g.cardTitle, { fontSize: 16, marginTop: 4 }]}>{b.title}</Text>
-                    <Text style={[g.muted, { marginTop: 4 }]}>{fiscalLabel(b.fiscalCost)} \u2022 rebellion risk {b.rebellionRisk}%</Text>
+                    <Text style={[g.muted, { marginTop: 4 }]}>{fiscalLabel(b.fiscalCost)} - rebellion risk {b.rebellionRisk}%</Text>
                   </View>
                 ))}
               </>
@@ -208,13 +208,13 @@ export default function GameScreen() {
         {activeTab === 'cabinet' && (
           <View>
             <Text style={[g.cardTitle, { marginBottom: 4 }]}>Your Cabinet</Text>
-            <Text style={[g.muted, { marginBottom: 8 }]}>Faction unrest: {state.factionUnrest}% \u2014 manage your team to keep the party behind you.</Text>
+            <Text style={[g.muted, { marginBottom: 8 }]}>Faction unrest: {state.factionUnrest}% - manage your team to keep the party behind you.</Text>
             {state.cabinet.map((m) => (
               <View key={m.name} style={[g.card, { marginTop: 6 }]}>
                 <View style={g.row}>
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>{m.name}</Text>
-                    <Text style={{ color: colors.muted, fontSize: 12 }}>{m.post} \u2022 {m.faction}</Text>
+                    <Text style={{ color: colors.muted, fontSize: 12 }}>{m.post} - {m.faction}</Text>
                   </View>
                   <Pressable onPress={() => dispatch({ type: 'SACK_MINISTER', name: m.name })} style={{ padding: 6 }}>
                     <Text style={{ color: colors.danger, fontSize: 13, fontWeight: '700' }}>Sack</Text>
@@ -235,7 +235,7 @@ export default function GameScreen() {
                     <View style={g.row}>
                       <View style={{ flex: 1 }}>
                         <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>{b.name}</Text>
-                        <Text style={{ color: colors.muted, fontSize: 12 }}>{b.faction} \u2022 ambition {b.ambition}</Text>
+                        <Text style={{ color: colors.muted, fontSize: 12 }}>{b.faction} - ambition {b.ambition}</Text>
                       </View>
                       <Pressable
                         onPress={() => dispatch({ type: 'APPOINT_MINISTER', post: 'Minister of State' })}
@@ -321,7 +321,7 @@ export default function GameScreen() {
             {state.foreignIssues.length === 0 && <Text style={g.muted}>No outstanding summits or calls.</Text>}
             {state.foreignIssues.map((f) => (
               <View key={f.id} style={[g.card, { marginTop: 6 }]}>
-                <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800' }}>{f.country.toUpperCase()} \u2022 {f.leader}</Text>
+                <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800' }}>{f.country.toUpperCase()} - {f.leader}</Text>
                 <Text style={[g.cardTitle, { fontSize: 16, marginTop: 4 }]}>{f.topic}</Text>
                 {f.options.map((o) => (
                   <Pressable key={o.id} style={[g.btnGhost, { marginTop: 8, paddingVertical: 8 }]} onPress={() => dispatch({ type: 'RESOLVE_FOREIGN', issueId: f.id, optionId: o.id })}>
@@ -355,7 +355,7 @@ export default function GameScreen() {
             <View style={{ backgroundColor: colors.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '90%' }}>
               <View style={g.row}>
                 <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800', letterSpacing: 1, flex: 1 }}>{activeDossier.department.toUpperCase()} SUBMISSION</Text>
-                <Pressable onPress={() => dispatch({ type: 'CLOSE_DOSSIER' })}><Text style={{ color: colors.muted, fontSize: 16, fontWeight: '700' }}>\u2715</Text></Pressable>
+                <Pressable onPress={() => dispatch({ type: 'CLOSE_DOSSIER' })}><Text style={{ color: colors.muted, fontSize: 16, fontWeight: '700' }}>X</Text></Pressable>
               </View>
               <Text style={[g.title, { fontSize: 22, marginTop: 6 }]}>{activeDossier.title}</Text>
               <ScrollView style={{ marginTop: 12, maxHeight: 300 }}>
@@ -380,7 +380,7 @@ export default function GameScreen() {
         {state.pmq && (
           <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
             <View style={{ backgroundColor: colors.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
-              <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800', letterSpacing: 1 }}>PRIME MINISTER\u2019S QUESTIONS</Text>
+              <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800', letterSpacing: 1 }}>PRIME MINISTER'S QUESTIONS</Text>
               <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>{state.pmq.from}</Text>
               <Text style={[g.body, { marginTop: 10, fontWeight: '600' }]}>{state.pmq.question}</Text>
               <Text style={[g.cardTitle, { fontSize: 15, marginTop: 16, marginBottom: 8 }]}>Your response:</Text>
@@ -399,8 +399,8 @@ export default function GameScreen() {
       <Modal visible={state.budgetDue} transparent animationType="slide">
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
           <View style={{ backgroundColor: colors.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
-            <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800', letterSpacing: 1 }}>HM TREASURY \u2014 ANNUAL BUDGET</Text>
-            <Text style={[g.title, { fontSize: 22, marginTop: 6 }]}>Set the Nation\u2019s Course</Text>
+            <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800', letterSpacing: 1 }}>HM TREASURY - ANNUAL BUDGET</Text>
+            <Text style={[g.title, { fontSize: 22, marginTop: 6 }]}>Set the Nation's Course</Text>
             <Text style={[g.muted, { marginTop: 4 }]}>Choose the package your Chancellor will deliver to the Commons.</Text>
             {BUDGET_PACKAGES.map((b) => (
               <Pressable key={b.id} style={[g.card, { marginTop: 10 }]} onPress={() => dispatch({ type: 'DELIVER_BUDGET', packageId: b.id })}>
