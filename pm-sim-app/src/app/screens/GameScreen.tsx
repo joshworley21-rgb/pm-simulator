@@ -355,7 +355,7 @@ export default function GameScreen() {
             <View style={{ backgroundColor: colors.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '90%' }}>
               <View style={g.row}>
                 <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '800', letterSpacing: 1, flex: 1 }}>{activeDossier.department.toUpperCase()} SUBMISSION</Text>
-                <Pressable onPress={() => dispatch({ type: 'CLOSE_DOSSIER' })}><Text style={{ color: colors.muted, fontSize: 16, fontWeight: '700' }}>\u2715</Text></Pressable>
+                <Pressable onPress={() => dispatch({ type: 'CLOSE_DOSSIER' })}><Text style={{ color: colors.muted, fontSize: 16, fontWeight: '700' }}>X</Text></Pressable>
               </View>
               <Text style={[g.title, { fontSize: 22, marginTop: 6 }]}>{activeDossier.title}</Text>
               <ScrollView style={{ marginTop: 12, maxHeight: 300 }}>
