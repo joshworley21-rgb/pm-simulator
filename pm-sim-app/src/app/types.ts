@@ -216,6 +216,8 @@ export interface GameState {
   departments: SpendingDept[];
   legacyScore: number;
   termsWon: number;
+  regionSeats: Record<string, Record<string, number>>; // regionId -> partyId -> seats
+  ministerPicker: string | null; // backbencher name whose promotion is being confirmed
 }
 
 export type Action =
