@@ -214,6 +214,8 @@ export interface GameState {
   taxes: TaxLever[];
   fiscalEventKind: 'budget' | 'autumn' | null;
   departments: SpendingDept[];
+  legacyScore: number;
+  termsWon: number;
 }
 
 export type Action =
