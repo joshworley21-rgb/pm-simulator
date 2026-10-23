@@ -546,6 +546,7 @@ export function reducer(state: GameState, action: Action): GameState {
       };
 
     case 'ADJUST_TAX': {
+      if (inPurdah(state)) return state;
       const idx = state.taxes.findIndex((t) => t.id === action.taxId);
       if (idx < 0) return state;
       const tax = state.taxes[idx];
