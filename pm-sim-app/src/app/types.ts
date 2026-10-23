@@ -152,6 +152,18 @@ export interface BudgetPackage {
   kicker: string;
 }
 
+/** A single controllable tax lever. */
+export interface TaxLever {
+  id: string;
+  name: string;
+  rate: number;          // current rate (%)
+  min: number;
+  max: number;
+  step: number;
+  /** Approval sensitivity: how much the public reacts to this tax changing. */
+  popularityWeight: number;
+}
+
 export interface Player {
   firstName: string;
   lastName: string;
