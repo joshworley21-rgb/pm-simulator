@@ -208,7 +208,7 @@ export default function GameScreen() {
         {activeTab === 'cabinet' && (
           <View>
             <Text style={[g.cardTitle, { marginBottom: 4 }]}>Your Cabinet</Text>
-            <Text style={[g.muted, { marginBottom: 8 }]}>Faction unrest: {state.factionUnrest}% \u2014 manage your team to keep the party behind you.</Text>
+            <Text style={[g.muted, { marginBottom: 8 }]}>Faction unrest: {state.factionUnrest}% - manage your team to keep the party behind you.</Text>
             {state.cabinet.map((m) => (
               <View key={m.name} style={[g.card, { marginTop: 6 }]}>
                 <View style={g.row}>
