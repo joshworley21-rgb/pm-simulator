@@ -127,6 +127,9 @@ function runElection(s: GameState): GameState {
   const swing = Math.round((playerSeats - 350) / 30);
   const approval = clamp(s.metrics.approval + (majority ? swing + 3 : -12), 0, 100);
   const message = `GENERAL ELECTION: ${playerParty?.name ?? '?'} won ${playerSeats} seats ${majority ? '(Working Majority)' : '(Hung Parliament)'}.`;
+  // Legacy score from governing quality; a second term rewards survival.
+  const legacyScore = s.legacyScore + Math.round(s.metrics.approval / 10) + Math.round(s.stats.economy / 10) + (majority ? 5 : 0);
+  const termsWon = majority ? s.termsWon + 1 : s.termsWon;
   return {
     ...s,
     parties,
@@ -134,6 +137,8 @@ function runElection(s: GameState): GameState {
     stats: { ...s.stats, lettersOfNoConfidence: 0, lettersThreshold: resignationThreshold(playerSeats) },
     turnsUntilElection: s.termLength || 60,
     isElection: true,
+    legacyScore,
+    termsWon,
     log: [message, ...s.log].slice(0, 50),
   };
 }
