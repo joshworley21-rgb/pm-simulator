@@ -164,6 +164,18 @@ export interface TaxLever {
   popularityWeight: number;
 }
 
+/** A government department whose budget the PM can set. */
+export interface SpendingDept {
+  id: string;
+  name: string;
+  budget: number;
+  min: number;
+  max: number;
+  step: number;
+  desc: string;
+  benefit: Effects;
+}
+
 export interface Player {
   firstName: string;
   lastName: string;
