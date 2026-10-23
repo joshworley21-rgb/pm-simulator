@@ -318,6 +318,7 @@ export function advanceWeek(s: GameState): GameState {
 
   // 3. Economy & polling.
   next = weeklyEconomy(next);
+  next = advanceEconomy(next);
   next = driftPolling(next, rng);
 
   // 4. 1922 letters.
