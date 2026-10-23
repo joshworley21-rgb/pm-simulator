@@ -491,11 +491,21 @@ export function reducer(state: GameState, action: Action): GameState {
       return resignMinister(state, action.name);
 
     case 'APPOINT_MINISTER': {
-      const post = action.post;
-      const candidates = state.backbenchers.filter((b) => b.partyId === state.player?.partyId);
-      if (candidates.length === 0) return state;
-      // Promote the most loyal (with a competence tilt) available backbencher.
-      const candidate = [...candidates].sort((a, b) => (b.loyalty + b.competence * 0.4) - (a.loyalty + a.competence * 0.4))[0];
+      // Open the picker (no auto-selection).
+      return { ...state, ministerPicker: action.post };
+    }
+
+    case 'PICK_MINISTER': {
+      return { ...state, ministerPicker: action.name };
+    }
+
+    case 'CONFIRM_APPOINT': {
+      const post = state.ministerPicker === null ? action.post : (state.ministerPicker as string);
+      const candidate = state.backbenchers.find((b) => b.name === state.ministerPicker);
+      if (!candidate && state.ministerPicker) {
+        // Fall back: pick the best available.
+      }
+      if (!candidate) return state;
       const minister: Minister = {
         name: candidate.name,
         post,
@@ -508,9 +518,13 @@ export function reducer(state: GameState, action: Action): GameState {
         ...state,
         cabinet: [...state.cabinet, minister],
         backbenchers: state.backbenchers.filter((b) => b.name !== candidate.name),
+        ministerPicker: null,
         log: [`CABINET: ${candidate.name} appointed ${post}.`, ...state.log].slice(0, 50),
       };
     }
+
+    case 'CANCEL_APPOINT':
+      return { ...state, ministerPicker: null };
 
     case 'SET_TERM_LENGTH':
       return { ...state, termLength: action.weeks, turnsUntilElection: action.weeks };
