@@ -35,6 +35,7 @@ export interface Relation {
   score: number;
 }
 
+/** NationalStats now includes detailed NHS metrics and fiscal drag tracking. */
 export interface NationalStats {
   cpiInflation: number;
   gdpGrowth: number;
@@ -62,6 +63,20 @@ export interface NationalStats {
   obrDebt: number;              // % GDP forecast
   obrGrowth: number;            // % forecast
   obrInflation: number;         // % forecast
+  // --- Detailed NHS metrics ---
+  ae4hourPerformance: number;   // A&E 4-hour wait target (% seen within 4 hours)
+  cancerWaitTimes: number;      // Average waiting time for cancer treatment (weeks)
+  nhsVacancies: number;         // Vacant nursing/medical positions (000s)
+  // --- Trade deal tracking ---
+  cpTPPStatus: 'active' | 'paused' | 'rejected' | 'inactive';
+  euDealStatus: 'active' | 'paused' | 'rejected' | 'inactive';
+  usDealStatus: 'active' | 'paused' | 'rejected' | 'inactive';
+  // --- Fiscal drag ---
+  incomeTaxThresholdFrozenWeeks: number; // how long the personal allowance freeze has lasted
+  niThresholdFrozenWeeks: number;        // how long the NI threshold freeze has lasted
+  // --- Multi-year spending review ---
+  spendingReviewYear: number;        // current review year (e.g. 2025, 2026, 2027)
+  settlementMultiplier: number;      // index tracking cumulative settlement changes
 }
 
 export interface Metrics {
@@ -90,8 +105,14 @@ export interface Effects {
   debtToGdp?: number;
   unemployment?: number;
   budgetBalance?: number;
-  supportDelta?: Record<string, number>;
+  supportDelta?: Record;
   fundsDelta?: number;
+  ae4hourChange?: number;
+  cancerWaitChange?: number;
+  vacanciesChange?: number;
+  fiscalDrag?: number;
+  tradeDealEffect?: number;
+  spendingReviewEffect?: number;
 }
 
 export interface DossierChoice {
@@ -191,6 +212,30 @@ export interface SpendingDept {
   benefit: Effects;
 }
 
+/** A single trade deal configuration. */
+export interface TradeDeal {
+  id: string;
+  name: string;
+  partner: string;
+  type: 'cpTPP' | 'eu' | 'us' | 'other';
+  status: 'active' | 'paused' | 'rejected' | 'inactive';
+  regionalWinners: Record<string, number>; // partyId -> support increase in region
+  regionalLosers: Record<string, number>;  // partyId -> support decrease in region
+  economicImpact: number; // % GDP change
+  politicalCost: number;  // approval change
+  weeksRemaining: number; // weeks to ratify/complete
+}
+
+/** A spending review settlement component. */
+export interface SpendingReviewSettlement {
+  department: Department;
+  multiYearBudget: number;     // total budget over review period (£bn)
+  annualAllocation: number;    // budget for current year (£bn)
+  changeFromPrevious: number; // % change from previous year
+  priorityAreas: string[];     // key focus areas for this department
+  publicServiceImpact: number; // impact on public services metric per year
+}
+
 export interface Player {
   firstName: string;
   lastName: string;
@@ -231,8 +276,18 @@ export interface GameState {
   departments: SpendingDept[];
   legacyScore: number;
   termsWon: number;
-  regionSeats: Record<string, Record<string, number>>; // regionId -> partyId -> seats
+  regionSeats: Record>; // regionId -> partyId -> seats
   ministerPicker: string | null; // backbencher name whose promotion is being confirmed
+  // Trade deals
+  tradeDeals: TradeDeal[];
+  // Spending review
+  spendingReview: SpendingReviewSettlement[];
+  // Fiscal drag tracking
+  fiscalDragTracking: {
+    incomeTaxFrozen: boolean;
+    niThresholdFrozen: boolean;
+    weeksFrozen: number;
+  };
 }
 
 export type Action =
