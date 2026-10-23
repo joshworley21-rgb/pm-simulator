@@ -214,7 +214,7 @@ export default function GameScreen() {
                 <View style={g.row}>
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>{m.name}</Text>
-                    <Text style={{ color: colors.muted, fontSize: 12 }}>{m.post} \u2022 {m.faction}</Text>
+                    <Text style={{ color: colors.muted, fontSize: 12 }}>{m.post} | {m.faction}</Text>
                   </View>
                   <Pressable onPress={() => dispatch({ type: 'SACK_MINISTER', name: m.name })} style={{ padding: 6 }}>
                     <Text style={{ color: colors.danger, fontSize: 13, fontWeight: '700' }}>Sack</Text>
