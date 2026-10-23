@@ -491,8 +491,8 @@ export function reducer(state: GameState, action: Action): GameState {
       return resignMinister(state, action.name);
 
     case 'APPOINT_MINISTER': {
-      // Store the target post, then let the UI show the candidate picker.
-      return { ...state, ministerPicker: action.post };
+      // Legacy: candidate picker is now driven by PICK_MINISTER + CONFIRM_APPOINT.
+      return state;
     }
 
     case 'PICK_MINISTER': {
