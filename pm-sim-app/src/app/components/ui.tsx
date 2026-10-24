@@ -44,12 +44,14 @@ export function Button({
   variant = 'primary',
   disabled,
   compact,
+  testID,
 }: {
   label: string;
   onPress: () => void;
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   disabled?: boolean;
   compact?: boolean;
+  testID?: string;
 }) {
   const bg =
     variant === 'primary'
@@ -66,6 +68,7 @@ export function Button({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
+      testID={testID}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [

@@ -157,7 +157,7 @@ export default function GameScreen() {
           >
             <Text style={{ color: colors.muted, fontWeight: '800' }}>?</Text>
           </Pressable>
-          <Button label="Advance" onPress={advanceWeek} compact disabled={!!state.gameOver} />
+          <Button label="Advance" onPress={advanceWeek} compact disabled={!!state.gameOver} testID="advance-week" />
         </View>
 
         {/* vitals */}
@@ -727,6 +727,7 @@ export default function GameScreen() {
             {activeDossier.choices.map((c) => (
               <Pressable
                 key={c.id}
+                testID={`dossier-choice-${c.id}`}
                 onPress={() => dispatch({ type: 'RESOLVE_DOSSIER', dossierId: activeDossier.id, choiceId: c.id })}
                 style={{ borderWidth: 1, borderColor: colors.cardBorder, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.sm, backgroundColor: colors.card }}
               >
@@ -749,6 +750,7 @@ export default function GameScreen() {
             {state.pmq.options.map((o) => (
               <Pressable
                 key={o.id}
+                testID={`pmq-option-${o.id}`}
                 onPress={() => dispatch({ type: 'ANSWER_PMQ', optionId: o.id })}
                 style={{ borderWidth: 1, borderColor: colors.cardBorder, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.sm, backgroundColor: colors.card }}
               >
@@ -818,7 +820,7 @@ export default function GameScreen() {
               <Text style={{ color: colors.muted, fontSize: font.small, lineHeight: 19 }}>{state.lastOutcome}</Text>
             </View>
           )}
-          <Button label="Back to the desk" onPress={() => setBriefing(null)} />
+          <Button label="Back to the desk" onPress={() => setBriefing(null)} testID="briefing-dismiss" />
         </View>
       </Sheet>
 
