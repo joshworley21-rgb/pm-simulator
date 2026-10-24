@@ -8,6 +8,13 @@ import { INITIAL_TAXES, TAX_YIELD_PER_POINT } from './taxes';
 import { INITIAL_DEPARTMENTS } from './spending';
 import type { Region } from './data';
 
+// ===== New Feature Module Imports =====
+import { calculateFiscalDrag, getFiscalDragScenario } from './fiscalDragIntegration';
+import { calculateTradeDealEconomics, DEFAULT_TRADE_DEAL_STATUS } from './tradeDeals';
+import { calculateNHSPerformance, NHS_TARGETS } from './nhsMetrics';
+import { calculateSpendingReviewImpact, DEFAULT_SPENDING_REVIEW } from './spendingReview';
+import { calculate1922Mood, shouldTriggerLeadershipChallenge, calculateBlindsideRisk } from './leadershipChallenge';
+
 export const FPTP_EXPONENT = 2.5;
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
