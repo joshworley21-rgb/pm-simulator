@@ -234,6 +234,32 @@ check('the 1922 ballot tallies the whole parliamentary party', () => {
   assert.ok(!!s.gameOver, 'losing the ballot should end the premiership');
 });
 
+check('a minority government can buy confidence and supply', () => {
+  let s = newGame('reform', 'hung-parliament');
+  const own = s.parties.find((p) => p.id === 'reform')?.seats ?? 0;
+  assert.ok(own < 326, 'hung parliament should leave us short: ' + own);
+  const partner = [...s.parties]
+    .filter((p) => p.id !== 'reform')
+    .sort((a, b) => b.seats - a.seats)[0];
+  s = reducer(s, { type: 'NEGOTIATE_SUPPLY', partyId: partner.id });
+  if (s.supplyPartnerId) {
+    assert.ok((s.supplyCostPerWeek ?? 0) > 0, 'a supply deal should cost money');
+    const backers = own + (s.parties.find((p) => p.id === s.supplyPartnerId)?.seats ?? 0);
+    assert.ok(backers >= 326, 'the deal should produce a majority');
+  } else {
+    assert.ok(own + partner.seats < 326, 'refused despite being able to govern');
+  }
+});
+
+check('a partner who cannot deliver a majority is refused', () => {
+  let s = newGame('reform', 'hung-parliament');
+  const smallest = [...s.parties]
+    .filter((p) => p.id !== 'reform')
+    .sort((a, b) => a.seats - b.seats)[0];
+  s = reducer(s, { type: 'NEGOTIATE_SUPPLY', partyId: smallest.id });
+  assert.equal(s.supplyPartnerId, undefined, 'took a partner who cannot govern');
+});
+
 console.log('');
 if (failures > 0) {
   // A thrown error gives the process a non-zero exit code.

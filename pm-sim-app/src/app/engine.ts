@@ -336,12 +336,18 @@ function weeklyEconomy(s: GameState): GameState {
 
 function resolveBill(s: GameState, bill: Bill, rng: () => number): GameState {
   const party = s.parties.find((p) => p.id === s.player?.partyId);
-  const seats = party?.seats ?? 0;
+  const ownSeats = party?.seats ?? 0;
+  // A confidence-and-supply partner votes with the government on money and
+  // confidence, which is what actually carries a bill through the lobbies.
+  const partner = s.supplyPartnerId
+    ? s.parties.find((p) => p.id === s.supplyPartnerId)
+    : undefined;
+  const seats = ownSeats + (partner?.seats ?? 0);
 
   let passed: boolean;
   if (seats >= 360) passed = true;
   else if (seats >= 326) passed = rng() < 0.92;
-  else if (seats >= 300) passed = rng() < 0.6;
+  else if (seats >= 300) passed = rng() < (partner ? 0.6 : 0.25);
   else passed = false;
 
   let letters = s.stats.lettersOfNoConfidence + Math.round(bill.rebellionRisk / 8);
@@ -359,7 +365,15 @@ function resolveBill(s: GameState, bill: Bill, rng: () => number): GameState {
   } else {
     next = applyEffects(next, { approval: -2, partyConfidence: -2 });
     letters += Math.round(bill.rebellionRisk / 4);
-    next = { ...next, log: [`BILL DEFEATED: ${bill.title}`, ...(next.log ?? [])].slice(0, 50) };
+    next = {
+      ...next,
+      log: [
+        partner || ownSeats >= 326
+          ? `BILL DEFEATED: ${bill.title} was voted down.`
+          : `BILL DEFEATED: ${bill.title} fell for want of a majority in the Commons.`,
+        ...(next.log ?? []),
+      ].slice(0, 50),
+    };
   }
 
   next = { ...next, stats: { ...next.stats, lettersOfNoConfidence: clamp(letters, 0, 99) } };
@@ -543,6 +557,46 @@ export function advanceWeek(s: GameState): GameState {
   if (mood.consideringDefection >= 2) letters += 1;
   letters = clamp(letters, 0, 99);
   next = { ...next, stats: { ...next.stats, lettersOfNoConfidence: letters }, committeeMood: mood };
+
+  // 4b. Confidence and supply: a minority government buys its votes, and the
+  // arrangement frays when you become unpopular.
+  if (next.supplyPartnerId && !next.gameOver) {
+    const partner = next.parties.find((p) => p.id === next.supplyPartnerId);
+    if (partner) {
+      next = applyEffects(next, { budgetBalance: -(next.supplyCostPerWeek ?? 0) });
+      if (next.metrics.approval < 30 && rng() < 0.12) {
+        next = {
+          ...next,
+          supplyPartnerId: undefined,
+          supplyCostPerWeek: 0,
+          supplyConcessions: [],
+          metrics: { ...next.metrics, partyConfidence: clamp(next.metrics.partyConfidence - 2, 0, 100) },
+          log: [`CONFIDENCE AND SUPPLY: ${partner.name} withdraws its support.`, ...next.log].slice(0, 50),
+          headlines: [{ paper: 'The Courier', title: `${partner.abbreviation} PULLS THE PLUG ON SUPPLY`, stance: 'right' as const }, ...next.headlines].slice(0, 4),
+        };
+      }
+    }
+  }
+
+  // 4c. Without a majority or a deal the opposition moves a confidence motion.
+  // The Cabinet Manual gives the incumbent the first chance to form a
+  // government, but not an unlimited one.
+  if (!next.gameOver) {
+    const pmSeats = next.parties.find((p) => p.id === next.player?.partyId)?.seats ?? 0;
+    const backing =
+      pmSeats +
+      (next.supplyPartnerId
+        ? next.parties.find((p) => p.id === next.supplyPartnerId)?.seats ?? 0
+        : 0);
+    if (backing < 326 && rng() < (next.metrics.approval < 40 ? 0.09 : 0.035)) {
+      const who = next.player ? `${next.player.firstName} ${next.player.lastName}` : 'The Prime Minister';
+      next = {
+        ...next,
+        gameOver: `${who} lost a confidence motion in the Commons after failing to command a majority.`,
+        log: [`CONFIDENCE MOTION: ${who} is defeated in the Commons and resigns.`, ...next.log].slice(0, 50),
+      };
+    }
+  }
 
   // 5. 1922 Committee confidence ballot.
   //
@@ -978,6 +1032,36 @@ export function reducer(state: GameState, action: Action): GameState {
       return next;
     }
 
+    case 'NEGOTIATE_SUPPLY': {
+      if (state.phase !== 'playing' || !state.player) return state;
+      const partner = state.parties.find((p) => p.id === action.partyId);
+      if (!partner) return state;
+      const mySeats = state.parties.find((p) => p.id === state.player?.partyId)?.seats ?? 0;
+      const combined = mySeats + partner.seats;
+      if (combined < 326) {
+        return {
+          ...state,
+          log: [`SUPPLY: ${partner.name} cannot deliver a majority (${combined} seats between you).`, ...state.log].slice(0, 50),
+        };
+      }
+
+      const rel = state.relations.find((r) => r.from === state.player?.partyId && r.to === partner.id)?.score ?? -50;
+      const willingness = Math.min(100, Math.max(0, 50 + rel / 2));
+      // A hostile partner will still deal, but only at a price. The 2017 DUP
+      // arrangement cost roughly GBP 1bn for ten seats; an unwilling partner
+      // charges double that and takes a bite out of party unity.
+      const hostile = willingness < 40;
+      const ratePerSeat = hostile ? 0.04 : 0.02;
+      const annualCost = Math.min(12, Math.round(partner.seats * ratePerSeat * 10) / 10);
+      return {
+        ...state,
+        supplyPartnerId: partner.id,
+        supplyCostPerWeek: Math.round((annualCost / 52) * 1000) / 1000,
+        supplyConcessions: [`GBP ${annualCost}bn a year in extra spending`, 'Prior notice of legislation'],
+        metrics: { ...state.metrics, partyConfidence: Math.max(0, state.metrics.partyConfidence - (hostile ? 4 : 2)) },
+        log: [`SUPPLY: ${partner.name} agrees confidence and supply${hostile ? ' on punishing terms' : ''}, costing GBP ${annualCost}bn a year.`, ...state.log].slice(0, 50),
+      };
+    }
     case 'DISMISS_ELECTION':
       return { ...state, isElection: false };
 

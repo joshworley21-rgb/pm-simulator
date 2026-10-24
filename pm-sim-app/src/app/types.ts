@@ -224,6 +224,13 @@ export interface GameState {
   // ===== Simulation telemetry (written weekly by the engine) =====
   /** Scenario this game started from. */
   scenarioId?: string;
+  /** Party propping up a minority government (confidence and supply). */
+  supplyPartnerId?: string;
+  /** Weekly cost of the arrangement, GBP bn. */
+  supplyCostPerWeek?: number;
+  /** Promises made to the partner. */
+  supplyConcessions?: string[];
+
   /** Result of the most recent 1922 Committee confidence ballot. */
   lastVote?: {
     votesFor: number;
@@ -277,5 +284,6 @@ export type Action =
   | { type: 'ADJUST_TAX'; taxId: string; delta: number }
   | { type: 'SET_AUTUMN_TAXES' }
   | { type: 'ADJUST_SPENDING'; deptId: string; delta: number }
+  | { type: 'NEGOTIATE_SUPPLY'; partyId: string }
   | { type: 'DISMISS_ELECTION' }
   | { type: 'RESTORE'; state: GameState };

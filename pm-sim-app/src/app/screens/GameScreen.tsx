@@ -83,6 +83,7 @@ export default function GameScreen() {
   const player = state.player;
   const party = state.parties.find((p) => p.id === player?.partyId);
   const rankedParties = useMemo(() => [...state.parties].sort((a, b) => b.seats - a.seats), [state.parties]);
+  const ownSeats = party ? party.seats : 0;
 
   const proposable = useMemo(() => {
     const inFlight = new Set(state.bills.map((b) => b.id));
@@ -446,6 +447,52 @@ export default function GameScreen() {
                     </Text>
                   )}
                 </Card>
+
+                {ownSeats < 326 && (
+                  <>
+                    <Text style={[styles.label, { marginTop: spacing.lg }]}>CONFIDENCE AND SUPPLY</Text>
+                    <Card tone="danger">
+                      <Text style={{ color: colors.text, fontSize: font.small, fontWeight: '800' }}>
+                        You are {326 - ownSeats} seats short of a majority
+                      </Text>
+                      <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 4, lineHeight: 17 }}>
+                        Without a deal the opposition can move a confidence motion at any time. A partner
+                        votes with you on money and confidence, at a price.
+                      </Text>
+                    </Card>
+                    {!state.supplyPartnerId &&
+                      state.parties
+                        .filter((p) => p.id !== player?.partyId)
+                        .sort((a, b) => b.seats - a.seats)
+                        .map((p) => {
+                          const rel = state.relations.find((r) => r.from === player?.partyId && r.to === p.id)?.score ?? -50;
+                          const willing = Math.min(100, Math.max(0, 50 + rel / 2));
+                          const rate = willing < 40 ? 0.04 : 0.02;
+                          const cost = Math.min(12, Math.round(p.seats * rate * 10) / 10);
+                          const canGovern = ownSeats + p.seats >= 326;
+                          return (
+                            <Card key={p.id}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: p.color, marginRight: 8 }} />
+                                <Text style={{ color: colors.text, flex: 1, fontSize: font.body, fontWeight: '700' }}>{p.name}</Text>
+                                <Text style={{ color: colors.muted, fontSize: font.tiny }}>{p.seats} seats</Text>
+                              </View>
+                              <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 4 }}>
+                                Wants £{cost}bn a year | willingness {Math.round(willing)}
+                                {canGovern ? '' : ' | still short of a majority'}
+                              </Text>
+                              <Button
+                                label="Negotiate confidence and supply"
+                                variant="secondary"
+                                compact
+                                disabled={!canGovern || willing < 40}
+                                onPress={() => dispatch({ type: 'NEGOTIATE_SUPPLY', partyId: p.id })}
+                              />
+                            </Card>
+                          );
+                        })}
+                  </>
+                )}
 
                 <Text style={[styles.label, { marginTop: spacing.lg }]}>HOUSE OF COMMONS | 650 SEATS</Text>
                 {rankedParties.map((p) => (
