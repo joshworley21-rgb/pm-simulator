@@ -1,4 +1,4 @@
-import type { GameState, Action, Party, Effects, Dossier, Bill, Minister } from './types';
+import type { GameState, Action, Party, Effects, Dossier, Bill, Minister, PmqQuestion } from './types';
 import { INITIAL_PARTIES, INITIAL_RELATIONS, REGIONS, DOSSIER_POOL } from './data';
 import { BILL_POOL } from './bills';
 import { BILL_POOL_2 } from './bills2';
@@ -255,6 +255,33 @@ export function fundedEnvelope(s: GameState): { spend: number; plannedDeficit: n
   return { spend, plannedDeficit, envelope: spend + plannedDeficit };
 }
 
+// ===== PMQs =====
+// A session is a proper exchange: the Leader of the Opposition gets six
+// questions, then the third party gets two.
+const PMQ_ROUNDS = 8;
+const PMQ_LOTO_ROUNDS = 6;
+
+/** Deterministic 0..1 draw so the reducer stays a pure function. */
+function seededRandom(seed: number): number {
+  const x = (Math.imul(seed >>> 0, 1664525) + 1013904223) >>> 0;
+  return x / 4294967296;
+}
+
+/** Rival parties, largest first, excluding the government. */
+function rivalParties(s: GameState): Party[] {
+  return [...s.parties].filter((p) => p.id !== s.player?.partyId).sort((a, b) => b.seats - a.seats);
+}
+
+/** Build question `round` of the exchange. */
+function pmqQuestion(s: GameState, round: number): PmqQuestion {
+  const asker: 'loto' | 'third' = round <= PMQ_LOTO_ROUNDS ? 'loto' : 'third';
+  const rivals = rivalParties(s);
+  const source = asker === 'loto' ? rivals[0] : rivals[1] ?? rivals[0];
+  const draw = seededRandom((s.seed + round * 7919 + s.week * 104729) >>> 0);
+  const q = PMQ_POOL[Math.floor(draw * PMQ_POOL.length)];
+  return { ...q, from: source ? `${source.name} leader` : q.from, asker, round, total: PMQ_ROUNDS };
+}
+
 export function structuralBalance(s: GameState): number {
   const BASE_DEFICIT = -75;
   const BASE_SPEND = 510;
@@ -338,7 +365,11 @@ function resolveBill(s: GameState, bill: Bill, rng: () => number): GameState {
   const partner = s.supplyPartnerId
     ? s.parties.find((p) => p.id === s.supplyPartnerId)
     : undefined;
-  const seats = ownSeats + (partner?.seats ?? 0);
+  // Restive coalition ministers vote against the government, costing it seats
+  // in the division even while the agreement formally holds.
+  const rebels = s.cabinet.filter((m) => m.coalition && m.loyalty < 45 && (m.ambition ?? 50) >= 55);
+  const rebelLoss = rebels.length * 15;
+  const seats = ownSeats + (partner?.seats ?? 0) - rebelLoss;
 
   let passed: boolean;
   if (seats >= 360) passed = true;
@@ -348,6 +379,19 @@ function resolveBill(s: GameState, bill: Bill, rng: () => number): GameState {
 
   let letters = s.stats.lettersOfNoConfidence + Math.round(bill.rebellionRisk / 8);
   let next = s;
+
+  if (rebels.length > 0) {
+    next = {
+      ...next,
+      cabinet: next.cabinet.map((m) =>
+        m.coalition && m.loyalty < 45 ? { ...m, loyalty: clamp(m.loyalty - 8, 0, 100) } : m,
+      ),
+      log: [
+        `COALITION REBELS: ${rebels.length} partner minister${rebels.length > 1 ? 's' : ''} voted against the government.`,
+        ...(next.log ?? []),
+      ].slice(0, 50),
+    };
+  }
 
   if (passed) {
     next = applyEffects(next, bill.effects);
@@ -611,6 +655,40 @@ export function advanceWeek(s: GameState): GameState {
   letters = clamp(letters, 0, 99);
   next = { ...next, stats: { ...next.stats, lettersOfNoConfidence: letters }, committeeMood: mood };
 
+  // 4a-ii. Mid-term reshuffle: when the 1922 mood is bad enough, the PM moves
+  // the team around to refresh the government and buy off the restive.
+  if (
+    !next.gameOver &&
+    next.cabinet.filter((m) => !m.coalition).length > 1 &&
+    (next.lastReshuffleWeek ?? -99) + 8 <= next.week &&
+    (mood.consideringDefection >= 2 || mood.averageLoyalty < 40) &&
+    next.backbenchers.length > 0
+  ) {
+    const out = [...next.cabinet.filter((m) => !m.coalition)].sort((a, b) => a.loyalty - b.loyalty)[0];
+    const incoming = next.backbenchers[0];
+    next = {
+      ...next,
+      cabinet: [
+        ...next.cabinet.filter((m) => m.name !== out.name),
+        {
+          name: incoming.name,
+          post: out.post,
+          partyId: incoming.partyId,
+          loyalty: incoming.loyalty,
+          competence: incoming.competence,
+          faction: incoming.faction,
+          ambition: incoming.ambition,
+        },
+      ],
+      backbenchers: next.backbenchers.slice(1),
+      lastReshuffleWeek: next.week,
+      stats: { ...next.stats, lettersOfNoConfidence: clamp(next.stats.lettersOfNoConfidence - 1, 0, 99) },
+      metrics: { ...next.metrics, partyConfidence: clamp(next.metrics.partyConfidence + 2, 0, 100) },
+      log: [`RESHUFFLE: ${out.name} leaves the Cabinet and ${incoming.name} takes over as ${out.post}.`, ...next.log].slice(0, 50),
+      headlines: [{ paper: 'The National Standard', title: 'PM RESHUFFLES THE CABINET', stance: 'centrist' as const }, ...next.headlines].slice(0, 4),
+    };
+  }
+
   // 4b. Confidence and supply: a minority government buys its votes, and the
   // arrangement frays when you become unpopular.
   if (next.supplyPartnerId && !next.gameOver) {
@@ -816,7 +894,7 @@ export function advanceWeek(s: GameState): GameState {
   // PMQs is a weekly fixture when the House sits (LOTO gets six questions,
   // the third party two), so it fires more often than a summit would.
   if (next.week % 4 === 0 && !next.gameOver && !next.pmq) {
-    next.pmq = PMQ_POOL[Math.floor(rng() * PMQ_POOL.length)];
+    next.pmq = pmqQuestion(next, 1);
   }
   if (next.week % 7 === 0 && !next.gameOver && next.foreignIssues.length < 2) {
     const fi = FOREIGN_POOL[Math.floor(rng() * FOREIGN_POOL.length)];
@@ -1089,13 +1167,15 @@ export function reducer(state: GameState, action: Action): GameState {
       if (!q) return state;
       const opt = q.options.find((o) => o.id === action.optionId);
       if (!opt) return state;
-      const next = applyEffects(state, opt.effects);
-      return {
-        ...next,
-        pmq: null,
-        log: [`PMQS: Answered a question from ${q.from}.`, ...next.log].slice(0, 50),
-        headlines: [{ paper: 'The Clarion', title: `PMQS: PM FACES ${q.from.toUpperCase()} ON THE ECONOMY`, stance: 'left' as const }, ...next.headlines].slice(0, 4),
+      const answered = {
+        ...applyEffects(state, opt.effects),
+        log: [`PMQS: Answered a question from ${q.from}.`, ...state.log].slice(0, 50),
+        headlines: [{ paper: 'The Clarion', title: `PMQS: PM FACES ${q.from.toUpperCase()}`, stance: 'left' as const }, ...state.headlines].slice(0, 4),
       };
+      const round = (q.round ?? 1) + 1;
+      // Six from the Leader of the Opposition, then two from the third party.
+      if (round > PMQ_ROUNDS) return { ...answered, pmq: null };
+      return { ...answered, pmq: pmqQuestion(answered, round) };
     }
 
     case 'DISMISS_PMQ':
@@ -1233,6 +1313,7 @@ export function reducer(state: GameState, action: Action): GameState {
         competence: 68,
         faction: 'Coalition',
         coalition: true,
+        ambition: 60 + i * 9,
       }));
       return {
         ...state,

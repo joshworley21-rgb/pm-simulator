@@ -119,6 +119,8 @@ export interface Minister {
   faction: string;
   /** True when the minister comes from a coalition partner. */
   coalition?: boolean;
+  /** Ambition 0-100: restive, ambitious ministers can rebel in a division. */
+  ambition?: number;
 }
 
 /** A backbench MP available for promotion to cabinet. */
@@ -144,6 +146,12 @@ export interface PmqQuestion {
   from: string;
   question: string;
   options: { id: string; label: string; effects: Effects }[];
+  /** Who is asking: the Leader of the Opposition, or the third party. */
+  asker?: 'loto' | 'third';
+  /** 1-based question number within the session. */
+  round?: number;
+  /** Six questions from LOTO, then two from the third party. */
+  total?: number;
 }
 
 export interface BudgetPackage {
@@ -228,6 +236,8 @@ export interface GameState {
   scenarioId?: string;
   /** By-election results during the parliament. */
   byElections?: { regionId: string; held: boolean; week: number }[];
+  /** Week of the last mid-term reshuffle, so they cannot chain. */
+  lastReshuffleWeek?: number;
 
   /** Two manifesto promises judged at the next election. */
   pledges?: import('./pledges').Pledge[];

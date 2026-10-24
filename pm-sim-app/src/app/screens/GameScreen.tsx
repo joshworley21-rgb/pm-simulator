@@ -410,6 +410,26 @@ export default function GameScreen() {
         {tab === 'politics' && (
           <View>
             <SectionTitle title="Westminster" hint="Keep your MPs and the press onside or you will not survive the year." />
+
+            {/* Confidence watch: the 1922 letters count and any motion, in one place. */}
+            <Card>
+              <Text style={{ color: colors.text, fontSize: font.small, fontWeight: '800' }}>Confidence watch</Text>
+              <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 4, lineHeight: 17 }}>
+                1922 Committee: {letters} of {threshold} letters ({revoltPct}% of the way to a ballot).
+                {state.committeeMood
+                  ? ` Backbench loyalty ${state.committeeMood.averageLoyalty}, ${state.committeeMood.consideringDefection} considering defection.`
+                  : ''}
+              </Text>
+              {state.oppositionMotion ? (
+                <Text style={{ color: colors.danger, fontSize: font.tiny, marginTop: 4, fontWeight: '700' }}>
+                  Opposition motion tabled: division in {Math.max(0, state.oppositionMotion.scheduledWeek - state.week)} week(s).
+                </Text>
+              ) : (
+                <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 4 }}>
+                  No opposition motion tabled.
+                </Text>
+              )}
+            </Card>
             <Segmented
               options={[
                 { key: 'cabinet', label: 'Cabinet' },
@@ -430,6 +450,7 @@ export default function GameScreen() {
                         <Text style={{ color: colors.text, fontSize: font.h3, fontWeight: '700' }}>{m.name}</Text>
                         <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 2 }}>
                           {m.post} | {m.faction}{m.coalition ? ' | coalition' : ''}
+                          {m.coalition && m.loyalty < 45 ? ' | restive' : ''}
                         </Text>
                       </View>
                       <Pressable onPress={() => setConfirmSack(m.name)} hitSlop={8}>
@@ -814,7 +835,16 @@ export default function GameScreen() {
       </Sheet>
 
       {/* ================= PMQ SHEET ================= */}
-      <Sheet visible={!!state.pmq} onClose={() => dispatch({ type: 'DISMISS_PMQ' })} eyebrow="PRIME MINISTER'S QUESTIONS" title={state.pmq ? state.pmq.from : ''}>
+      <Sheet
+        visible={!!state.pmq}
+        onClose={() => dispatch({ type: 'DISMISS_PMQ' })}
+        eyebrow={
+          state.pmq?.total
+            ? `PRIME MINISTER'S QUESTIONS | ${state.pmq.asker === 'third' ? 'THIRD PARTY' : 'OPPOSITION LEADER'} | QUESTION ${state.pmq.round ?? 1} OF ${state.pmq.total}`
+            : "PRIME MINISTER'S QUESTIONS"
+        }
+        title={state.pmq ? state.pmq.from : ''}
+      >
         {state.pmq && (
           <View>
             <Text style={{ color: colors.text, fontSize: font.body, lineHeight: 22 }}>{state.pmq.question}</Text>

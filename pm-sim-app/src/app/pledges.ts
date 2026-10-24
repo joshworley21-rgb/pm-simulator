@@ -14,7 +14,8 @@ export type PledgeMetric =
   | 'cpiInflation'
   | 'netMigration'
   | 'debtToGdp'
-  | 'gdpGrowth';
+  | 'gdpGrowth'
+  | 'publicServices';
 
 export interface Pledge {
   id: string;
@@ -40,6 +41,8 @@ interface Template {
   /** How far from the current value the promise reaches. */
   delta: number;
   label: (target: string) => string;
+  /** Parties that should never be offered this promise. */
+  avoidParties?: string[];
 }
 
 const TEMPLATES: Template[] = [
@@ -77,6 +80,8 @@ const TEMPLATES: Template[] = [
     direction: 'down',
     delta: -60,
     label: (t) => `Reduce net migration to ${t}k`,
+    // A Green or Liberal Democrat PM would not campaign on cutting migration.
+    avoidParties: ['progressive', 'liberty'],
   },
   {
     key: 'debt',
@@ -91,6 +96,15 @@ const TEMPLATES: Template[] = [
     direction: 'up',
     delta: 0.5,
     label: (t) => `Grow the economy by ${t}%`,
+  },
+  {
+    key: 'services',
+    metric: 'publicServices',
+    direction: 'up',
+    delta: 3,
+    label: (t) => `Lift public services to ${t}`,
+    // Right-of-centre parties campaign on tax and migration, not spending.
+    avoidParties: ['conservative', 'populist'],
   },
 ];
 
@@ -110,6 +124,8 @@ export function readMetric(s: GameState, metric: PledgeMetric): number {
       return s.stats.debtToGdp;
     case 'gdpGrowth':
       return s.stats.gdpGrowth;
+    case 'publicServices':
+      return s.metrics.publicServices;
     default:
       return 0;
   }
@@ -121,7 +137,10 @@ function round1(n: number): number {
 
 /** Pick two pledges deterministically from the seed, targeting current values. */
 export function makePledges(s: GameState, seed: number): Pledge[] {
-  const pool = [...TEMPLATES];
+  // Party-aware: never offer a promise the PM's own party would not make.
+  const partyId = s.player?.partyId;
+  const allowed = TEMPLATES.filter((t) => !(partyId && t.avoidParties?.includes(partyId)));
+  const pool = [...(allowed.length >= 2 ? allowed : TEMPLATES)];
   const picks: Template[] = [];
   let state = seed >>> 0;
 

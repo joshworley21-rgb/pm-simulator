@@ -24,6 +24,7 @@ const assert = {
 };
 import { createInitialState, migrateState, reducer, advanceWeek } from '../src/app/engine';
 import { DOSSIER_POOL } from '../src/app/data';
+import { BILL_POOL } from '../src/app/bills';
 import { DOSSIER_POOL_2 } from '../src/app/dossiers2';
 import { DOSSIER_POOL_3 } from '../src/app/dossiers3';
 import type { GameState } from '../src/app/types';
@@ -360,6 +361,79 @@ check('the projection always fills the Commons', () => {
   const totals = projectSeats(newGame('reform', 'morning-in-britain')).totals;
   const seats = Object.values(totals).reduce((sum, n) => sum + n, 0);
   assert.equal(seats, 650, 'expected 650 seats');
+});
+
+check('PMQs runs a six-plus-two exchange and then clears', () => {
+  let s = newGame('reform');
+  for (let i = 0; i < 6 && !s.pmq; i++) s = advanceWeek(s);
+  assert.ok(s.pmq, 'PMQs never came up');
+  assert.equal(s.pmq?.total ?? 0, 8, 'a session should be eight questions');
+  assert.equal(s.pmq?.asker ?? '', 'loto', 'the first questions come from the opposition leader');
+  let rounds = 0;
+  while (s.pmq && rounds < 20) {
+    s = reducer(s, { type: 'ANSWER_PMQ', optionId: s.pmq.options[0].id });
+    rounds += 1;
+  }
+  assert.equal(rounds, 8, 'exchange should be eight questions, got ' + rounds);
+  assert.ok(!s.pmq, 'PMQs should clear once the exchange is answered');
+});
+
+check('manifesto pledges are party-aware', () => {
+  const green = newGame('progressive');
+  assert.equal((green.pledges ?? []).length, 2, 'a Green PM should still make two pledges');
+  assert.ok(
+    !(green.pledges ?? []).some((p) => p.metric === 'netMigration'),
+    'a Green PM was offered a migration pledge',
+  );
+  const tory = newGame('conservative');
+  assert.ok(
+    !(tory.pledges ?? []).some((p) => p.metric === 'publicServices'),
+    'a Conservative PM was offered a spending pledge',
+  );
+});
+
+check('restive coalition ministers cost the government votes', () => {
+  const base = newGame('reform');
+  const s: GameState = {
+    ...base,
+    coalition: true,
+    supplyPartnerId: 'liberty',
+    cabinet: [
+      ...base.cabinet,
+      {
+        name: 'Rebel One',
+        post: 'Minister of State (Coalition)',
+        partyId: 'liberty',
+        loyalty: 20,
+        competence: 60,
+        faction: 'Coalition',
+        coalition: true,
+        ambition: 80,
+      },
+    ],
+    bills: [{ ...BILL_POOL[0], weeksToPass: 1 }],
+  };
+  const after = advanceWeek(s);
+  assert.ok(
+    (after.log ?? []).some((l) => l.includes('COALITION REBELS')),
+    'a restive coalition minister should be recorded as rebelling',
+  );
+});
+
+check('a bad 1922 mood forces a mid-term reshuffle', () => {
+  const base = newGame('reform');
+  const s: GameState = {
+    ...base,
+    week: 12,
+    lastReshuffleWeek: undefined,
+    backbenchers: [
+      { name: 'Fresh Face', partyId: 'reform', faction: 'One Nation', loyalty: 70, competence: 70, ambition: 60 },
+      ...base.backbenchers.map((b) => ({ ...b, loyalty: 10, ambition: 90 })),
+    ],
+  };
+  const after = advanceWeek(s);
+  assert.ok((after.log ?? []).some((l) => l.includes('RESHUFFLE')), 'no reshuffle happened');
+  assert.ok(typeof after.lastReshuffleWeek === 'number', 'reshuffle was not recorded');
 });
 
 console.log('');
