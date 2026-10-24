@@ -242,7 +242,20 @@ const TAX_BASELINES: Record<string, number> = {
  * interest bill - should persist. That keeps the deficit from compounding
  * into a debt spiral while still punishing expensive government.
  */
-function structuralBalance(s: GameState): number {
+/**
+ * The money the government is actually planning to spend this year.
+ *
+ * Spending plus the planned deficit: the envelope the departments are funded
+ * from. The UI reads this instead of inventing its own revenue assumption, so
+ * the Treasury tab and the deficit headline can never disagree again.
+ */
+export function fundedEnvelope(s: GameState): { spend: number; plannedDeficit: number; envelope: number } {
+  const spend = s.departments.reduce((sum, d) => sum + d.budget, 0);
+  const plannedDeficit = Math.max(0, -s.stats.budgetBalance);
+  return { spend, plannedDeficit, envelope: spend + plannedDeficit };
+}
+
+export function structuralBalance(s: GameState): number {
   const BASE_DEFICIT = -75;
   const BASE_SPEND = 510;
   const spendNow = s.departments.reduce((sum, d) => sum + d.budget, 0);

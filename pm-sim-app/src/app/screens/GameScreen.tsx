@@ -3,6 +3,7 @@ import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useGame } from '../state';
 import { colors, font, radius, spacing } from '../theme';
 import { Button, Card, Chip, EffectChips, EmptyState, Meter, SectionTitle, Segmented, Sheet, StatTile } from '../components/ui';
@@ -11,6 +12,7 @@ import { BILL_POOL_2 } from '../bills2';
 import { BUDGET_PACKAGES } from '../budget';
 import { TAX_YIELD_PER_POINT } from '../taxes';
 import { evaluatePledges } from '../pledges';
+import { fundedEnvelope } from '../engine';
 import type { RootStackParamList } from '../types';
 import type { Bill, Dossier, Effects } from '../types';
 
@@ -20,12 +22,13 @@ type Tab = 'desk' | 'govern' | 'money' | 'politics' | 'world';
 type MoneyTab = 'spending' | 'taxes';
 type PoliticsTab = 'cabinet' | 'westminster' | 'press';
 
-const TABS: { key: Tab; label: string; icon: string }[] = [
-  { key: 'desk', label: 'Red Box', icon: 'D' },
-  { key: 'govern', label: 'Laws', icon: 'L' },
-  { key: 'money', label: 'Money', icon: 'M' },
-  { key: 'politics', label: 'Politics', icon: 'P' },
-  { key: 'world', label: 'World', icon: 'W' },
+type IconName = keyof typeof Ionicons.glyphMap;
+const TABS: { key: Tab; label: string; icon: IconName }[] = [
+  { key: 'desk', label: 'Red Box', icon: 'file-tray-full-outline' },
+  { key: 'govern', label: 'Laws', icon: 'document-text-outline' },
+  { key: 'money', label: 'Money', icon: 'cash-outline' },
+  { key: 'politics', label: 'Politics', icon: 'business-outline' },
+  { key: 'world', label: 'World', icon: 'globe-outline' },
 ];
 
 /** Plain-English wording for how much the public cares about a tax. */
@@ -37,7 +40,7 @@ function angerLabel(weight: number): { text: string; tone: 'danger' | 'warning' 
 }
 
 function budgetLabel(v: number): string {
-  return v < 0 ? `-£${Math.abs(Math.round(v))}bn` : `£${Math.round(v)}bn`;
+  return v < 0 ? `£${Math.abs(Math.round(v))}bn deficit` : `£${Math.round(v)}bn surplus`;
 }
 
 function money(v: number): string {
@@ -57,6 +60,7 @@ export default function GameScreen() {
   const [moneyTab, setMoneyTab] = useState<MoneyTab>('spending');
   const [politicsTab, setPoliticsTab] = useState<PoliticsTab>('cabinet');
   const [helpOpen, setHelpOpen] = useState(false);
+  const [confirmSack, setConfirmSack] = useState<string | null>(null);
 
   /* ---- weekly briefing: diff the log before/after advancing ---- */
   const previousLog = useRef<string[]>(state.log);
@@ -103,9 +107,9 @@ export default function GameScreen() {
   const urgentCount = state.redBox.filter((d) => d.urgent).length;
   const inPurdah = state.turnsUntilElection <= 6;
 
-  const totalSpend = state.departments.reduce((sum, d) => sum + d.budget, 0);
-  const revenueAssumption = 950;
-  const headroom = Math.round(revenueAssumption - totalSpend);
+  // Single source of truth: the engine decides what the country can afford, so
+  // the Treasury tab can never contradict the deficit headline.
+  const envelope = fundedEnvelope(state);
 
   const fiscal = state as unknown as {
     fiscalDragRevenue?: number;
@@ -293,13 +297,19 @@ export default function GameScreen() {
 
             {moneyTab === 'spending' && (
               <View>
-                <Card tone={headroom < 0 ? 'danger' : 'success'}>
-                  <Text style={{ color: colors.text, fontSize: font.h3, fontWeight: '800' }}>Total spend {money(totalSpend)}</Text>
-                  <Text style={{ color: headroom < 0 ? colors.danger : colors.success, fontSize: font.small, fontWeight: '700', marginTop: 4 }}>
-                    {headroom < 0 ? `${money(-headroom)} over plan` : `${money(headroom)} headroom`}
-                  </Text>
-                  <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 4 }}>
-                    Planning assumption: {money(revenueAssumption)} of revenue. Each step costs or saves cash and shifts services.
+                <Card tone={envelope.plannedDeficit > 0 ? 'danger' : 'success'}>
+                  <View style={{ flexDirection: 'row' }}>
+                    <StatTile label="Spending" value={money(envelope.spend)} />
+                    <StatTile
+                      label="Borrowing"
+                      value={money(envelope.plannedDeficit)}
+                      tone={envelope.plannedDeficit > 0 ? 'danger' : 'success'}
+                    />
+                    <StatTile label="Funded envelope" value={money(envelope.envelope)} />
+                  </View>
+                  <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: spacing.sm, lineHeight: 17 }}>
+                    Departments are funded by taxes plus this borrowing. Every step you add widens the deficit the
+                    moment you take it.
                   </Text>
                 </Card>
 
@@ -389,10 +399,32 @@ export default function GameScreen() {
                           {m.post} | {m.faction}{m.coalition ? ' | coalition' : ''}
                         </Text>
                       </View>
-                      <Pressable onPress={() => dispatch({ type: 'SACK_MINISTER', name: m.name })} hitSlop={8}>
-                        <Text style={{ color: colors.danger, fontSize: font.small, fontWeight: '700' }}>Sack</Text>
+                      <Pressable onPress={() => setConfirmSack(m.name)} hitSlop={8}>
+                        <Text style={{ color: colors.muted, fontSize: font.small, fontWeight: '700' }}>Sack</Text>
                       </Pressable>
                     </View>
+                    {confirmSack === m.name && (
+                      <View style={{ marginTop: 6 }}>
+                        <Text style={{ color: colors.danger, fontSize: font.tiny, lineHeight: 17 }}>
+                          {m.coalition ? 'Sacking a coalition minister ends the agreement and your majority.' : 'This is final. You cannot re-appoint them this term.'}
+                        </Text>
+                        <View style={{ flexDirection: 'row', marginTop: 6 }}>
+                          <Pressable
+                            onPress={() => {
+                              dispatch({ type: 'SACK_MINISTER', name: m.name });
+                              setConfirmSack(null);
+                            }}
+                            hitSlop={8}
+                            style={{ marginRight: 16 }}
+                          >
+                            <Text style={{ color: colors.danger, fontSize: font.small, fontWeight: '800' }}>Confirm sack</Text>
+                          </Pressable>
+                          <Pressable onPress={() => setConfirmSack(null)} hitSlop={8}>
+                            <Text style={{ color: colors.muted, fontSize: font.small, fontWeight: '700' }}>Cancel</Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    )}
                     <View style={{ marginTop: spacing.sm }}>
                       <Text style={{ color: colors.muted, fontSize: font.tiny }}>Loyalty {m.loyalty}</Text>
                       <Meter value={m.loyalty} color={m.loyalty > 60 ? colors.success : colors.warning} />
@@ -699,7 +731,7 @@ export default function GameScreen() {
                   backgroundColor: active ? colors.accentSoft : 'transparent',
                 }}
               >
-                <Text style={{ color: active ? colors.accent : colors.muted, fontSize: font.tiny, fontWeight: '800' }}>{t.icon}</Text>
+                <Ionicons name={t.icon} size={19} color={active ? colors.accent : colors.muted} />
                 {badge > 0 && (
                   <View style={{ position: 'absolute', right: -4, top: -4, backgroundColor: colors.danger, borderRadius: 8, minWidth: 15, height: 15, alignItems: 'center', justifyContent: 'center' }}>
                     <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{badge}</Text>
