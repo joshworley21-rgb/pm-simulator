@@ -1,17 +1,25 @@
 import { StyleSheet } from 'react-native';
 
+/** Brand palette — deepened for contrast on mobile screens. */
 export const colors = {
-  bg: '#0e1526',
-  card: '#1b2742',
-  cardBorder: '#2b3a5e',
-  text: '#e8edf7',
-  muted: '#8fa1c3',
+  bg: '#0b1220',
+  bgElevated: '#111c30',
+  card: '#16233c',
+  cardBorder: '#26385c',
+  text: '#eaf0fb',
+  muted: '#93a4c4',
   accent: '#4f8cff',
-  accentSoft: '#24365a',
-  danger: '#ff5d5d',
+  accentSoft: '#1d2f52',
+  danger: '#ff6161',
+  warning: '#ffb648',
   success: '#3ddc84',
 };
 
+export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };
+export const radius = { sm: 8, md: 12, lg: 16, pill: 999 };
+export const font = { h1: 28, h2: 20, h3: 16, body: 14, small: 12, tiny: 11 };
+
+/** Legacy global styles (kept for Menu/Create screens). */
 export const g = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg, padding: 20 },
   title: { color: colors.text, fontSize: 32, fontWeight: '800' },
