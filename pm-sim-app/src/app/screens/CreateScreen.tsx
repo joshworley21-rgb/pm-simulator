@@ -7,6 +7,7 @@ import { useGame } from '../state';
 import { colors, font, radius, spacing } from '../theme';
 import { Button, Card, SectionTitle } from '../components/ui';
 import { BACKGROUNDS } from '../data';
+import { SCENARIOS, DEFAULT_SCENARIO_ID } from '../scenarios';
 import type { RootStackParamList } from '../types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Create'>;
@@ -28,6 +29,7 @@ export default function CreateScreen() {
   const [partyId, setPartyId] = useState<string>('reform');
   const [background, setBackground] = useState(BACKGROUNDS[0]);
   const [termLength, setTermLength] = useState<number>(60);
+  const [scenarioId, setScenarioId] = useState<string>(DEFAULT_SCENARIO_ID);
 
   const canStart = firstName.trim().length > 0 && lastName.trim().length > 0;
 
@@ -35,7 +37,7 @@ export default function CreateScreen() {
     dispatch({ type: 'SET_TERM_LENGTH', weeks: termLength });
     dispatch({
       type: 'CREATE_PLAYER',
-      player: { firstName: firstName.trim(), lastName: lastName.trim(), partyId, background },
+      player: { firstName: firstName.trim(), lastName: lastName.trim(), partyId, background, scenario: scenarioId },
     });
     nav.navigate('Game');
   };
@@ -121,6 +123,43 @@ export default function CreateScreen() {
           );
         })}
       </View>
+
+      <SectionTitle
+        title="Starting position"
+        hint="Same decisions, very different country. This is the main source of replay value."
+      />
+      {SCENARIOS.map((sc) => {
+        const selected = sc.id === scenarioId;
+        const tone =
+          sc.difficulty === 'easy' ? colors.success : sc.difficulty === 'normal' ? colors.accent : sc.difficulty === 'hard' ? colors.warning : colors.danger;
+        return (
+          <Pressable
+            key={sc.id}
+            accessibilityRole="radio"
+            accessibilityState={{ selected }}
+            onPress={() => setScenarioId(sc.id)}
+            style={{
+              backgroundColor: selected ? colors.accentSoft : colors.card,
+              borderColor: selected ? colors.accent : colors.cardBorder,
+              borderWidth: selected ? 2 : 1,
+              borderRadius: radius.md,
+              padding: spacing.md,
+              marginTop: spacing.sm,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={{ color: colors.text, fontSize: font.h3, fontWeight: '700', flex: 1 }}>{sc.name}</Text>
+              <Text style={{ color: tone, fontSize: font.tiny, fontWeight: '800', textTransform: 'uppercase' }}>
+                {sc.difficulty}
+              </Text>
+            </View>
+            <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 2 }}>{sc.tagline}</Text>
+            {selected && (
+              <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 6, lineHeight: 17 }}>{sc.blurb}</Text>
+            )}
+          </Pressable>
+        );
+      })}
 
       <SectionTitle title="Parliament length" hint="How long until you must face the voters." />
       <View style={{ flexDirection: 'row' }}>

@@ -181,6 +181,8 @@ export interface Player {
   lastName: string;
   partyId: string;
   background: string;
+  /** Starting scenario id (see scenarios.ts). */
+  scenario?: string;
 }
 
 export type Phase = 'menu' | 'create' | 'playing';
@@ -220,6 +222,16 @@ export interface GameState {
   ministerPicker: string | null; // backbencher name whose promotion is being confirmed
 
   // ===== Simulation telemetry (written weekly by the engine) =====
+  /** Scenario this game started from. */
+  scenarioId?: string;
+  /** Result of the most recent 1922 Committee confidence ballot. */
+  lastVote?: {
+    votesFor: number;
+    votesAgainst: number;
+    survived: boolean;
+    resignedWithoutBallot: boolean;
+    turn: number;
+  };
   /** NHS performance index 0-100, derived from waiting times each week. */
   nhsPerformance?: number;
   /** Extra revenue from frozen thresholds, £bn per year. */

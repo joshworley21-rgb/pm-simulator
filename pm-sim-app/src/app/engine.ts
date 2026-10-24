@@ -17,6 +17,7 @@ import { DEFAULT_SPENDING_REVIEW } from './spendingReview';
 import { calculate1922Mood, calculateBlindsideRisk } from './leadershipChallenge';
 import { DOSSIER_POOL_2 } from './dossiers2';
 import { DOSSIER_POOL_3 } from './dossiers3';
+import { applyScenario } from './scenarios';
 
 export const FPTP_EXPONENT = 2.5;
 
@@ -543,30 +544,64 @@ export function advanceWeek(s: GameState): GameState {
   letters = clamp(letters, 0, 99);
   next = { ...next, stats: { ...next.stats, lettersOfNoConfidence: letters }, committeeMood: mood };
 
-  // 5. Confidence vote.
+  // 5. 1922 Committee confidence ballot.
+  //
+  // Party rules: 15% of a party's MPs writing to the chair triggers a ballot,
+  // and the leader needs a majority of MPs voting for them. Results are
+  // reported head-to-head, e.g. 211 for and 148 against.
   const threshold = next.stats.lettersThreshold || 15;
   if (letters >= threshold && !next.gameOver) {
     const conf = next.metrics.partyConfidence;
-    const seatsHeld = next.parties.find((p) => p.id === next.player?.partyId)?.seats ?? 326;
-    const blindside = calculateBlindsideRisk(letters, conf, seatsHeld - 326);
-    const baseChance = conf >= 60 ? 0.9 : conf >= 50 ? 0.7 : conf >= 40 ? 0.5 : 0.25;
-    const chance = clamp(baseChance - blindside.risk / 500, 0.05, 0.95);
-    const survive = rng() < chance;
     const name = next.player ? `${next.player.firstName} ${next.player.lastName}` : 'The Prime Minister';
-    if (survive) {
+    const electorate = Math.max(
+      1,
+      next.parties.find((p) => p.id === next.player?.partyId)?.seats ?? 326,
+    );
+    const mood = next.committeeMood;
+    const restless = mood ? mood.consideringDefection + mood.readyToChallenge : 0;
+
+    // "Men in grey suits": senior colleagues can end a premiership before
+    // a ballot is ever held.
+    const blindside = calculateBlindsideRisk(letters, conf, electorate - 326);
+    const greySuits = conf < 20 && rng() < clamp(0.2 + blindside.risk / 200, 0, 0.8);
+
+    // Share of the parliamentary party voting for the leader.
+    const loyaltyShare = clamp(0.22 + conf * 0.0072 - restless * 0.01, 0.05, 0.95);
+    const votesFor = Math.round(clamp(electorate * loyaltyShare + (rng() * 6 - 3), 0, electorate));
+    const votesAgainst = electorate - votesFor;
+    const survived = votesFor > votesAgainst;
+
+    const voteRecord = {
+      votesFor,
+      votesAgainst,
+      survived,
+      resignedWithoutBallot: greySuits,
+      turn: next.week,
+    };
+
+    if (greySuits) {
       next = {
         ...next,
+        gameOver: `${name} was told by senior colleagues that the party had lost confidence, and resigned before a ballot could be held.`,
+        lastVote: voteRecord,
+        log: [`1922 COMMITTEE: the grey suits called. ${name} resigned without a ballot.`, ...next.log].slice(0, 50),
+      };
+    } else if (survived) {
+      next = {
+        ...next,
+        lastVote: voteRecord,
         stats: { ...next.stats, lettersOfNoConfidence: Math.round(threshold * 0.2) },
         metrics: { ...next.metrics, partyConfidence: clamp(conf - 5, 0, 100) },
-        log: [`CONFIDENCE VOTE: ${name} SURVIVES a leadership challenge.`, ...next.log].slice(0, 50),
-        headlines: [{ paper: 'The National Standard', title: 'PM SURVIVES CONFIDENCE VOTE BUT EMERGES WOUNDED', stance: 'centrist' as const }, ...next.headlines].slice(0, 4),
+        log: [`CONFIDENCE VOTE: ${name} survives ${votesFor} to ${votesAgainst}.`, ...next.log].slice(0, 50),
+        headlines: [{ paper: 'The National Standard', title: `PM SURVIVES ${votesFor}-${votesAgainst} BUT EMERGES WOUNDED`, stance: 'centrist' as const }, ...next.headlines].slice(0, 4),
       };
     } else {
       next = {
         ...next,
-        gameOver: `${name} lost a vote of no confidence among their own MPs and was forced to resign.`,
+        gameOver: `${name} lost a confidence ballot of MPs ${votesFor}-${votesAgainst} and was forced to resign.`,
+        lastVote: voteRecord,
         stats: { ...next.stats, lettersOfNoConfidence: threshold },
-        log: [`CONFIDENCE VOTE: ${name} LOSES and is forced to resign.`, ...next.log].slice(0, 50),
+        log: [`CONFIDENCE VOTE: ${name} loses ${votesFor} to ${votesAgainst} and resigns.`, ...next.log].slice(0, 50),
       };
     }
   }
@@ -590,6 +625,22 @@ export function advanceWeek(s: GameState): GameState {
     };
   }
 
+  // 6b. Collective responsibility: a minister who no longer believes in the
+  // direction of travel may resign rather than defend it.
+  if (next.cabinet.length > 0 && !next.gameOver && rng() < 0.06) {
+    const unhappy = next.cabinet.filter((m) => m.loyalty < 35);
+    if (unhappy.length > 0) {
+      const quit = unhappy[Math.floor(rng() * unhappy.length)];
+      next = {
+        ...next,
+        cabinet: next.cabinet.filter((m) => m.name !== quit.name),
+        metrics: { ...next.metrics, partyConfidence: clamp(next.metrics.partyConfidence - 3, 0, 100) },
+        log: [`RESIGNATION: ${quit.name} (${quit.post}) quit, citing collective responsibility.`, ...next.log].slice(0, 50),
+        headlines: [{ paper: 'The National Standard', title: `${quit.post.toUpperCase()} RESIGNS OVER GOVERNMENT DIRECTION`, stance: 'centrist' as const }, ...next.headlines].slice(0, 4),
+      };
+    }
+  }
+
   // 7. Draw fresh dossier.
   const activeIds = new Set(remaining.map((d) => d.id));
   const available = ALL_DOSSIERS.filter((d) => !activeIds.has(d.id));
@@ -600,7 +651,9 @@ export function advanceWeek(s: GameState): GameState {
   next.redBox = remaining;
 
   // 8. Every ~5 weeks, PMQs or a foreign call arises.
-  if (next.week % 5 === 0 && !next.gameOver && !next.pmq) {
+  // PMQs is a weekly fixture when the House sits (LOTO gets six questions,
+  // the third party two), so it fires more often than a summit would.
+  if (next.week % 4 === 0 && !next.gameOver && !next.pmq) {
     next.pmq = PMQ_POOL[Math.floor(rng() * PMQ_POOL.length)];
   }
   if (next.week % 7 === 0 && !next.gameOver && next.foreignIssues.length < 2) {
@@ -692,7 +745,8 @@ export function migrateState(saved: Partial<GameState> | null | undefined): Game
 export function reducer(state: GameState, action: Action): GameState {
   switch (action.type) {
     case 'NEW_GAME':
-      return { ...createInitialState(), phase: 'create' };
+      // Fresh seed per game so replays do not replay the same events.
+      return { ...createInitialState(), phase: 'create', seed: Math.floor(Math.random() * 1e9) };
 
     case 'RESTORE':
       return { ...action.state };
@@ -705,13 +759,22 @@ export function reducer(state: GameState, action: Action): GameState {
       const seats = electSeats(parties, REGIONS);
       const withSeats = parties.map((p) => ({ ...p, seats: seats[p.id] ?? 0 }));
       const mySeats = withSeats.find((p) => p.id === action.player.partyId)?.seats ?? 0;
-      return {
+
+      const formed: GameState = {
         ...state,
         player: action.player,
         parties: withSeats,
         phase: 'playing',
-        stats: { ...state.stats, lettersThreshold: resignationThreshold(mySeats) },
         log: [`${fullName} enters Downing Street with ${mySeats} seats in the Commons.`, ...state.log].slice(0, 50),
+      };
+
+      // A scenario can reshape the economy, the party and even the seat count.
+      const opened = applyScenario(formed, action.player.scenario);
+      const seatsAfter = opened.parties.find((p) => p.id === action.player.partyId)?.seats ?? 0;
+
+      return {
+        ...opened,
+        stats: { ...opened.stats, lettersThreshold: resignationThreshold(seatsAfter) },
       };
     }
 

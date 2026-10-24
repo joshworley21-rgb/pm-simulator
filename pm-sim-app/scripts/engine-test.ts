@@ -27,6 +27,7 @@ import { DOSSIER_POOL } from '../src/app/data';
 import { DOSSIER_POOL_2 } from '../src/app/dossiers2';
 import { DOSSIER_POOL_3 } from '../src/app/dossiers3';
 import type { GameState } from '../src/app/types';
+import { SCENARIOS } from '../src/app/scenarios';
 
 let checks = 0;
 let failures = 0;
@@ -42,12 +43,12 @@ function check(name: string, fn: () => void) {
   }
 }
 
-function newGame(partyId = 'reform'): GameState {
+function newGame(partyId = 'reform', scenario?: string): GameState {
   let s = createInitialState();
   s = reducer(s, { type: 'SET_TERM_LENGTH', weeks: 60 });
   s = reducer(s, {
     type: 'CREATE_PLAYER',
-    player: { firstName: 'Test', lastName: 'PM', partyId, background: 'City financier' },
+    player: { firstName: 'Test', lastName: 'PM', partyId, background: 'City financier', scenario },
   });
   return s;
 }
@@ -201,6 +202,36 @@ check('advanceWeek is pure with respect to its input', () => {
   const snapshot = JSON.stringify(s);
   advanceWeek(s);
   assert.equal(JSON.stringify(s), snapshot, 'advanceWeek mutated its argument');
+});
+
+check('scenarios give genuinely different openings', () => {
+  for (const sc of SCENARIOS) {
+    const s = newGame('reform', sc.id);
+    assert.equal(s.scenarioId, sc.id);
+    assert.equal(Math.round(s.metrics.approval), sc.approval, sc.id + ' approval');
+    assert.equal(Math.round(s.metrics.partyConfidence), sc.unity, sc.id + ' unity');
+    if (sc.hungParliament) {
+      const seats = s.parties.find((p) => p.id === 'reform')?.seats ?? 0;
+      assert.ok(seats <= (sc.seatsCap ?? 300), sc.id + ' did not cap seats: ' + seats);
+    }
+    assertFinite(s);
+  }
+});
+
+check('the 1922 ballot tallies the whole parliamentary party', () => {
+  let s = newGame('reform', 'winter-of-discontent');
+  s = {
+    ...s,
+    stats: { ...s.stats, lettersOfNoConfidence: s.stats.lettersThreshold },
+    metrics: { ...s.metrics, partyConfidence: 25 },
+  };
+  s = advanceWeek(s);
+  const seats = s.parties.find((p) => p.id === 'reform')?.seats ?? 0;
+  assert.ok(!!s.lastVote, 'no ballot was recorded');
+  const vote = s.lastVote!;
+  assert.equal(vote.votesFor + vote.votesAgainst, seats, 'ballot did not cover the party');
+  assert.ok(vote.votesAgainst > vote.votesFor, 'a collapsing leader should lose the ballot');
+  assert.ok(!!s.gameOver, 'losing the ballot should end the premiership');
 });
 
 console.log('');

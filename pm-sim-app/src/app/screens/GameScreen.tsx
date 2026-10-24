@@ -439,6 +439,12 @@ export default function GameScreen() {
                       Backbench loyalty {state.committeeMood.averageLoyalty} | defection risk {state.committeeMood.consideringDefection} | would challenge {state.committeeMood.readyToChallenge}
                     </Text>
                   )}
+                  {!!state.lastVote && (
+                    <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 6 }}>
+                      Last confidence ballot: {state.lastVote.votesFor} for, {state.lastVote.votesAgainst} against
+                      {state.lastVote.resignedWithoutBallot ? ' (resigned without a ballot)' : ''}
+                    </Text>
+                  )}
                 </Card>
 
                 <Text style={[styles.label, { marginTop: spacing.lg }]}>HOUSE OF COMMONS | 650 SEATS</Text>
