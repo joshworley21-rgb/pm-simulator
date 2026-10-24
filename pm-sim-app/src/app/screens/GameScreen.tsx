@@ -65,6 +65,7 @@ export default function GameScreen() {
   /* ---- weekly briefing: diff the log before/after advancing ---- */
   const previousLog = useRef<string[]>(state.log);
   const [briefing, setBriefing] = useState<string[] | null>(null);
+  const [showBriefing, setShowBriefing] = useState(true);
   const awaitingTurn = useRef(false);
 
   useEffect(() => {
@@ -75,8 +76,8 @@ export default function GameScreen() {
     const fresh =
       grew > 0 ? state.log.slice(0, grew) : state.log.filter((line) => !before.includes(line));
     // Never stack a briefing on top of an election or game-over modal.
-    setBriefing(state.gameOver || state.isElection ? null : fresh.slice(0, 8));
-  }, [state.log, state.gameOver, state.isElection]);
+    setBriefing(state.gameOver || state.isElection || !showBriefing ? null : fresh.slice(0, 8));
+  }, [state.log, state.gameOver, state.isElection, showBriefing]);
 
   const advanceWeek = () => {
     previousLog.current = state.log;
@@ -119,6 +120,7 @@ export default function GameScreen() {
   };
 
   const activeDossier = state.redBox.find((d) => d.id === state.selectedDossierId) ?? null;
+  const dossierIndex = activeDossier ? redBox.findIndex((d) => d.id === activeDossier.id) + 1 : 0;
 
   /* ---- alerts ---- */
   const alerts: { label: string; tone: 'danger' | 'warning' | 'accent' }[] = [];
@@ -188,6 +190,33 @@ export default function GameScreen() {
         contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: 110 }}
         showsVerticalScrollIndicator={false}
       >
+        {briefing && briefing.length > 0 && (
+          <Card>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={{ color: colors.accent, fontSize: font.tiny, fontWeight: '800', flex: 1 }}>
+                WEEK {state.week} BRIEFING
+              </Text>
+              <Pressable onPress={() => setShowBriefing(false)} hitSlop={8} style={{ marginRight: 14 }}>
+                <Text style={{ color: colors.muted, fontSize: font.tiny, fontWeight: '700' }}>Don't show again</Text>
+              </Pressable>
+              <Pressable onPress={() => setBriefing(null)} hitSlop={8} testID="briefing-dismiss">
+                <Text style={{ color: colors.accent, fontSize: font.small, fontWeight: '800' }}>Dismiss</Text>
+              </Pressable>
+            </View>
+            {briefing.map((line, i) => (
+              <View key={`brief-${i}`} style={{ flexDirection: 'row', marginTop: 6 }}>
+                <Text style={{ color: colors.accent, marginRight: 8 }}>-</Text>
+                <Text style={{ color: colors.text, flex: 1, fontSize: font.small, lineHeight: 18 }}>{line}</Text>
+              </View>
+            ))}
+            {!!state.lastOutcome && (
+              <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: spacing.sm, lineHeight: 17 }}>
+                Last decision: {state.lastOutcome}
+              </Text>
+            )}
+          </Card>
+        )}
+
         {tab === 'desk' && (
           <View>
             <SectionTitle title="Your Red Box" hint="Papers needing a decision. Ignored urgent items become scandals." />
@@ -326,10 +355,14 @@ export default function GameScreen() {
                     </View>
                     <View style={{ marginTop: spacing.sm }}>
                       <Meter value={d.budget - d.min} max={Math.max(1, d.max - d.min)} />
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 3 }}>
+                        <Text style={{ color: colors.muted, fontSize: font.tiny }}>{money(d.min)}</Text>
+                        <Text style={{ color: colors.muted, fontSize: font.tiny }}>
+                          each step moves the deficit by {money(d.step)}
+                        </Text>
+                        <Text style={{ color: colors.muted, fontSize: font.tiny }}>{money(d.max)}</Text>
+                      </View>
                     </View>
-                    <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 4 }}>
-                      Range {money(d.min)} to {money(d.max)} | each step {money(d.step)}
-                    </Text>
                     <EffectChips effects={d.benefit} max={4} />
                   </Card>
                 ))}
@@ -644,28 +677,29 @@ export default function GameScreen() {
 
             <Text style={[styles.label, { marginTop: spacing.lg }]}>THE NUMBERS</Text>
             <View style={{ flexDirection: 'row', marginTop: spacing.sm }}>
-              <StatTile label="GDP growth" value={`${state.stats.gdpGrowth}%`} tone={state.stats.gdpGrowth >= 1 ? 'success' : 'danger'} />
-              <StatTile label="Inflation" value={`${state.stats.cpiInflation}%`} tone={state.stats.cpiInflation <= 3 ? 'success' : 'danger'} />
-              <StatTile label="10y gilts" value={`${state.stats.giltYield}%`} tone={state.stats.giltYield <= 4.5 ? 'success' : 'danger'} />
+              <StatTile label="GDP growth" value={`${state.stats.gdpGrowth}%`} tone={state.stats.gdpGrowth >= 1 ? 'success' : 'danger'} hint="annual %" />
+              <StatTile label="Inflation" value={`${state.stats.cpiInflation}%`} tone={state.stats.cpiInflation <= 3 ? 'success' : 'danger'} hint="CPI, %/yr" />
+              <StatTile label="10y gilts" value={`${state.stats.giltYield}%`} tone={state.stats.giltYield <= 4.5 ? 'success' : 'danger'} hint="cost of borrowing" />
             </View>
             <View style={{ flexDirection: 'row', marginTop: spacing.sm }}>
-              <StatTile label="Debt / GDP" value={`${state.stats.debtToGdp}%`} />
-              <StatTile label="Unemployment" value={`${state.stats.unemployment}%`} />
-              <StatTile label="Security" value={Math.round(state.metrics.security)} />
+              <StatTile label="Debt / GDP" value={`${state.stats.debtToGdp}%`} hint="share of GDP" />
+              <StatTile label="Unemployment" value={`${state.stats.unemployment}%`} hint="% of workforce" />
+              <StatTile label="Security" value={Math.round(state.metrics.security)} hint="0-100 scale" />
             </View>
             <View style={{ flexDirection: 'row', marginTop: spacing.sm }}>
-              <StatTile label="NHS waiting" value={`${state.stats.nhsWaitingList}m`} />
+              <StatTile label="NHS waiting" value={`${state.stats.nhsWaitingList}m`} hint="millions" />
               <StatTile
                 label="NHS perf"
                 value={Math.round(state.nhsPerformance ?? 0)}
                 tone={(state.nhsPerformance ?? 0) >= 55 ? 'success' : 'danger'}
+                hint="0-100 scale"
               />
-              <StatTile label="Services" value={Math.round(state.metrics.publicServices)} />
+              <StatTile label="Services" value={Math.round(state.metrics.publicServices)} hint="0-100 scale" />
             </View>
             <View style={{ flexDirection: 'row', marginTop: spacing.sm }}>
-              <StatTile label="Migration" value={`${state.stats.netMigration}k`} />
-              <StatTile label="Trade effect" value={`${state.tradeGdpImpact ?? 0}%`} />
-              <StatTile label="Fiscal drag" value={`£${state.fiscalDragRevenue ?? 0}bn`} />
+              <StatTile label="Migration" value={`${state.stats.netMigration}k`} hint="net, thousands" />
+              <StatTile label="Trade effect" value={`${state.tradeGdpImpact ?? 0}%`} hint="% of GDP" />
+              <StatTile label="Fiscal drag" value={`£${state.fiscalDragRevenue ?? 0}bn`} hint="from frozen bands" />
             </View>
 
             <Card>
@@ -753,6 +787,12 @@ export default function GameScreen() {
       >
         {activeDossier && (
           <View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
+              <Chip label={activeDossier.urgent ? 'urgent' : 'routine'} tone={activeDossier.urgent ? 'danger' : 'neutral'} />
+              <Text style={{ color: colors.muted, fontSize: font.tiny, marginLeft: 8 }}>
+                {activeDossier.weeksRemaining} week{activeDossier.weeksRemaining === 1 ? '' : 's'} left | paper {dossierIndex} of {redBox.length}
+              </Text>
+            </View>
             <Text style={{ color: colors.text, fontSize: font.body, fontWeight: '700', lineHeight: 21 }}>{activeDossier.leadParagraph}</Text>
             <Text style={{ color: colors.muted, fontSize: font.small, lineHeight: 19, marginTop: spacing.sm }}>{activeDossier.body}</Text>
             <Text style={[styles.label, { marginTop: spacing.lg }]}>YOUR DECISION</Text>
@@ -831,30 +871,7 @@ export default function GameScreen() {
         )}
       </Sheet>
 
-      {/* ================= WEEKLY BRIEFING ================= */}
-      <Sheet visible={briefing !== null} onClose={() => setBriefing(null)} eyebrow={`WEEK ${state.week} BRIEFING`} title="What happened">
-        <View>
-          {(briefing ? briefing : []).length === 0 ? (
-            <Text style={{ color: colors.muted, fontSize: font.small, lineHeight: 19 }}>
-              A quiet week. The papers kept to speculation and the whips kept counting.
-            </Text>
-          ) : (
-            (briefing ? briefing : []).map((line, i) => (
-              <View key={`brief-${i}`} style={{ flexDirection: 'row', marginTop: 8 }}>
-                <Text style={{ color: colors.accent, marginRight: 8 }}>-</Text>
-                <Text style={{ color: colors.text, flex: 1, fontSize: font.small, lineHeight: 19 }}>{line}</Text>
-              </View>
-            ))
-          )}
-          {!!state.lastOutcome && (
-            <View style={{ marginTop: spacing.md }}>
-              <Text style={styles.label}>LAST DECISION</Text>
-              <Text style={{ color: colors.muted, fontSize: font.small, lineHeight: 19 }}>{state.lastOutcome}</Text>
-            </View>
-          )}
-          <Button label="Back to the desk" onPress={() => setBriefing(null)} testID="briefing-dismiss" />
-        </View>
-      </Sheet>
+      {/* weekly briefing is now a non-blocking banner at the top of the desk */}
 
       {/* ================= HELP ================= */}
       <Sheet visible={helpOpen} onClose={() => setHelpOpen(false)} eyebrow="HOW TO PLAY" title="Running the country">
