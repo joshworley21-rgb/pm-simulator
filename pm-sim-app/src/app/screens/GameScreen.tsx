@@ -386,7 +386,7 @@ export default function GameScreen() {
                       <View style={{ flex: 1 }}>
                         <Text style={{ color: colors.text, fontSize: font.h3, fontWeight: '700' }}>{m.name}</Text>
                         <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 2 }}>
-                          {m.post} | {m.faction}
+                          {m.post} | {m.faction}{m.coalition ? ' | coalition' : ''}
                         </Text>
                       </View>
                       <Pressable onPress={() => dispatch({ type: 'SACK_MINISTER', name: m.name })} hitSlop={8}>
@@ -523,7 +523,7 @@ export default function GameScreen() {
                   >
                     <Text style={{ color: colors.text, flex: 1, fontSize: font.small }}>{b.name}</Text>
                     <Text style={{ color: colors.muted, fontSize: font.tiny, marginRight: 8 }}>
-                      {Math.round(b.weight * 100)}% of voters
+                      {b.seats} seats | {Math.round(b.weight * 100)}%
                     </Text>
                     <Text style={{ color: b.support >= 45 ? colors.success : colors.danger, fontSize: font.body, fontWeight: '700' }}>
                       {b.support}
@@ -885,6 +885,9 @@ export default function GameScreen() {
             <Text style={{ color: colors.muted, fontSize: font.small, textAlign: 'center', marginTop: spacing.sm }}>
               {state.week} weeks in office | {state.passedLaws.length} laws passed | pledges kept{' '}
               {evaluatePledges(state, state.pledges ?? []).filter((r) => r.kept).length} of {(state.pledges ?? []).length}
+            </Text>
+            <Text style={{ color: colors.muted, fontSize: font.small, textAlign: 'center', marginTop: 4 }}>
+              By-elections: {(state.byElections ?? []).filter((b) => !b.held).length} lost of {(state.byElections ?? []).length}
             </Text>
               Final legacy score {state.legacyScore}.
             </Text>

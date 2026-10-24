@@ -21,6 +21,16 @@ import { applyScenario } from './scenarios';
 import { makePledges, evaluatePledges } from './pledges';
 import { computeBlocs, blocAverage } from './voterBlocs';
 
+/** Placeholder partner ministers; enough variety to staff a coalition. */
+const COALITION_NAMES = [
+  'Sarah Whitcombe',
+  'Daniel Okafor',
+  'Priya Raman',
+  'Callum Reid',
+  'Nadia Haddad',
+  'Tom Beresford',
+];
+
 export const FPTP_EXPONENT = 2.5;
 
 /** Full dossier pool: the original six plus both expanded slates. */
@@ -642,6 +652,81 @@ export function advanceWeek(s: GameState): GameState {
     }
   }
 
+  // 4d. Coalition discipline: a partner's ministers resign when the deal stops
+  // being worth it, and the government loses its majority with them.
+  if (next.coalition && next.supplyPartnerId && !next.gameOver && rng() < 0.07) {
+    const partner = next.parties.find((p) => p.id === next.supplyPartnerId);
+    const coalitionMinisters = next.cabinet.filter((m) => m.coalition);
+    const blocHostile = (next.blocs ?? []).some((b) => b.mood === 'hostile');
+    if (partner && coalitionMinisters.length > 0 && (next.metrics.approval < 30 || blocHostile)) {
+      const leaver = coalitionMinisters[0];
+      next = {
+        ...next,
+        cabinet: next.cabinet.filter((m) => m.name !== leaver.name),
+        supplyPartnerId: undefined,
+        supplyCostPerWeek: 0,
+        supplyConcessions: [],
+        coalition: false,
+        coalitionPosts: [],
+        metrics: { ...next.metrics, partyConfidence: clamp(next.metrics.partyConfidence - 5, 0, 100) },
+        log: [`COALITION COLLAPSE: ${leaver.name} resigned from the Cabinet and ${partner.name} withdrew its support.`, ...next.log].slice(0, 50),
+        headlines: [{ paper: 'The Courier', title: `${partner.abbreviation} WALKS OUT OF THE COALITION`, stance: 'right' as const }, ...next.headlines].slice(0, 4),
+      };
+    }
+  }
+
+  // 4e. By-elections: seats change hands between general elections, and the
+  // bloc numbers decide which way they go.
+  if (!next.gameOver && rng() < 0.05) {
+    const regions = Object.keys(next.regionSeats ?? {});
+    if (regions.length > 0) {
+      const regionId = regions[Math.floor(rng() * regions.length)];
+      const map = next.regionSeats?.[regionId] ?? {};
+      const playerId = next.player?.partyId ?? '';
+      const totalInRegion = Object.values(map).reduce((sum, n) => sum + n, 0);
+      const mineInRegion = map[playerId] ?? 0;
+      const blocMean =
+        (next.blocs ?? []).reduce((sum, b) => sum + b.support * b.weight, 0) || next.metrics.approval;
+      const holdChance = clamp(
+        (totalInRegion > 0 ? mineInRegion / totalInRegion : 0.3) + (blocMean - 50) / 150,
+        0.05,
+        0.9,
+      );
+      const held = rng() < holdChance;
+      const rival = [...next.parties]
+        .filter((p) => p.id !== playerId)
+        .sort((a, b) => b.currentSupport - a.currentSupport)[0];
+
+      if (!held && rival) {
+        const parties = next.parties.map((p) => {
+          if (p.id === playerId) return { ...p, seats: Math.max(0, p.seats - 1) };
+          if (p.id === rival.id) return { ...p, seats: p.seats + 1 };
+          return p;
+        });
+        const regionSeats = { ...(next.regionSeats ?? {}) };
+        const updated = { ...(regionSeats[regionId] ?? {}) };
+        updated[playerId] = Math.max(0, (updated[playerId] ?? 0) - 1);
+        updated[rival.id] = (updated[rival.id] ?? 0) + 1;
+        regionSeats[regionId] = updated;
+
+        next = { ...next, parties, regionSeats };
+        next = applyEffects(next, { approval: -1, partyConfidence: -2, mediaAttention: 6 });
+        next = {
+          ...next,
+          byElections: [...(next.byElections ?? []), { regionId, held: false, week: next.week }],
+          log: [`BY-ELECTION: ${rival.name} takes ${regionId} from the government.`, ...next.log].slice(0, 50),
+          headlines: [{ paper: 'The Courier', title: `BY-ELECTION DEFEAT IN ${regionId.toUpperCase()}`, stance: 'right' as const }, ...next.headlines].slice(0, 4),
+        };
+      } else {
+        next = {
+          ...next,
+          byElections: [...(next.byElections ?? []), { regionId, held: true, week: next.week }],
+          log: [`BY-ELECTION: the government holds ${regionId}.`, ...next.log].slice(0, 50),
+        };
+      }
+    }
+  }
+
   // 5. 1922 Committee confidence ballot.
   //
   // Party rules: 15% of a party's MPs writing to the chair triggers a ballot,
@@ -870,7 +955,8 @@ export function reducer(state: GameState, action: Action): GameState {
       const parties = state.parties.map((p) =>
         p.id === action.player.partyId ? { ...p, leader: fullName } : p,
       );
-      const seats = electSeats(parties, REGIONS);
+      const detail = electSeatsDetailed(parties, REGIONS);
+      const seats = detail.totals;
       const withSeats = parties.map((p) => ({ ...p, seats: seats[p.id] ?? 0 }));
       const mySeats = withSeats.find((p) => p.id === action.player.partyId)?.seats ?? 0;
 
@@ -878,6 +964,7 @@ export function reducer(state: GameState, action: Action): GameState {
         ...state,
         player: action.player,
         parties: withSeats,
+        regionSeats: detail.byRegion,
         phase: 'playing',
         log: [`${fullName} enters Downing Street with ${mySeats} seats in the Commons.`, ...state.log].slice(0, 50),
       };
@@ -890,7 +977,8 @@ export function reducer(state: GameState, action: Action): GameState {
         ...opened,
         stats: { ...opened.stats, lettersThreshold: resignationThreshold(seatsAfter) },
       };
-      return { ...fresh, pledges: makePledges(fresh, fresh.seed) };
+      const withBlocs = { ...fresh, blocs: computeBlocs(fresh) };
+      return { ...withBlocs, pledges: makePledges(withBlocs, withBlocs.seed) };
     }
 
     case 'START_TURN':
@@ -940,8 +1028,29 @@ export function reducer(state: GameState, action: Action): GameState {
       };
     }
 
-    case 'SACK_MINISTER':
-      return resignMinister(state, action.name);
+    case 'SACK_MINISTER': {
+      const minister = state.cabinet.find((m) => m.name === action.name);
+      const wasCoalition = !!minister?.coalition;
+      let sacked = resignMinister(state, action.name);
+
+      // Sacking a partner's minister ends the coalition, and with it the
+      // majority that kept the government upright.
+      if (wasCoalition && sacked.supplyPartnerId) {
+        const partner = sacked.parties.find((p) => p.id === sacked.supplyPartnerId);
+        sacked = {
+          ...sacked,
+          supplyPartnerId: undefined,
+          supplyCostPerWeek: 0,
+          supplyConcessions: [],
+          coalition: false,
+          coalitionPosts: [],
+          metrics: { ...sacked.metrics, partyConfidence: clamp(sacked.metrics.partyConfidence - 6, 0, 100) },
+          log: [`COALITION COLLAPSE: sacking ${minister?.name} ended the deal with ${partner?.name ?? 'the partner'}.`, ...sacked.log].slice(0, 50),
+          headlines: [{ paper: 'The National Standard', title: 'COALITION COLLAPSES AFTER MINISTER SACKED', stance: 'centrist' as const }, ...sacked.headlines].slice(0, 4),
+        };
+      }
+      return sacked;
+    }
 
     case 'APPOINT_MINISTER': {
       // Legacy: candidate picker is now driven by PICK_MINISTER + CONFIRM_APPOINT.
@@ -1135,6 +1244,16 @@ export function reducer(state: GameState, action: Action): GameState {
         };
       }
       const annualCost = Math.min(18, Math.round(partner.seats * 0.05 * 10) / 10);
+      const partnerNames = COALITION_NAMES.filter((n) => !state.cabinet.some((m) => m.name === n)).slice(0, 2);
+      const coalitionMinisters: Minister[] = partnerNames.map((name, i) => ({
+        name,
+        post: i === 0 ? 'Minister of State (Coalition)' : 'Parliamentary Secretary (Coalition)',
+        partyId: partner.id,
+        loyalty: 60,
+        competence: 68,
+        faction: 'Coalition',
+        coalition: true,
+      }));
       return {
         ...state,
         supplyPartnerId: partner.id,
@@ -1142,6 +1261,7 @@ export function reducer(state: GameState, action: Action): GameState {
         supplyConcessions: [`GBP ${annualCost}bn a year in extra spending`, 'Cabinet seats for the partner', 'Agreed programme for government'],
         coalition: true,
         coalitionPosts: [`${partner.name} takes two Cabinet posts`],
+        cabinet: [...state.cabinet, ...coalitionMinisters],
         metrics: { ...state.metrics, partyConfidence: Math.min(100, state.metrics.partyConfidence + 1) },
         log: [`COALITION: ${partner.name} enters government with two Cabinet seats, at GBP ${annualCost}bn a year.`, ...state.log].slice(0, 50),
       };

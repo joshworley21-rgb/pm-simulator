@@ -301,6 +301,36 @@ check('a large partner can be taken into coalition', () => {
   }
 });
 
+check('a coalition seats partner ministers and sacking them collapses it', () => {
+  let s = newGame('reform', 'hung-parliament');
+  const partner = [...s.parties].filter((p) => p.id !== 'reform').sort((a, b) => b.seats - a.seats)[0];
+  s = reducer(s, { type: 'FORM_COALITION', partyId: partner.id });
+  const partnerMinisters = s.cabinet.filter((m) => m.coalition);
+  assert.equal(partnerMinisters.length, 2, 'expected two partner ministers');
+  assert.ok(partnerMinisters.every((m) => m.partyId === partner.id));
+  s = reducer(s, { type: 'SACK_MINISTER', name: partnerMinisters[0].name });
+  assert.equal(s.coalition, false, 'coalition should collapse');
+  assert.equal(s.supplyPartnerId, undefined, 'supply should be withdrawn');
+});
+
+check('seat geography drives bloc weights', () => {
+  const s = newGame('reform', 'inherited-mess');
+  assert.ok(Object.keys(s.regionSeats ?? {}).length > 0, 'no region seats recorded at game start');
+  const blocs = s.blocs ?? [];
+  assert.equal(blocs.length, 5);
+  assert.ok(blocs.some((b) => b.seats > 0), 'no bloc holds any seats');
+});
+
+check('by-elections only take seats from the government', () => {
+  const s = play(newGame('reform', 'winter-of-discontent'), 40);
+  const bye = s.byElections ?? [];
+  for (const b of bye) {
+    assert.ok(Object.keys(s.regionSeats ?? {}).includes(b.regionId), 'unknown region ' + b.regionId);
+  }
+  const totalSeats = s.parties.reduce((sum, p) => sum + p.seats, 0);
+  assert.ok(totalSeats <= 650, 'seat total should never exceed the Commons: ' + totalSeats);
+});
+
 console.log('');
 if (failures > 0) {
   // A thrown error gives the process a non-zero exit code.

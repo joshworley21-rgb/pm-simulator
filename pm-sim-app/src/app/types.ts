@@ -117,6 +117,8 @@ export interface Minister {
   loyalty: number;
   competence: number;
   faction: string;
+  /** True when the minister comes from a coalition partner. */
+  coalition?: boolean;
 }
 
 /** A backbench MP available for promotion to cabinet. */
@@ -224,6 +226,9 @@ export interface GameState {
   // ===== Simulation telemetry (written weekly by the engine) =====
   /** Scenario this game started from. */
   scenarioId?: string;
+  /** By-election results during the parliament. */
+  byElections?: { regionId: string; held: boolean; week: number }[];
+
   /** Two manifesto promises judged at the next election. */
   pledges?: import('./pledges').Pledge[];
   /** Voter bloc breakdown, recomputed weekly. */
