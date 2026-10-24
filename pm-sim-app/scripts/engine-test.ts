@@ -28,6 +28,7 @@ import { DOSSIER_POOL_2 } from '../src/app/dossiers2';
 import { DOSSIER_POOL_3 } from '../src/app/dossiers3';
 import type { GameState } from '../src/app/types';
 import { SCENARIOS } from '../src/app/scenarios';
+import { evaluatePledges } from '../src/app/pledges';
 
 let checks = 0;
 let failures = 0;
@@ -258,6 +259,46 @@ check('a partner who cannot deliver a majority is refused', () => {
     .sort((a, b) => a.seats - b.seats)[0];
   s = reducer(s, { type: 'NEGOTIATE_SUPPLY', partyId: smallest.id });
   assert.equal(s.supplyPartnerId, undefined, 'took a partner who cannot govern');
+});
+
+check('manifesto pledges are made and can be judged', () => {
+  const s = newGame('reform', 'inherited-mess');
+  assert.equal((s.pledges ?? []).length, 2, 'expected two pledges');
+  const results = evaluatePledges(s, s.pledges ?? []);
+  assert.equal(results.length, 2);
+  for (const r of results) assert.ok(Number.isFinite(r.current), 'pledge metric unreadable');
+});
+
+check('voter blocs are computed and weighted to 1', () => {
+  const s = play(newGame(), 4);
+  const blocs = s.blocs ?? [];
+  assert.equal(blocs.length, 5, 'expected five blocs');
+  const total = blocs.reduce((sum, b) => sum + b.weight, 0);
+  assert.ok(Math.abs(total - 1) < 0.001, 'weights should sum to 1, got ' + total);
+  for (const b of blocs) {
+    assert.ok(b.support >= 0 && b.support <= 100, b.id + ' out of range');
+  }
+});
+
+check('a minority government faces a fixed-timetable confidence motion', () => {
+  let s = newGame('reform', 'hung-parliament');
+  s = { ...s, week: 11, turnsUntilElection: 40 };
+  s = advanceWeek(s);
+  assert.ok(!!s.oppositionMotion, 'no motion tabled at week 12 without a majority');
+  const due = s.oppositionMotion!.scheduledWeek;
+  s = advanceWeek({ ...s, week: due });
+  assert.ok(!s.oppositionMotion, 'motion never resolved');
+});
+
+check('a large partner can be taken into coalition', () => {
+  let s = newGame('reform', 'hung-parliament');
+  const partner = [...s.parties].filter((p) => p.id !== 'reform').sort((a, b) => b.seats - a.seats)[0];
+  s = reducer(s, { type: 'FORM_COALITION', partyId: partner.id });
+  if (partner.seats >= 40) {
+    assert.equal(s.coalition, true, 'coalition not formed');
+    assert.ok((s.coalitionPosts ?? []).length > 0, 'no cabinet posts recorded');
+    assert.ok((s.supplyCostPerWeek ?? 0) > 0, 'coalition should cost money');
+  }
 });
 
 console.log('');

@@ -224,6 +224,17 @@ export interface GameState {
   // ===== Simulation telemetry (written weekly by the engine) =====
   /** Scenario this game started from. */
   scenarioId?: string;
+  /** Two manifesto promises judged at the next election. */
+  pledges?: import('./pledges').Pledge[];
+  /** Voter bloc breakdown, recomputed weekly. */
+  blocs?: import('./voterBlocs').BlocSupport[];
+  /** Opposition motion of no confidence, if one is tabled. */
+  oppositionMotion?: { sponsorPartyId: string; tabledWeek: number; scheduledWeek: number };
+  /** True when the partner is in government, not merely supplying votes. */
+  coalition?: boolean;
+  /** Cabinet posts handed to the coalition partner. */
+  coalitionPosts?: string[];
+
   /** Party propping up a minority government (confidence and supply). */
   supplyPartnerId?: string;
   /** Weekly cost of the arrangement, GBP bn. */
@@ -285,5 +296,6 @@ export type Action =
   | { type: 'SET_AUTUMN_TAXES' }
   | { type: 'ADJUST_SPENDING'; deptId: string; delta: number }
   | { type: 'NEGOTIATE_SUPPLY'; partyId: string }
+  | { type: 'FORM_COALITION'; partyId: string }
   | { type: 'DISMISS_ELECTION' }
   | { type: 'RESTORE'; state: GameState };

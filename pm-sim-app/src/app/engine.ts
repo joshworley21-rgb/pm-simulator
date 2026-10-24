@@ -18,6 +18,8 @@ import { calculate1922Mood, calculateBlindsideRisk } from './leadershipChallenge
 import { DOSSIER_POOL_2 } from './dossiers2';
 import { DOSSIER_POOL_3 } from './dossiers3';
 import { applyScenario } from './scenarios';
+import { makePledges, evaluatePledges } from './pledges';
+import { computeBlocs, blocAverage } from './voterBlocs';
 
 export const FPTP_EXPONENT = 2.5;
 
@@ -100,6 +102,11 @@ export function createInitialState(): GameState {
     thresholdFrozenTurns: 0,
     tradeGdpImpact: 0,
     committeeMood: undefined,
+    pledges: [],
+    blocs: [],
+    oppositionMotion: undefined,
+    coalition: false,
+    coalitionPosts: [],
   };
 }
 
@@ -535,6 +542,63 @@ export function advanceWeek(s: GameState): GameState {
   next = weeklyEconomy(next);
   next = driftPolling(next, rng);
 
+  // 3e. Voter blocs: recompute who is with you and who has turned.
+  const blocs = computeBlocs(next);
+  next = { ...next, blocs };
+  next = applyEffects(next, { approval: (blocAverage(blocs) - next.metrics.approval) * 0.04 });
+
+  // 3f. Opposition business: without a majority a confidence motion is tabled
+  // on a fixed timetable, not by dice roll.
+  if (!next.gameOver && !next.oppositionMotion) {
+    const pmSeats = next.parties.find((p) => p.id === next.player?.partyId)?.seats ?? 0;
+    const partnerSeats = next.supplyPartnerId
+      ? next.parties.find((p) => p.id === next.supplyPartnerId)?.seats ?? 0
+      : 0;
+    const cadence = next.metrics.approval < 30 ? 6 : 12;
+    if (pmSeats + partnerSeats < 326 && next.week % cadence === 0) {
+      const sponsor = [...next.parties]
+        .filter((p) => p.id !== next.player?.partyId)
+        .sort((a, b) => b.seats - a.seats)[0];
+      if (sponsor) {
+        next = {
+          ...next,
+          oppositionMotion: { sponsorPartyId: sponsor.id, tabledWeek: next.week, scheduledWeek: next.week + 2 },
+          log: [`OPPOSITION DAY: ${sponsor.name} tables a motion of no confidence, to be voted on in two weeks.`, ...next.log].slice(0, 50),
+        };
+      }
+    }
+  }
+
+  // 3g. Division on the motion.
+  if (next.oppositionMotion && next.week >= next.oppositionMotion.scheduledWeek && !next.gameOver) {
+    const ownSeats = next.parties.find((p) => p.id === next.player?.partyId)?.seats ?? 0;
+    const partnerSeats = next.supplyPartnerId
+      ? next.parties.find((p) => p.id === next.supplyPartnerId)?.seats ?? 0
+      : 0;
+    const defections = Math.round((ownSeats * Math.max(0, 40 - next.metrics.partyConfidence)) / 100);
+    const govVotes = Math.max(0, ownSeats + partnerSeats - defections);
+    const totalSeats = next.parties.reduce((sum, p) => sum + p.seats, 0) || 650;
+    const oppVotes = Math.max(0, totalSeats - govVotes);
+    const sponsor = next.parties.find((p) => p.id === next.oppositionMotion?.sponsorPartyId);
+
+    if (govVotes > oppVotes) {
+      next = {
+        ...next,
+        oppositionMotion: undefined,
+        metrics: { ...next.metrics, partyConfidence: clamp(next.metrics.partyConfidence - 2, 0, 100) },
+        log: [`CONFIDENCE MOTION: the government wins ${govVotes}-${oppVotes}.`, ...next.log].slice(0, 50),
+        headlines: [{ paper: 'The National Standard', title: `GOVERNMENT SURVIVES ${govVotes}-${oppVotes}`, stance: 'centrist' as const }, ...next.headlines].slice(0, 4),
+      };
+    } else {
+      const who = next.player ? `${next.player.firstName} ${next.player.lastName}` : 'The Prime Minister';
+      next = {
+        ...next,
+        gameOver: `${who} lost a motion of no confidence ${govVotes}-${oppVotes}${sponsor ? ' to ' + sponsor.name : ''} and resigned.`,
+        oppositionMotion: undefined,
+        log: [`CONFIDENCE MOTION: the government is defeated ${govVotes}-${oppVotes}.`, ...next.log].slice(0, 50),
+      };
+    }
+  }
   // 3b. NHS performance and waiting-list drift.
   next = weeklyNhsDrift(next);
 
@@ -575,26 +639,6 @@ export function advanceWeek(s: GameState): GameState {
           headlines: [{ paper: 'The Courier', title: `${partner.abbreviation} PULLS THE PLUG ON SUPPLY`, stance: 'right' as const }, ...next.headlines].slice(0, 4),
         };
       }
-    }
-  }
-
-  // 4c. Without a majority or a deal the opposition moves a confidence motion.
-  // The Cabinet Manual gives the incumbent the first chance to form a
-  // government, but not an unlimited one.
-  if (!next.gameOver) {
-    const pmSeats = next.parties.find((p) => p.id === next.player?.partyId)?.seats ?? 0;
-    const backing =
-      pmSeats +
-      (next.supplyPartnerId
-        ? next.parties.find((p) => p.id === next.supplyPartnerId)?.seats ?? 0
-        : 0);
-    if (backing < 326 && rng() < (next.metrics.approval < 40 ? 0.09 : 0.035)) {
-      const who = next.player ? `${next.player.firstName} ${next.player.lastName}` : 'The Prime Minister';
-      next = {
-        ...next,
-        gameOver: `${who} lost a confidence motion in the Commons after failing to command a majority.`,
-        log: [`CONFIDENCE MOTION: ${who} is defeated in the Commons and resigns.`, ...next.log].slice(0, 50),
-      };
     }
   }
 
@@ -728,10 +772,26 @@ export function advanceWeek(s: GameState): GameState {
     }
   }
 
-  // 9. Election countdown.
+  // 9. Election countdown, and the reckoning on the last set of promises.
   const turnsUntilElection = next.turnsUntilElection - 1;
   next = { ...next, turnsUntilElection };
-  if (turnsUntilElection <= 0 && !next.gameOver) next = runElection(next);
+  if (turnsUntilElection <= 0 && !next.gameOver) {
+    const results = evaluatePledges(next, next.pledges ?? []);
+    const kept = results.filter((r) => r.kept).length;
+    const total = results.length;
+    next = runElection(next);
+    if (total > 0) {
+      next = applyEffects(next, {
+        approval: kept === total ? 4 : kept === 0 ? -6 : -1,
+        partyConfidence: kept >= 1 ? 1 : -2,
+      });
+      next = {
+        ...next,
+        log: [`PLEDGES: ${kept} of ${total} manifesto promises kept.`, ...next.log].slice(0, 50),
+      };
+    }
+    next = { ...next, pledges: makePledges(next, (next.seed + next.week) >>> 0) };
+  }
 
   next.seed = seed >>> 0;
   return next;
@@ -826,10 +886,11 @@ export function reducer(state: GameState, action: Action): GameState {
       const opened = applyScenario(formed, action.player.scenario);
       const seatsAfter = opened.parties.find((p) => p.id === action.player.partyId)?.seats ?? 0;
 
-      return {
+      const fresh: GameState = {
         ...opened,
         stats: { ...opened.stats, lettersThreshold: resignationThreshold(seatsAfter) },
       };
+      return { ...fresh, pledges: makePledges(fresh, fresh.seed) };
     }
 
     case 'START_TURN':
@@ -1062,6 +1123,30 @@ export function reducer(state: GameState, action: Action): GameState {
         log: [`SUPPLY: ${partner.name} agrees confidence and supply${hostile ? ' on punishing terms' : ''}, costing GBP ${annualCost}bn a year.`, ...state.log].slice(0, 50),
       };
     }
+    case 'FORM_COALITION': {
+      if (state.phase !== 'playing' || !state.player) return state;
+      const partner = state.parties.find((p) => p.id === action.partyId);
+      if (!partner) return state;
+      const mine = state.parties.find((p) => p.id === state.player?.partyId)?.seats ?? 0;
+      if (mine + partner.seats < 326 || partner.seats < 40) {
+        return {
+          ...state,
+          log: [`COALITION: ${partner.name} is not a credible coalition partner.`, ...state.log].slice(0, 50),
+        };
+      }
+      const annualCost = Math.min(18, Math.round(partner.seats * 0.05 * 10) / 10);
+      return {
+        ...state,
+        supplyPartnerId: partner.id,
+        supplyCostPerWeek: Math.round((annualCost / 52) * 1000) / 1000,
+        supplyConcessions: [`GBP ${annualCost}bn a year in extra spending`, 'Cabinet seats for the partner', 'Agreed programme for government'],
+        coalition: true,
+        coalitionPosts: [`${partner.name} takes two Cabinet posts`],
+        metrics: { ...state.metrics, partyConfidence: Math.min(100, state.metrics.partyConfidence + 1) },
+        log: [`COALITION: ${partner.name} enters government with two Cabinet seats, at GBP ${annualCost}bn a year.`, ...state.log].slice(0, 50),
+      };
+    }
+
     case 'DISMISS_ELECTION':
       return { ...state, isElection: false };
 

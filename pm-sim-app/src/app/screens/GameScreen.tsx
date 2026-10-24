@@ -10,6 +10,7 @@ import { BILL_POOL } from '../bills';
 import { BILL_POOL_2 } from '../bills2';
 import { BUDGET_PACKAGES } from '../budget';
 import { TAX_YIELD_PER_POINT } from '../taxes';
+import { evaluatePledges } from '../pledges';
 import type { RootStackParamList } from '../types';
 import type { Bill, Dossier, Effects } from '../types';
 
@@ -424,6 +425,17 @@ export default function GameScreen() {
 
             {politicsTab === 'westminster' && (
               <View>
+                {!!state.oppositionMotion && (
+                  <Card tone="danger">
+                    <Text style={{ color: colors.danger, fontSize: font.tiny, fontWeight: '800', letterSpacing: 1 }}>
+                      MOTION OF NO CONFIDENCE
+                    </Text>
+                    <Text style={{ color: colors.text, fontSize: font.small, marginTop: 4, lineHeight: 18 }}>
+                      Tabled by {state.parties.find((p) => p.id === state.oppositionMotion?.sponsorPartyId)?.name ?? 'the opposition'}.
+                      Division in {Math.max(0, state.oppositionMotion.scheduledWeek - state.week)} week(s).
+                    </Text>
+                  </Card>
+                )}
                 <Card tone={revoltPct >= 65 ? 'danger' : 'default'}>
                   <Text style={{ color: colors.text, fontSize: font.h3, fontWeight: '800' }}>1922 Committee</Text>
                   <Text style={{ color: colors.muted, fontSize: font.small, marginTop: 4 }}>
@@ -488,11 +500,36 @@ export default function GameScreen() {
                                 disabled={!canGovern || willing < 40}
                                 onPress={() => dispatch({ type: 'NEGOTIATE_SUPPLY', partyId: p.id })}
                               />
+                              {p.seats >= 40 && (
+                                <Button
+                                  label="Invite into coalition"
+                                  variant="primary"
+                                  compact
+                                  disabled={!canGovern}
+                                  onPress={() => dispatch({ type: 'FORM_COALITION', partyId: p.id })}
+                                />
+                              )}
                             </Card>
                           );
                         })}
                   </>
                 )}
+
+                <Text style={[styles.label, { marginTop: spacing.lg }]}>VOTER BLOCS</Text>
+                {(state.blocs ?? []).map((b) => (
+                  <View
+                    key={b.id}
+                    style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: colors.cardBorder }}
+                  >
+                    <Text style={{ color: colors.text, flex: 1, fontSize: font.small }}>{b.name}</Text>
+                    <Text style={{ color: colors.muted, fontSize: font.tiny, marginRight: 8 }}>
+                      {Math.round(b.weight * 100)}% of voters
+                    </Text>
+                    <Text style={{ color: b.support >= 45 ? colors.success : colors.danger, fontSize: font.body, fontWeight: '700' }}>
+                      {b.support}
+                    </Text>
+                  </View>
+                ))}
 
                 <Text style={[styles.label, { marginTop: spacing.lg }]}>HOUSE OF COMMONS | 650 SEATS</Text>
                 {rankedParties.map((p) => (
@@ -508,6 +545,22 @@ export default function GameScreen() {
 
             {politicsTab === 'press' && (
               <View>
+                <Text style={[styles.label, { marginTop: spacing.md }]}>MANIFESTO PLEDGES</Text>
+                {(state.pledges ?? []).length === 0 ? (
+                  <Text style={[styles.hint, { marginTop: 4 }]}>No promises on the record yet.</Text>
+                ) : (
+                  evaluatePledges(state, state.pledges ?? []).map((r) => (
+                    <View key={r.pledge.id} style={{ marginTop: 6 }}>
+                      <Text style={{ color: r.kept ? colors.success : colors.text, fontSize: font.small, fontWeight: '700' }}>
+                        {r.kept ? 'KEPT' : 'ON TRACK?'} - {r.pledge.text}
+                      </Text>
+                      <Text style={{ color: colors.muted, fontSize: font.tiny }}>
+                        now {r.current}, from {r.pledge.baseline}, target {r.pledge.target}
+                      </Text>
+                    </View>
+                  ))
+                )}
+
                 <Text style={[styles.label, { marginTop: spacing.md }]}>FLEET STREET</Text>
                 {state.headlines.map((h, i) => (
                   <Card key={`${h.paper}-${i}`}>
@@ -829,6 +882,10 @@ export default function GameScreen() {
               {state.gameOver}
             </Text>
             <Text style={{ color: colors.muted, fontSize: font.small, textAlign: 'center', marginTop: spacing.sm }}>
+            <Text style={{ color: colors.muted, fontSize: font.small, textAlign: 'center', marginTop: spacing.sm }}>
+              {state.week} weeks in office | {state.passedLaws.length} laws passed | pledges kept{' '}
+              {evaluatePledges(state, state.pledges ?? []).filter((r) => r.kept).length} of {(state.pledges ?? []).length}
+            </Text>
               Final legacy score {state.legacyScore}.
             </Text>
             <Button label="Return to main menu" onPress={restart} />
