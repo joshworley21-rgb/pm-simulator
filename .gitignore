@@ -34,3 +34,5 @@ npm-debug.log*
 # Temp
 tmp/
 temp/
+# Playwright / test runner output
+pm-sim-app/test-results/
