@@ -29,6 +29,7 @@ import { DOSSIER_POOL_3 } from '../src/app/dossiers3';
 import type { GameState } from '../src/app/types';
 import { SCENARIOS } from '../src/app/scenarios';
 import { evaluatePledges } from '../src/app/pledges';
+import { projectSeats } from '../src/app/electionProjection';
 
 let checks = 0;
 let failures = 0;
@@ -329,6 +330,36 @@ check('by-elections only take seats from the government', () => {
   }
   const totalSeats = s.parties.reduce((sum, p) => sum + p.seats, 0);
   assert.ok(totalSeats <= 650, 'seat total should never exceed the Commons: ' + totalSeats);
+});
+
+check('the election result responds to how you have governed', () => {
+  const base = newGame('reform', 'inherited-mess');
+  const withPolling = (support: number): GameState => ({
+    ...base,
+    parties: base.parties.map((p) => (p.id === 'reform' ? { ...p, currentSupport: support } : p)),
+  });
+  const strong = projectSeats(withPolling(50)).totals.reform ?? 0;
+  const middling = projectSeats(withPolling(34)).totals.reform ?? 0;
+  const weak = projectSeats(withPolling(15)).totals.reform ?? 0;
+  assert.ok(strong > middling, 'strong polling should win more seats');
+  assert.ok(middling > weak, 'weak polling should win fewer seats');
+});
+
+check('hostile blocs cost seats even when polling holds', () => {
+  const base = newGame('reform', 'inherited-mess');
+  const withBlocs = (support: number): GameState => ({
+    ...base,
+    blocs: (base.blocs ?? []).map((b) => ({ ...b, support })),
+  });
+  const loyal = projectSeats(withBlocs(80)).totals.reform ?? 0;
+  const hostile = projectSeats(withBlocs(20)).totals.reform ?? 0;
+  assert.ok(loyal > hostile, 'loyal blocs should be worth seats');
+});
+
+check('the projection always fills the Commons', () => {
+  const totals = projectSeats(newGame('reform', 'morning-in-britain')).totals;
+  const seats = Object.values(totals).reduce((sum, n) => sum + n, 0);
+  assert.equal(seats, 650, 'expected 650 seats');
 });
 
 console.log('');

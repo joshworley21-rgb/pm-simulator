@@ -38,7 +38,7 @@ const BASE_WEIGHTS: Record<BlocId, number> = {
 };
 
 /** Where each bloc's seats are concentrated, using the region ids in data.ts. */
-const REGION_GROUPS: Record<BlocId, string[]> = {
+export const BLOC_REGIONS: Record<BlocId, string[]> = {
   'red-wall': ['north', 'midlands', 'wales'],
   'blue-wall': ['south-east', 'south-west', 'east'],
   'young-renters': ['london', 'scotland'],
@@ -69,7 +69,7 @@ function seatHolds(s: GameState): Record<BlocId, SeatHold> | null {
   for (const id of BLOC_IDS) {
     let mine = 0;
     let total = 0;
-    for (const region of REGION_GROUPS[id]) {
+    for (const region of BLOC_REGIONS[id]) {
       const map = regionSeats[region];
       if (!map) continue;
       for (const [partyId, seats] of Object.entries(map)) {

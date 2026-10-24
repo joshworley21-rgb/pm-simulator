@@ -20,6 +20,7 @@ import { DOSSIER_POOL_3 } from './dossiers3';
 import { applyScenario } from './scenarios';
 import { makePledges, evaluatePledges } from './pledges';
 import { computeBlocs, blocAverage } from './voterBlocs';
+import { projectSeats } from './electionProjection';
 
 /** Placeholder partner ministers; enough variety to staff a coalition. */
 const COALITION_NAMES = [
@@ -143,43 +144,8 @@ function largestRemainder(weights: Record<string, number>, seats: number): Recor
   return result;
 }
 
-function electSeats(parties: Party[], regions: Region[]): Record<string, number> {
-  const totals: Record<string, number> = {};
-  for (const p of parties) totals[p.id] = 0;
-  for (const region of regions) {
-    const weights: Record<string, number> = {};
-    for (const p of parties) {
-      const share = Math.max(0, region.support[p.id] ?? 0);
-      weights[p.id] = Math.pow(share, FPTP_EXPONENT);
-    }
-    const alloc = largestRemainder(weights, region.seats);
-    for (const p of parties) totals[p.id] += alloc[p.id] ?? 0;
-  }
-  return totals;
-}
-
-function electSeatsDetailed(parties: Party[], regions: Region[]): {
-  totals: Record<string, number>;
-  byRegion: Record<string, Record<string, number>>;
-} {
-  const totals: Record<string, number> = {};
-  for (const p of parties) totals[p.id] = 0;
-  const byRegion: Record<string, Record<string, number>> = {};
-  for (const region of regions) {
-    const weights: Record<string, number> = {};
-    for (const p of parties) {
-      const share = Math.max(0, region.support[p.id] ?? 0);
-      weights[p.id] = Math.pow(share, FPTP_EXPONENT);
-    }
-    const alloc = largestRemainder(weights, region.seats);
-    byRegion[region.id] = alloc;
-    for (const p of parties) totals[p.id] += alloc[p.id] ?? 0;
-  }
-  return { totals, byRegion };
-}
-
 function runElection(s: GameState): GameState {
-  const detail = electSeatsDetailed(s.parties, REGIONS);
+  const detail = projectSeats(s);
   const seats = detail.totals;
   const parties = s.parties.map((p) => ({ ...p, seats: seats[p.id] ?? 0 }));
   const playerParty = parties.find((p) => p.id === s.player?.partyId);
@@ -955,7 +921,8 @@ export function reducer(state: GameState, action: Action): GameState {
       const parties = state.parties.map((p) =>
         p.id === action.player.partyId ? { ...p, leader: fullName } : p,
       );
-      const detail = electSeatsDetailed(parties, REGIONS);
+      const drafting: GameState = { ...state, player: action.player, parties };
+      const detail = projectSeats(drafting);
       const seats = detail.totals;
       const withSeats = parties.map((p) => ({ ...p, seats: seats[p.id] ?? 0 }));
       const mySeats = withSeats.find((p) => p.id === action.player.partyId)?.seats ?? 0;
