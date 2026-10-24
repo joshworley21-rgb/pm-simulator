@@ -965,13 +965,13 @@ export default function GameScreen() {
               {state.gameOver}
             </Text>
             <Text style={{ color: colors.muted, fontSize: font.small, textAlign: 'center', marginTop: spacing.sm }}>
-            <Text style={{ color: colors.muted, fontSize: font.small, textAlign: 'center', marginTop: spacing.sm }}>
               {state.week} weeks in office | {state.passedLaws.length} laws passed | pledges kept{' '}
               {evaluatePledges(state, state.pledges ?? []).filter((r) => r.kept).length} of {(state.pledges ?? []).length}
             </Text>
             <Text style={{ color: colors.muted, fontSize: font.small, textAlign: 'center', marginTop: 4 }}>
               By-elections: {(state.byElections ?? []).filter((b) => !b.held).length} lost of {(state.byElections ?? []).length}
             </Text>
+            <Text style={{ color: colors.muted, fontSize: font.small, textAlign: 'center', marginTop: 4 }}>
               Final legacy score {state.legacyScore}.
             </Text>
             <Button label="Return to main menu" onPress={restart} />
