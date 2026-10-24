@@ -420,6 +420,36 @@ check('restive coalition ministers cost the government votes', () => {
   );
 });
 
+check('only ambitious coalition ministers rebel and are punished', () => {
+  const base = newGame('reform');
+  const s: GameState = {
+    ...base,
+    coalition: true,
+    supplyPartnerId: 'liberty',
+    cabinet: [
+      ...base.cabinet,
+      {
+        name: 'Reluctant One',
+        post: 'Minister of State (Coalition)',
+        partyId: 'liberty',
+        loyalty: 30,
+        competence: 60,
+        faction: 'Coalition',
+        coalition: true,
+        ambition: 20,
+      },
+    ],
+    bills: [{ ...BILL_POOL[0], weeksToPass: 1 }],
+  };
+  const after = advanceWeek(s);
+  assert.ok(
+    !(after.log ?? []).some((l) => l.includes('COALITION REBELS')),
+    'an unambitious coalition minister should not be recorded as rebelling',
+  );
+  const who = after.cabinet.find((m) => m.name === 'Reluctant One');
+  assert.equal(who?.loyalty ?? -1, 30, 'the unambitious minister should keep their loyalty');
+});
+
 check('a bad 1922 mood forces a mid-term reshuffle', () => {
   const base = newGame('reform');
   const s: GameState = {

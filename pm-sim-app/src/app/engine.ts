@@ -381,13 +381,16 @@ function resolveBill(s: GameState, bill: Bill, rng: () => number): GameState {
   let next = s;
 
   if (rebels.length > 0) {
+    // Punish only the ministers who actually rebelled, by name, so the loyalty
+    // hit matches the seat loss computed above.
+    const rebelNames = new Set(rebels.map((r) => r.name));
     next = {
       ...next,
       cabinet: next.cabinet.map((m) =>
-        m.coalition && m.loyalty < 45 ? { ...m, loyalty: clamp(m.loyalty - 8, 0, 100) } : m,
+        rebelNames.has(m.name) ? { ...m, loyalty: clamp(m.loyalty - 8, 0, 100) } : m,
       ),
       log: [
-        `COALITION REBELS: ${rebels.length} partner minister${rebels.length > 1 ? 's' : ''} voted against the government.`,
+        `COALITION REBELS: ${rebels.length} partner minister${rebels.length > 1 ? 's' : ''} (${rebels.map((r) => r.name).join(', ')}) voted against the government.`,
         ...(next.log ?? []),
       ].slice(0, 50),
     };
