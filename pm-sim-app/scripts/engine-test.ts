@@ -23,6 +23,7 @@ const assert = {
   },
 };
 import { createInitialState, migrateState, reducer, advanceWeek } from '../src/app/engine';
+import { advanceRelationDecay } from '../src/app/diplomacy';
 import { DOSSIER_POOL } from '../src/app/data';
 import { BILL_POOL } from '../src/app/bills';
 import { DOSSIER_POOL_2 } from '../src/app/dossiers2';
@@ -464,6 +465,39 @@ check('a bad 1922 mood forces a mid-term reshuffle', () => {
   const after = advanceWeek(s);
   assert.ok((after.log ?? []).some((l) => l.includes('RESHUFFLE')), 'no reshuffle happened');
   assert.ok(typeof after.lastReshuffleWeek === 'number', 'reshuffle was not recorded');
+});
+
+check('diplomacy warms with a confidence-and-supply deal', () => {
+  const s = newGame('reform', 'hung-parliament');
+  const own = s.parties.find((p) => p.id === 'reform')?.seats ?? 0;
+  const partner = [...s.parties].filter((p) => p.id !== 'reform' && own + p.seats >= 326).sort((a, b) => b.seats - a.seats)[0];
+  const before = s.relations.find((r) => r.from === 'reform' && r.to === partner.id)?.score ?? 0;
+  const after = reducer(s, { type: 'NEGOTIATE_SUPPLY', partyId: partner.id }).relations.find((r) => r.from === 'reform' && r.to === partner.id)?.score ?? 0;
+  assert.ok(after > before, 'a supply deal should raise the relationship score');
+});
+
+check('strong relations cool toward the cap', () => {
+  const cooled = advanceRelationDecay([{ from: 'a', to: 'b', score: 70 }]);
+  assert.equal(cooled[0].score, 69, 'a strong relation should cool by one point');
+  const floored = advanceRelationDecay([{ from: 'a', to: 'b', score: 60 }]);
+  assert.equal(floored[0].score, 60, 'cooling must not drop below the strong-relation threshold');
+  const base = newGame('reform', 'hung-parliament');
+  const s = { ...base, relations: base.relations.map((r) => (r.from === 'reform' && r.to === 'liberty' ? { ...r, score: 70 } : r)) };
+  const afterWeek = advanceWeek(s);
+  assert.equal(afterWeek.relations.find((r) => r.from === 'reform' && r.to === 'liberty')?.score, 69, 'advanceWeek should cool a strong relation');
+});
+
+check('diplomacy is deterministic for a fixed seed', () => {
+  const run = () => {
+    let s = newGame('reform', 'hung-parliament');
+    const own = s.parties.find((p) => p.id === 'reform')?.seats ?? 0;
+    const partner = [...s.parties].filter((p) => p.id !== 'reform' && own + p.seats >= 326).sort((a, b) => b.seats - a.seats)[0];
+    s = reducer(s, { type: 'NEGOTIATE_SUPPLY', partyId: partner.id });
+    s = { ...s, relations: s.relations.map((r) => (r.from === 'reform' && r.to === 'liberty' ? { ...r, score: 70 } : r)) };
+    for (let i = 0; i < 5; i++) s = advanceWeek(s);
+    return JSON.stringify(s.relations);
+  };
+  assert.equal(run(), run(), 'diplomacy drifted non-deterministically across replays');
 });
 
 console.log('');

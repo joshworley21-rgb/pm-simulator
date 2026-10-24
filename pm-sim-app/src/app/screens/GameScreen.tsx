@@ -13,6 +13,8 @@ import { BUDGET_PACKAGES } from '../budget';
 import { TAX_YIELD_PER_POINT } from '../taxes';
 import { evaluatePledges } from '../pledges';
 import { fundedEnvelope } from '../engine';
+import { relationBand } from '../diplomacy';
+import type { RelationBand } from '../diplomacy';
 import type { RootStackParamList } from '../types';
 import type { Bill, Dossier, Effects } from '../types';
 
@@ -50,6 +52,14 @@ function money(v: number): string {
 function dossierTone(d: Dossier): 'danger' | 'default' {
   return d.urgent ? 'danger' : 'default';
 }
+
+const BAND_TONE: Record<RelationBand, 'success' | 'accent' | 'warning' | 'danger' | 'neutral'> = {
+  alliance: 'success',
+  friendly: 'accent',
+  neutral: 'neutral',
+  tense: 'warning',
+  hostile: 'danger',
+};
 
 export default function GameScreen() {
   const { state, dispatch } = useGame();
@@ -734,6 +744,21 @@ export default function GameScreen() {
                   <View key={row.key} style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
                     <Text style={{ color: colors.text, flex: 1, fontSize: font.small }}>{row.label}</Text>
                     <Chip label={status} tone={tone} />
+                  </View>
+                );
+              })}
+            </Card>
+
+            <Card>
+              <Text style={{ color: colors.text, fontSize: font.small, fontWeight: '800' }}>Diplomatic relations</Text>
+              {player && state.relations.filter((r) => r.from === player.partyId).map((r) => {
+                const band = relationBand(r.score);
+                const partnerName = state.parties.find((p) => p.id === r.to)?.name ?? r.to;
+                return (
+                  <View key={r.to} style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+                    <Text style={{ color: colors.text, flex: 1, fontSize: font.small }} numberOfLines={1}>{partnerName}</Text>
+                    <Text style={{ color: colors.muted, fontSize: font.tiny, marginRight: 8 }}>{r.score}</Text>
+                    <Chip label={band} tone={BAND_TONE[band]} />
                   </View>
                 );
               })}

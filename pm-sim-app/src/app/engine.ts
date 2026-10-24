@@ -7,6 +7,7 @@ import { BUDGET_PACKAGES } from './budget';
 import { INITIAL_TAXES, TAX_YIELD_PER_POINT } from './taxes';
 import { INITIAL_DEPARTMENTS } from './spending';
 import type { Region } from './data';
+import { advanceRelationDecay, warmMutual, COALITION_WARMTH, SUPPLY_WARMTH } from './diplomacy';
 
 // ===== Simulation modules (all of these run inside advanceWeek) =====
 import { calculateFiscalDrag, fiscalDragToEffects, FROZEN_THRESHOLDS } from './fiscalDragIntegration';
@@ -577,6 +578,9 @@ export function advanceWeek(s: GameState): GameState {
   // 3. Economy & polling.
   next = weeklyEconomy(next);
   next = driftPolling(next, rng);
+
+  // 3a. Diplomacy: strong alliances cool without upkeep (relationEngine adapter).
+  next = { ...next, relations: advanceRelationDecay(next.relations) };
 
   // 3e. Voter blocs: recompute who is with you and who has turned.
   const blocs = computeBlocs(next);
@@ -1291,6 +1295,7 @@ export function reducer(state: GameState, action: Action): GameState {
         supplyPartnerId: partner.id,
         supplyCostPerWeek: Math.round((annualCost / 52) * 1000) / 1000,
         supplyConcessions: [`GBP ${annualCost}bn a year in extra spending`, 'Prior notice of legislation'],
+        relations: warmMutual(state.relations, state.player!.partyId, partner.id, SUPPLY_WARMTH),
         metrics: { ...state.metrics, partyConfidence: Math.max(0, state.metrics.partyConfidence - (hostile ? 4 : 2)) },
         log: [`SUPPLY: ${partner.name} agrees confidence and supply${hostile ? ' on punishing terms' : ''}, costing GBP ${annualCost}bn a year.`, ...state.log].slice(0, 50),
       };
@@ -1325,6 +1330,7 @@ export function reducer(state: GameState, action: Action): GameState {
         supplyConcessions: [`GBP ${annualCost}bn a year in extra spending`, 'Cabinet seats for the partner', 'Agreed programme for government'],
         coalition: true,
         coalitionPosts: [`${partner.name} takes two Cabinet posts`],
+        relations: warmMutual(state.relations, state.player!.partyId, partner.id, COALITION_WARMTH),
         cabinet: [...state.cabinet, ...coalitionMinisters],
         metrics: { ...state.metrics, partyConfidence: Math.min(100, state.metrics.partyConfidence + 1) },
         log: [`COALITION: ${partner.name} enters government with two Cabinet seats, at GBP ${annualCost}bn a year.`, ...state.log].slice(0, 50),
