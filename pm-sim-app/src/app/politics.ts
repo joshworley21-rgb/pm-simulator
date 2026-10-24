@@ -52,6 +52,26 @@ export const FOREIGN_POOL: ForeignIssue[] = [
       { id: 'renewables', label: 'Pivot to a joint renewables corridor', summary: 'Political win, slower near-term relief.', effects: { economy: 2, cpiInflation: 0.1 } },
     ],
   },
+  {
+    id: 'fi-pm-trudeau-ca',
+    leader: 'Prime Minister Lalonde',
+    country: 'Canada',
+    topic: 'Post-Brexit trade deal ratification',
+    options: [
+      { id: 'sign', label: 'Sign the rollover trade deal', summary: 'Lock in tariff-free access with a major partner.', effects: { economy: 3, approval: 1 } },
+      { id: 'renegotiate', label: 'Demand better agriculture terms', summary: 'Risk delay for a better deal.', effects: { economy: -1, approval: -1, publicServices: 0 } },
+    ],
+  },
+  {
+    id: 'fi-president-saudi',
+    leader: 'Crown Prince Faisal',
+    country: 'Saudi Arabia',
+    topic: 'Arms sales and human rights pressure',
+    options: [
+      { id: 'sell', label: 'Approve the arms sale', summary: 'Jobs and influence, but reputational cost.', effects: { economy: 2, approval: -2, security: 2 } },
+      { id: 'block', label: 'Block on human-rights grounds', summary: 'Moral win, strains an ally.', effects: { approval: 2, economy: -2 } },
+    ],
+  },
 ];
 
 /** PMQs exchanges: the opposition leader and a backbench question. */
@@ -84,6 +104,26 @@ export const PMQ_POOL: PmqQuestion[] = [
       { id: 'defend', label: 'Blame the broken system inherited', effects: { approval: -1, supportDelta: { populist: 2 } } },
       { id: 'own', label: 'Admit it is too high, promise action', effects: { approval: 1, supportDelta: { populist: -1 } } },
       { id: 'attack', label: 'Turn it on Reform UK', effects: { approval: 1, supportDelta: { populist: -3 } } },
+    ],
+  },
+  {
+    id: 'pmq-cost-of-living',
+    from: 'Opposition Leader',
+    question: 'Families are choosing between heating and eating. Mortgage rates are stuck high. What does the Prime Minister say to voters who feel abandoned?',
+    options: [
+      { id: 'defend', label: 'Point to falling inflation', effects: { approval: 1, economy: 0 } },
+      { id: 'own', label: 'Acknowledge the squeeze and announce help', effects: { approval: 2, fundsDelta: -100 } },
+      { id: 'attack', label: 'Blame global shocks', effects: { approval: -1 } },
+    ],
+  },
+  {
+    id: 'pmq-housing',
+    from: 'Backbench MP',
+    question: 'Young people in my constituency cannot afford a home. When will the Prime Minister stand up to the nimbys and build houses?',
+    options: [
+      { id: 'defend', label: 'Highlight planning reform', effects: { approval: 1, economy: 1 } },
+      { id: 'own', label: 'Commit to a 1.5m home target', effects: { approval: 2, publicServices: 1, partyConfidence: -1 } },
+      { id: 'attack', label: 'Blame council blockers', effects: { approval: 0, mediaAttention: 8 } },
     ],
   },
 ];

@@ -152,6 +152,30 @@ export interface BudgetPackage {
   kicker: string;
 }
 
+/** A single controllable tax lever. */
+export interface TaxLever {
+  id: string;
+  name: string;
+  rate: number;          // current rate (%)
+  min: number;
+  max: number;
+  step: number;
+  /** Approval sensitivity: how much the public reacts to this tax changing. */
+  popularityWeight: number;
+}
+
+/** A government department whose budget the PM can set. */
+export interface SpendingDept {
+  id: string;
+  name: string;
+  budget: number;
+  min: number;
+  max: number;
+  step: number;
+  desc: string;
+  benefit: Effects;
+}
+
 export interface Player {
   firstName: string;
   lastName: string;
@@ -187,6 +211,13 @@ export interface GameState {
   budgetDue: boolean;
   backbenchers: Backbencher[];
   termLength: number;
+  taxes: TaxLever[];
+  fiscalEventKind: 'budget' | 'autumn' | null;
+  departments: SpendingDept[];
+  legacyScore: number;
+  termsWon: number;
+  regionSeats: Record<string, Record<string, number>>; // regionId -> partyId -> seats
+  ministerPicker: string | null; // backbencher name whose promotion is being confirmed
 }
 
 export type Action =
@@ -200,10 +231,17 @@ export type Action =
   | { type: 'PROPOSE_BILL'; billId: string }
   | { type: 'SACK_MINISTER'; name: string }
   | { type: 'APPOINT_MINISTER'; post: string }
+  | { type: 'APPOINT_MINISTER_BY_NAME'; name: string }
+  | { type: 'PICK_MINISTER'; name: string }
+  | { type: 'CONFIRM_APPOINT'; post: string }
+  | { type: 'CANCEL_APPOINT' }
   | { type: 'RESOLVE_FOREIGN'; issueId: string; optionId: string }
   | { type: 'ANSWER_PMQ'; optionId: string }
   | { type: 'DISMISS_PMQ' }
   | { type: 'DELIVER_BUDGET'; packageId: string }
   | { type: 'SKIP_BUDGET' }
+  | { type: 'ADJUST_TAX'; taxId: string; delta: number }
+  | { type: 'SET_AUTUMN_TAXES' }
+  | { type: 'ADJUST_SPENDING'; deptId: string; delta: number }
   | { type: 'DISMISS_ELECTION' }
   | { type: 'RESTORE'; state: GameState };

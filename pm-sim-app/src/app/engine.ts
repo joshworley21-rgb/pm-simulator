@@ -1,9 +1,19 @@
 import type { GameState, Action, Party, Effects, Dossier, Bill, Minister } from './types';
 import { INITIAL_PARTIES, INITIAL_RELATIONS, REGIONS, DOSSIER_POOL } from './data';
 import { BILL_POOL } from './bills';
+import { BILL_POOL_2 } from './bills2';
 import { DEFAULT_CABINET, FOREIGN_POOL, PMQ_POOL, BACKBENCHERS } from './politics';
 import { BUDGET_PACKAGES } from './budget';
+import { INITIAL_TAXES, TAX_YIELD_PER_POINT } from './taxes';
+import { INITIAL_DEPARTMENTS } from './spending';
 import type { Region } from './data';
+
+// ===== New Feature Module Imports =====
+import { calculateFiscalDrag, getFiscalDragScenario } from './fiscalDragIntegration';
+import { calculateTradeDealEconomics, DEFAULT_TRADE_DEAL_STATUS } from './tradeDeals';
+import { calculateNHSPerformance, NHS_TARGETS } from './nhsMetrics';
+import { calculateSpendingReviewImpact, DEFAULT_SPENDING_REVIEW } from './spendingReview';
+import { calculate1922Mood, shouldTriggerLeadershipChallenge, calculateBlindsideRisk } from './leadershipChallenge';
 
 export const FPTP_EXPONENT = 2.5;
 
@@ -69,6 +79,13 @@ export function createInitialState(): GameState {
     budgetDue: false,
     backbenchers: BACKBENCHERS.map((b) => ({ ...b })),
     termLength: 60,
+    taxes: INITIAL_TAXES.map((t) => ({ ...t })),
+    fiscalEventKind: null,
+    departments: INITIAL_DEPARTMENTS.map((d) => ({ ...d })),
+    legacyScore: 0,
+    termsWon: 0,
+    regionSeats: {},
+    ministerPicker: null,
   };
 }
 
@@ -110,8 +127,29 @@ function electSeats(parties: Party[], regions: Region[]): Record<string, number>
   return totals;
 }
 
+function electSeatsDetailed(parties: Party[], regions: Region[]): {
+  totals: Record<string, number>;
+  byRegion: Record<string, Record<string, number>>;
+} {
+  const totals: Record<string, number> = {};
+  for (const p of parties) totals[p.id] = 0;
+  const byRegion: Record<string, Record<string, number>> = {};
+  for (const region of regions) {
+    const weights: Record<string, number> = {};
+    for (const p of parties) {
+      const share = Math.max(0, region.support[p.id] ?? 0);
+      weights[p.id] = Math.pow(share, FPTP_EXPONENT);
+    }
+    const alloc = largestRemainder(weights, region.seats);
+    byRegion[region.id] = alloc;
+    for (const p of parties) totals[p.id] += alloc[p.id] ?? 0;
+  }
+  return { totals, byRegion };
+}
+
 function runElection(s: GameState): GameState {
-  const seats = electSeats(s.parties, REGIONS);
+  const detail = electSeatsDetailed(s.parties, REGIONS);
+  const seats = detail.totals;
   const parties = s.parties.map((p) => ({ ...p, seats: seats[p.id] ?? 0 }));
   const playerParty = parties.find((p) => p.id === s.player?.partyId);
   const playerSeats = playerParty?.seats ?? 0;
@@ -119,6 +157,9 @@ function runElection(s: GameState): GameState {
   const swing = Math.round((playerSeats - 350) / 30);
   const approval = clamp(s.metrics.approval + (majority ? swing + 3 : -12), 0, 100);
   const message = `GENERAL ELECTION: ${playerParty?.name ?? '?'} won ${playerSeats} seats ${majority ? '(Working Majority)' : '(Hung Parliament)'}.`;
+  // Legacy score from governing quality; a second term rewards survival.
+  const legacyScore = s.legacyScore + Math.round(s.metrics.approval / 10) + Math.round(s.metrics.economy / 10) + (majority ? 5 : 0);
+  const termsWon = majority ? s.termsWon + 1 : s.termsWon;
   return {
     ...s,
     parties,
@@ -126,6 +167,9 @@ function runElection(s: GameState): GameState {
     stats: { ...s.stats, lettersOfNoConfidence: 0, lettersThreshold: resignationThreshold(playerSeats) },
     turnsUntilElection: s.termLength || 60,
     isElection: true,
+    legacyScore,
+    termsWon,
+    regionSeats: detail.byRegion,
     log: [message, ...s.log].slice(0, 50),
   };
 }
@@ -341,9 +385,15 @@ export function advanceWeek(s: GameState): GameState {
     }
   }
 
-  // 8b. Annual Budget (every 12 weeks).
-  if (next.week % 12 === 0 && !next.gameOver) {
-    next.budgetDue = true;
+  // 8b. Two fiscal events per year: Autumn Statement (week % 6 == 0) and Budget (week % 12 == 0).
+  if (!next.gameOver) {
+    if (next.week % 12 === 0) {
+      next.budgetDue = true;
+      next.fiscalEventKind = 'budget';
+    } else if (next.week % 6 === 0) {
+      next.budgetDue = true;
+      next.fiscalEventKind = 'autumn';
+    }
   }
 
   // 9. Election countdown.
@@ -364,6 +414,11 @@ function resignMinister(s: GameState, name: string): GameState {
     factionUnrest: clamp(s.factionUnrest + 8, 0, 100),
     log: [`CABINET: ${m.name} sacked as ${m.post}.`, ...s.log].slice(0, 50),
   };
+}
+
+/** Purdah: the pre-election quiet period when policy/nominal actions are locked. */
+function inPurdah(s: GameState): boolean {
+  return s.phase === 'playing' && s.turnsUntilElection <= 6;
 }
 
 export function reducer(state: GameState, action: Action): GameState {
@@ -423,7 +478,11 @@ export function reducer(state: GameState, action: Action): GameState {
     }
 
     case 'PROPOSE_BILL': {
-      const blueprint = BILL_POOL.find((b) => b.id === action.billId);
+      if (inPurdah(state)) {
+        return { ...state, log: [`PURDAH: Cannot introduce bills during the pre-election quiet period.`, ...state.log].slice(0, 50) };
+      }
+      const allBills = [...BILL_POOL, ...BILL_POOL_2];
+      const blueprint = allBills.find((b) => b.id === action.billId);
       if (!blueprint) return state;
       const already = state.bills.some((b) => b.id === blueprint.id) || state.passedLaws.includes(blueprint.title);
       if (already) return state;
@@ -439,11 +498,19 @@ export function reducer(state: GameState, action: Action): GameState {
       return resignMinister(state, action.name);
 
     case 'APPOINT_MINISTER': {
+      // Legacy: candidate picker is now driven by PICK_MINISTER + CONFIRM_APPOINT.
+      return state;
+    }
+
+    case 'PICK_MINISTER': {
+      return { ...state, ministerPicker: action.name };
+    }
+
+    case 'CONFIRM_APPOINT': {
+      const name = state.ministerPicker;
+      const candidate = state.backbenchers.find((b) => b.name === name);
+      if (!candidate) return state;
       const post = action.post;
-      const candidates = state.backbenchers.filter((b) => b.partyId === state.player?.partyId);
-      if (candidates.length === 0) return state;
-      // Promote the most loyal (with a competence tilt) available backbencher.
-      const candidate = [...candidates].sort((a, b) => (b.loyalty + b.competence * 0.4) - (a.loyalty + a.competence * 0.4))[0];
       const minister: Minister = {
         name: candidate.name,
         post,
@@ -456,9 +523,13 @@ export function reducer(state: GameState, action: Action): GameState {
         ...state,
         cabinet: [...state.cabinet, minister],
         backbenchers: state.backbenchers.filter((b) => b.name !== candidate.name),
+        ministerPicker: null,
         log: [`CABINET: ${candidate.name} appointed ${post}.`, ...state.log].slice(0, 50),
       };
     }
+
+    case 'CANCEL_APPOINT':
+      return { ...state, ministerPicker: null };
 
     case 'SET_TERM_LENGTH':
       return { ...state, termLength: action.weeks, turnsUntilElection: action.weeks };
@@ -496,12 +567,14 @@ export function reducer(state: GameState, action: Action): GameState {
       return { ...state, pmq: null };
 
     case 'DELIVER_BUDGET': {
+      if (inPurdah(state)) return state;
       const pkg = BUDGET_PACKAGES.find((b) => b.id === action.packageId);
       if (!pkg) return state;
       let next = applyEffects(state, pkg.effects);
       next = {
         ...next,
         budgetDue: false,
+        fiscalEventKind: null,
         log: [`BUDGET: ${pkg.title} delivered by the Chancellor.`, ...next.log].slice(0, 50),
         headlines: [{ paper: 'The National Standard', title: pkg.kicker, stance: 'centrist' as const }, ...next.headlines].slice(0, 4),
       };
@@ -512,8 +585,67 @@ export function reducer(state: GameState, action: Action): GameState {
       return {
         ...state,
         budgetDue: false,
-        log: [`BUDGET DEFERRED: The Chancellor postponed the statement.`, ...state.log].slice(0, 50),
+        fiscalEventKind: null,
+        log: [`FISCAL EVENT DEFERRED: The Chancellor postponed the statement.`, ...state.log].slice(0, 50),
       };
+
+    case 'ADJUST_TAX': {
+      if (inPurdah(state)) return state;
+      const idx = state.taxes.findIndex((t) => t.id === action.taxId);
+      if (idx < 0) return state;
+      const tax = state.taxes[idx];
+      const rate = clamp(r1(tax.rate + action.delta), tax.min, tax.max);
+      if (rate === tax.rate) return state; // no change
+      const taxes = state.taxes.map((t, i) => (i === idx ? { ...t, rate } : t));
+      const delta = rate - tax.rate;
+      // Fiscal yield: raising tax improves the budget, lowers approval; vice versa.
+      const yieldChange = delta * (TAX_YIELD_PER_POINT[tax.id] ?? 0);
+      const approvalChange = -delta * tax.popularityWeight;
+      let next = applyEffects(state, {
+        approval: approvalChange,
+        budgetBalance: yieldChange,
+        taxRate: tax.id === 'income' ? delta : 0,
+      });
+      next = { ...next, taxes };
+      return next;
+    }
+
+    case 'SET_AUTUMN_TAXES': {
+      // The Autumn Statement delivers the tax changes set since the last Budget.
+      return {
+        ...state,
+        budgetDue: false,
+        fiscalEventKind: null,
+        log: [`AUTUMN STATEMENT: Tax measures delivered.`, ...state.log].slice(0, 50),
+        headlines: [{ paper: 'The National Standard', title: 'AUTUMN STATEMENT: CHANCELLOR SETS OUT TAX PLAN', stance: 'centrist' as const }, ...state.headlines].slice(0, 4),
+      };
+    }
+
+    case 'ADJUST_SPENDING': {
+      if (inPurdah(state)) return state;
+      const idx = state.departments.findIndex((d) => d.id === action.deptId);
+      if (idx < 0) return state;
+      const dept = state.departments[idx];
+      const budget = clamp(r1(dept.budget + action.delta), dept.min, dept.max);
+      if (budget === dept.budget) return state;
+      const delta = budget - dept.budget;
+      const departments = state.departments.map((d, i) => (i === idx ? { ...d, budget } : d));
+      // Spending costs the Exchequer; benefits scale with the (step-normalised) delta.
+      const steps = Math.round(delta / dept.step);
+      let fx: Effects = { budgetBalance: -delta };
+      const b = dept.benefit;
+      fx = {
+        approval: (b.approval ?? 0) * steps,
+        publicServices: (b.publicServices ?? 0) * steps,
+        security: (b.security ?? 0) * steps,
+        economy: (b.economy ?? 0) * steps,
+        nhsWaitingList: (b.nhsWaitingList ?? 0) * steps,
+        budgetBalance: -delta,
+      };
+      let next = applyEffects(state, fx);
+      next = { ...next, departments };
+      return next;
+    }
 
     case 'DISMISS_ELECTION':
       return { ...state, isElection: false };
