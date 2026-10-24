@@ -1,119 +1,117 @@
 /**
- * Fiscal Drag Integration
- * Tax threshold freezing, bracket creep, and automatic fiscal effects
+ * Fiscal drag: frozen thresholds quietly raise more tax as pay rises.
+ *
+ * All money is in pounds (input) and BILLIONS of pounds per year (output).
+ * The model is deliberately simple and calibrated against the real-world
+ * effect of the 2021-2025 threshold freeze, which raised roughly £6-8bn a
+ * year at 4-5% nominal pay growth.
  */
 
 import type { Effects } from './types';
 
-/** Fiscal drag parameters - based on UK 2024/25 tax year */
 export interface FiscalDragParameters {
-  /** Personal allowance (£) - frozen at 2022/23 level of £12,570 */
+  /** Personal allowance (£) — frozen at the 2022/23 level of £12,570 */
   personalAllowance: number;
-  /** Basic rate threshold (£) - frozen at £50,270 */
+  /** Basic rate limit (£) — frozen at £50,270 */
   basicRateCutoff: number;
-  /** Higher rate threshold (£) - frozen at £125,140 */
+  /** Higher rate threshold (£) — frozen at £125,140 */
   higherRateCutoff: number;
-  /** Additional rate threshold (£) - frozen at £125,140+ */
+  /** Additional rate threshold (£) */
   additionalRateCutoff: number;
-  /** Basic rate of income tax (%) - 20% */
   basicRate: number;
-  /** Higher rate of income tax (%) - 40% */
   higherRate: number;
-  /** Additional rate of income tax (%) - 45% */
   additionalRate: number;
-  /** Current CPI inflation (%) */
+  /** CPI inflation (%) */
   cpiInflation: number;
   /** Real income growth after inflation (%) */
   realIncomeGrowth: number;
-  /** Year of fiscal event (for threshold review announcements) */
   fiscalYear: number;
 }
 
-/** Fiscal drag result */
 export interface FiscalDragResult {
-  /** Additional revenue raised (£bn/year) */
+  /** Extra revenue from bracket creep, £bn per year */
   additionalRevenue: number;
-  /** Number of taxpayers pushed into higher bracket */
+  /** Taxpayers dragged into a higher band this year */
   taxpayersAffected: number;
-  /** Average tax increase per affected taxpayer (£/year) */
+  /** Average extra tax per affected taxpayer, £ per year */
   avgTaxIncrease: number;
-  /** Effective tax rate change (percentage points) */
+  /** Change in the effective tax rate, percentage points */
   effectiveTaxRateChange: number;
-  /** Fiscal drag intensity classification */
   intensity: 'low' | 'medium' | 'high' | 'very_high';
-  /** Whether thresholds were frozen or adjusted */
+  /** True when allowances have not been indexed */
   thresholdsFrozen: boolean;
-  /** Cumulative fiscal drag since threshold freeze started */
+  /** Same as additionalRevenue, kept for continuity */
   cumulativeFiscalDrag: number;
 }
 
-/** UK fiscal drag scenarios */
+/** Frozen thresholds, as they have stood since 2022/23. */
+export const FROZEN_THRESHOLDS = {
+  personalAllowance: 12_570,
+  basicRateCutoff: 50_270,
+  higherRateCutoff: 125_140,
+  additionalRateCutoff: 150_000,
+} as const;
+
+/** Average taxable income used to translate pay growth into cash (£). */
+const AVERAGE_TAXABLE_INCOME = 34_000;
+/** UK taxpayer population used by the model. */
+const TOTAL_TAXPAYERS = 32_000_000;
+/** Share of taxpayers sitting near a band edge, so pay growth drags them over it. */
+const BAND_EDGE_SHARE = 0.12;
+/** Calibration factor, tuned so 4% nominal growth ≈ £6bn/yr. */
+const DRAG_SENSITIVITY = 0.6;
+/** Approximate total UK tax take, used for the effective-rate calculation (£bn). */
+const TOTAL_TAX_TAKE_BN = 1_000;
+
 export const FISCAL_DRAG_SCENARIOS = {
-  /** Moderate inflation drift */
   moderate: {
     name: 'Moderate Inflation Drift',
     parameters: {
-      personalAllowance: 12_570,
-      basicRateCutoff: 50_270,
-      higherRateCutoff: 125_140,
-      additionalRateCutoff: 150_000,
+      ...FROZEN_THRESHOLDS,
       basicRate: 20,
       higherRate: 40,
       additionalRate: 45,
       cpiInflation: 2.5,
       realIncomeGrowth: 0.5,
-      fiscalYear: 2024,
+      fiscalYear: 2025,
     },
   },
-  /** High inflation bracket creep */
   high: {
     name: 'High Inflation Drift',
     parameters: {
-      personalAllowance: 12_570,
-      basicRateCutoff: 50_270,
-      higherRateCutoff: 125_140,
-      additionalRateCutoff: 150_000,
+      ...FROZEN_THRESHOLDS,
       basicRate: 20,
       higherRate: 40,
       additionalRate: 45,
       cpiInflation: 5.0,
       realIncomeGrowth: 1.0,
-      fiscalYear: 2024,
+      fiscalYear: 2025,
     },
   },
-  /** Threshold freeze (no indexation) - worst case */
   freeze: {
     name: 'Threshold Freeze (No Indexation)',
     parameters: {
-      personalAllowance: 12_570,
-      basicRateCutoff: 50_270,
-      higherRateCutoff: 125_140,
-      additionalRateCutoff: 150_000,
+      ...FROZEN_THRESHOLDS,
       basicRate: 20,
       higherRate: 40,
       additionalRate: 45,
       cpiInflation: 3.5,
       realIncomeGrowth: 0,
-      fiscalYear: 2024,
+      fiscalYear: 2025,
     },
   },
-  /** Strong real income growth */
   growthBoom: {
     name: 'Strong Real Income Growth',
     parameters: {
-      personalAllowance: 12_570,
-      basicRateCutoff: 50_270,
-      higherRateCutoff: 125_140,
-      additionalRateCutoff: 150_000,
+      ...FROZEN_THRESHOLDS,
       basicRate: 20,
       higherRate: 40,
       additionalRate: 45,
       cpiInflation: 2.0,
       realIncomeGrowth: 3.0,
-      fiscalYear: 2024,
+      fiscalYear: 2025,
     },
   },
-  /** Election year giveaway - threshold increase */
   electionGiveaway: {
     name: 'Election Year Threshold Increase',
     parameters: {
@@ -126,104 +124,83 @@ export const FISCAL_DRAG_SCENARIOS = {
       additionalRate: 45,
       cpiInflation: 3.0,
       realIncomeGrowth: 1.5,
-      fiscalYear: 2024,
+      fiscalYear: 2025,
     },
   },
 } as const;
 
-/** Calculate fiscal drag impact for a given year */
 export function calculateFiscalDrag(params: FiscalDragParameters): FiscalDragResult {
-  const {
-    personalAllowance,
-    basicRateCutoff,
-    higherRateCutoff,
-    additionalRateCutoff,
-    basicRate,
-    higherRate,
-    additionalRate,
-    cpiInflation,
-    realIncomeGrowth,
-  } = params;
+  const nominalGrowth = Math.max(0, params.realIncomeGrowth + params.cpiInflation);
+  const thresholdsFrozen =
+    params.personalAllowance <= FROZEN_THRESHOLDS.personalAllowance &&
+    params.basicRateCutoff <= FROZEN_THRESHOLDS.basicRateCutoff;
 
-  const nominalGrowth = realIncomeGrowth + cpiInflation;
-  const totalTaxpayers = 32_000_000;
+  // Cash value of one year's pay growth for a typical taxpayer.
+  const incomeIncrement = (AVERAGE_TAXABLE_INCOME * nominalGrowth) / 100;
 
-  // Determine intensity
-  let intensity: 'low' | 'medium' | 'high' | 'very_high';
-  if (cpiInflation >= 5 && realIncomeGrowth >= 3) intensity = 'very_high';
-  else if (cpiInflation >= 3 && realIncomeGrowth >= 1) intensity = 'high';
-  else if (cpiInflation >= 2 || realIncomeGrowth >= 0.5) intensity = 'medium';
+  // Everyone whose pay rises pays basic rate on the increment; the slice of
+  // taxpayers near a band edge also pays the higher-rate step on the part
+  // that crosses the line.
+  const basicDrag = TOTAL_TAXPAYERS * incomeIncrement * (params.basicRate / 100);
+  const higherStep = (params.higherRate - params.basicRate) / 100;
+  const higherDrag = TOTAL_TAXPAYERS * BAND_EDGE_SHARE * incomeIncrement * higherStep;
+
+  const rawBn = ((basicDrag + higherDrag) / 1e9) * DRAG_SENSITIVITY;
+  const additionalRevenue = thresholdsFrozen ? Math.round(rawBn * 10) / 10 : 0;
+
+  const taxpayersAffected = thresholdsFrozen
+    ? Math.round(TOTAL_TAXPAYERS * BAND_EDGE_SHARE * Math.min(1, nominalGrowth / 8))
+    : 0;
+
+  const avgTaxIncrease = taxpayersAffected > 0
+    ? Math.round((additionalRevenue * 1e9) / taxpayersAffected)
+    : 0;
+
+  const effectiveTaxRateChange = Math.round((additionalRevenue / TOTAL_TAX_TAKE_BN) * 100 * 10) / 10;
+
+  let intensity: FiscalDragResult['intensity'];
+  if (nominalGrowth >= 6) intensity = 'very_high';
+  else if (nominalGrowth >= 4) intensity = 'high';
+  else if (nominalGrowth >= 2) intensity = 'medium';
   else intensity = 'low';
 
-  // Calculate taxpayers affected by each threshold
-  const taxpayersAboveAllowance = Math.round(totalTaxpayers * Math.min(1, (nominalGrowth * 0.8) / 50));
-  const taxpayersAboveBasic = Math.round(totalTaxpayers * Math.min(1, (nominalGrowth * 0.6) / 40));
-  const taxpayersAboveHigher = Math.round(totalTaxpayers * Math.min(1, (nominalGrowth * 0.3) / 30));
-  const taxpayersAboveAdditional = Math.round(totalTaxpayers * Math.min(1, (nominalGrowth * 0.15) / 20));
-
-  // Additional revenue calculations
-  const basicRateRevenue = Math.round(
-    taxpayersAboveBasic * basicRateCutoff * (basicRate / 100) * 0.0001
-  );
-
-  const higherRateRevenue = Math.round(
-    taxpayersAboveHigher * (higherRateCutoff - basicRateCutoff) * (higherRate / 100) * 0.0001
-  );
-
-  const additionalRateRevenue = Math.round(
-    taxpayersAboveAdditional * (additionalRateCutoff - higherRateCutoff) * (additionalRate / 100) * 0.0001
-  );
-
-  const additionalRevenue = basicRateRevenue + higherRateRevenue + additionalRateRevenue;
-  const taxpayersAffected = taxpayersAboveBasic + taxpayersAboveHigher + taxpayersAboveAdditional;
-
-  let avgTaxIncrease = 0;
-  if (taxpayersAffected > 0) {
-    avgTaxIncrease = Math.round(additionalRevenue / taxpayersAffected);
-  }
-
-  const baselineTaxRevenue = totalTaxpayers * basicRateCutoff / 100 * (basicRate / 100) * 0.01;
-  const effectiveTaxRateChange = Math.round(
-    (additionalRevenue / Math.max(1, baselineTaxRevenue)) * 10
-  ) / 10;
-
-  const cumulativeFiscalDrag = additionalRevenue;
-
   return {
-    additionalRevenue: Math.round(additionalRevenue),
+    additionalRevenue,
     taxpayersAffected,
-    avgTaxIncrease: Math.max(1, avgTaxIncrease),
+    avgTaxIncrease,
     effectiveTaxRateChange,
     intensity,
-    thresholdsFrozen: params.personalAllowance === 12_570 && params.basicRateCutoff === 50_270,
-    cumulativeFiscalDrag,
+    thresholdsFrozen,
+    cumulativeFiscalDrag: additionalRevenue,
   };
 }
 
-/** Apply fiscal drag to game state metrics */
+/** Translate the annual drag into the small weekly effect the engine applies. */
+export function fiscalDragToEffects(result: FiscalDragResult): Effects {
+  if (result.additionalRevenue <= 0) return {};
+  return {
+    // A twelfth of the annual figure each month-ish, so a 60-week term
+    // accumulates roughly five years of drag.
+    budgetBalance: Math.round((result.additionalRevenue / 12) * 100) / 100,
+    // Voters notice stealth taxation, but gently.
+    approval: -Math.min(2, result.effectiveTaxRateChange * 1.5),
+    partyConfidence: -Math.min(1, result.effectiveTaxRateChange * 0.5),
+  };
+}
+
+/** Back-compat helper: direct effects from parameters. */
 export function applyFiscalDragToState(
-  state: any,
-  params: FiscalDragParameters
+  _state: unknown,
+  params: FiscalDragParameters,
 ): Effects {
-  const result = calculateFiscalDrag(params);
-
-  const effects: Effects = {
-    budgetBalance: result.additionalRevenue,
-    approval: -Math.min(20, Math.abs(result.effectiveTaxRateChange) * 5),
-    cpiInflation: result.intensity === 'very_high' ? 0.3 : 0,
-    gdpGrowth: -0.1 * Math.min(5, Math.abs(result.effectiveTaxRateChange)),
-    publicServices: -0.5,
-    partyConfidence: -Math.min(15, Math.abs(result.effectiveTaxRateChange) * 3),
-  };
-
-  return effects;
+  return fiscalDragToEffects(calculateFiscalDrag(params));
 }
 
-/**
- * Get the fiscal drag scenario based on current economic conditions
- * Higher inflation leads to more aggressive bracket creep
- */
-export function getFiscalDragScenario(cpiInflation: number, realIncomeGrowth: number): keyof typeof FISCAL_DRAG_SCENARIOS {
+/** Pick the scenario that matches the current economy. */
+export function getFiscalDragScenario(
+  cpiInflation: number,
+  realIncomeGrowth: number,
+): keyof typeof FISCAL_DRAG_SCENARIOS {
   if (cpiInflation >= 4.5) return 'high';
   if (cpiInflation >= 3) return 'freeze';
   if (cpiInflation >= 2) return 'moderate';

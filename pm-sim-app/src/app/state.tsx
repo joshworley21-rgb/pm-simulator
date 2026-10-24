@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useReducer } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { GameState, Action } from './types';
-import { createInitialState, reducer } from './engine';
+import { createInitialState, migrateState, reducer } from './engine';
 
 const STORAGE_KEY = 'pm-sim-save-v7';
 
@@ -20,8 +20,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       try {
         const raw = await AsyncStorage.getItem(STORAGE_KEY);
         if (raw) {
-          const saved = JSON.parse(raw) as GameState;
-          dispatch({ type: 'RESTORE', state: { ...createInitialState(), ...saved } });
+          const saved = JSON.parse(raw) as Partial<GameState>;
+          dispatch({ type: 'RESTORE', state: migrateState(saved) });
         }
       } catch (e) {
         console.warn('Failed to load save', e);

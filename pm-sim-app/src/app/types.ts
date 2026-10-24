@@ -218,6 +218,28 @@ export interface GameState {
   termsWon: number;
   regionSeats: Record<string, Record<string, number>>; // regionId -> partyId -> seats
   ministerPicker: string | null; // backbencher name whose promotion is being confirmed
+
+  // ===== Simulation telemetry (written weekly by the engine) =====
+  /** NHS performance index 0-100, derived from waiting times each week. */
+  nhsPerformance?: number;
+  /** Extra revenue from frozen thresholds, £bn per year. */
+  fiscalDragRevenue?: number;
+  /** Bracket-creep intensity bucket. */
+  fiscalDragIntensity?: 'low' | 'medium' | 'high' | 'very_high';
+  /** Taxpayers dragged into a higher band this year. */
+  taxpayersAffectedByDrag?: number;
+  /** Weeks the thresholds have been frozen. */
+  thresholdFrozenTurns?: number;
+  /** GDP contribution from current trade arrangements (%). */
+  tradeGdpImpact?: number;
+  /** 1922 Committee mood snapshot. */
+  committeeMood?: {
+    averageLoyalty: number;
+    averageAmbition: number;
+    consideringDefection: number;
+    readyToChallenge: number;
+    activeFactions: string[];
+  };
 }
 
 export type Action =

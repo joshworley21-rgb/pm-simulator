@@ -8,14 +8,20 @@ import { INITIAL_TAXES, TAX_YIELD_PER_POINT } from './taxes';
 import { INITIAL_DEPARTMENTS } from './spending';
 import type { Region } from './data';
 
-// ===== New Feature Module Imports =====
-import { calculateFiscalDrag, getFiscalDragScenario } from './fiscalDragIntegration';
+// ===== Simulation modules (all of these run inside advanceWeek) =====
+import { calculateFiscalDrag, fiscalDragToEffects, FROZEN_THRESHOLDS } from './fiscalDragIntegration';
 import { calculateTradeDealEconomics, DEFAULT_TRADE_DEAL_STATUS } from './tradeDeals';
-import { calculateNHSPerformance, NHS_TARGETS } from './nhsMetrics';
-import { calculateSpendingReviewImpact, DEFAULT_SPENDING_REVIEW } from './spendingReview';
-import { calculate1922Mood, shouldTriggerLeadershipChallenge, calculateBlindsideRisk } from './leadershipChallenge';
+import { calculateNHSPerformance } from './nhsMetrics';
+import type { NHSMetrics } from './nhsMetrics';
+import { DEFAULT_SPENDING_REVIEW } from './spendingReview';
+import { calculate1922Mood, calculateBlindsideRisk } from './leadershipChallenge';
+import { DOSSIER_POOL_2 } from './dossiers2';
+import { DOSSIER_POOL_3 } from './dossiers3';
 
 export const FPTP_EXPONENT = 2.5;
+
+/** Full dossier pool: the original six plus both expanded slates. */
+const ALL_DOSSIERS = [...DOSSIER_POOL, ...DOSSIER_POOL_2, ...DOSSIER_POOL_3];
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
 
@@ -59,7 +65,7 @@ export function createInitialState(): GameState {
     week: 1,
     turnsUntilElection: 60,
     isElection: false,
-    redBox: [{ ...DOSSIER_POOL[0] }, { ...DOSSIER_POOL[2] }],
+    redBox: [{ ...ALL_DOSSIERS[0] }, { ...ALL_DOSSIERS[2] }],
     selectedDossierId: null,
     lastOutcome: null,
     bills: [],
@@ -86,6 +92,13 @@ export function createInitialState(): GameState {
     termsWon: 0,
     regionSeats: {},
     ministerPicker: null,
+    nhsPerformance: 50,
+    fiscalDragRevenue: 0,
+    fiscalDragIntensity: 'low',
+    taxpayersAffectedByDrag: 0,
+    thresholdFrozenTurns: 0,
+    tradeGdpImpact: 0,
+    committeeMood: undefined,
   };
 }
 
@@ -181,7 +194,16 @@ function applyEffects(s: GameState, fx: Effects): GameState {
     funds: Math.max(0, p.funds + (fx.fundsDelta ?? 0)),
   }));
   const metrics = {
-    approval: clamp(s.metrics.approval + (fx.approval ?? 0), 0, 100),
+    approval: clamp(
+      s.metrics.approval +
+        // Diminishing returns: a government already riding high gets
+        // little credit for one more popular decision.
+        ((fx.approval ?? 0) > 0
+          ? (fx.approval ?? 0) * (1 - s.metrics.approval / 110)
+          : (fx.approval ?? 0)),
+      0,
+      100,
+    ),
     partyConfidence: clamp(s.metrics.partyConfidence + (fx.partyConfidence ?? 0), 0, 100),
     economy: clamp(s.metrics.economy + (fx.economy ?? 0), 0, 100),
     publicServices: clamp(s.metrics.publicServices + (fx.publicServices ?? 0), 0, 100),
@@ -218,26 +240,96 @@ function driftPolling(s: GameState, rng: () => number): GameState {
   return { ...s, parties };
 }
 
+/** Baseline rates for each lever, used to score policy against the start position. */
+const TAX_BASELINES: Record<string, number> = {
+  income: 20,
+  ni: 8,
+  vat: 20,
+  corporation: 25,
+  capgains: 20,
+  inheritance: 40,
+};
+
+/**
+ * Where the deficit wants to settle given current policy.
+ *
+ * One-off decisions (a bailout, a budget package) should fade; only the
+ * structural position - tax rates, department budgets, fiscal drag and the
+ * interest bill - should persist. That keeps the deficit from compounding
+ * into a debt spiral while still punishing expensive government.
+ */
+function structuralBalance(s: GameState): number {
+  const BASE_DEFICIT = -75;
+  const BASE_SPEND = 510;
+  const spendNow = s.departments.reduce((sum, d) => sum + d.budget, 0);
+  const taxDelta = s.taxes.reduce(
+    (sum, t) => sum + (t.rate - (TAX_BASELINES[t.id] ?? t.rate)) * (TAX_YIELD_PER_POINT[t.id] ?? 0),
+    0,
+  );
+  const drag = s.fiscalDragRevenue ?? 0;
+  const interestBill = Math.max(0, (s.stats.debtToGdp - 100) * 0.6);
+  return BASE_DEFICIT + taxDelta - (spendNow - BASE_SPEND) + drag - interestBill;
+}
+
 function weeklyEconomy(s: GameState): GameState {
   const st = s.stats;
+  const structural = structuralBalance(s);
+
+  // Published borrowing converges on the structural position at roughly
+  // 10% a week, so a one-off bailout fades instead of compounding forever.
+  const balance = r1(st.budgetBalance + (structural - st.budgetBalance) * 0.1);
+
   let gilt = st.giltYield;
   let debt = st.debtToGdp;
   let confidence = s.metrics.partyConfidence;
 
-  if (st.budgetBalance < -100) { gilt += 0.15; debt += 1.5; confidence -= 1; }
-  else if (st.budgetBalance < -40) { gilt += 0.05; debt += 0.5; }
-  else if (st.budgetBalance > 20) { gilt -= 0.05; debt -= 0.5; }
-  if (debt > 100) gilt += 0.1;
+  if (structural < -120) {
+    gilt += 0.08;
+    debt += Math.min(0.35, -structural / 400);
+    confidence -= 1;
+  } else if (structural < -60) {
+    gilt += 0.04;
+    debt += Math.min(0.25, -structural / 500);
+  } else if (structural > 0) {
+    gilt -= 0.04;
+    debt -= 0.2;
+  }
+  if (debt > 100) gilt += 0.05;
+  if (debt > 130) gilt += 0.1;
+
+  // Expensive borrowing is the price of a loose fiscal stance: it drags on
+  // the real economy, which in turn drags on your approval target.
+  let economy = s.metrics.economy;
+  if (st.giltYield > 6) economy -= 0.5;
+  else if (st.giltYield > 5) economy -= 0.25;
+  else if (st.giltYield < 3.5 && st.cpiInflation < 3) economy += 0.15;
+  economy = clamp(economy, 0, 100);
 
   let approval = s.metrics.approval;
+
+  // Approval is not a score you bank: it drifts back toward what the
+  // economy, services and inflation actually justify. Good weeks still
+  // spike it, but nothing stays at 90% for a whole parliament.
+  const approvalTarget = clamp(
+    35 + (s.metrics.economy - 50) * 0.25 + (s.metrics.publicServices - 50) * 0.2 - (st.cpiInflation - 2) * 2,
+    10,
+    65,
+  );
+  approval += (approvalTarget - approval) * 0.09;
+
   if (st.cpiInflation > 4) approval -= 1;
   if (st.unemployment > 6) approval -= 1;
   approval = clamp(approval, 0, 100);
 
+  // Unity recovers toward the level your popularity can sustain, so one
+  // bad month does not doom the premiership but drift still punishes you.
+  const unityTarget = clamp(45 + (approval - 50) * 0.5, 15, 85);
+  confidence += (unityTarget - confidence) * 0.06;
+
   return {
     ...s,
-    stats: { ...st, giltYield: Math.max(1.0, r1(gilt)), debtToGdp: r1(Math.max(30, debt)) },
-    metrics: { ...s.metrics, approval, partyConfidence: clamp(confidence, 0, 100) },
+    stats: { ...st, budgetBalance: balance, giltYield: Math.max(1.0, r1(gilt)), debtToGdp: r1(Math.max(30, debt)) },
+    metrics: { ...s.metrics, approval, economy, partyConfidence: clamp(confidence, 0, 100) },
   };
 }
 
@@ -270,6 +362,120 @@ function resolveBill(s: GameState, bill: Bill, rng: () => number): GameState {
   }
 
   next = { ...next, stats: { ...next.stats, lettersOfNoConfidence: clamp(letters, 0, 99) } };
+  return next;
+}
+
+
+/** Derive NHS performance metrics from the national waiting list. */
+function nhsMetricsFromGame(s: GameState): NHSMetrics {
+  const gap = s.stats.nhsWaitingList - 6;
+  return {
+    aeWaitingTime: clamp(10 + gap * 8, 4, 70),
+    cancerWaitTime: clamp(62 + gap * 6, 55, 120),
+    ambulanceResponse: clamp(85 - gap * 4, 40, 96),
+    bedOccupancy: clamp(88 + gap * 3, 70, 99),
+    staffVacancies: clamp(6 + gap * 2, 2, 20),
+    mentalHealthWaitlist: clamp(400 + gap * 60, 150, 900),
+    prescriptionAccess: 12,
+    budgetUtilization: clamp(96 + gap, 80, 100),
+    patientSatisfaction: clamp(s.metrics.publicServices, 0, 100),
+  };
+}
+
+/**
+ * NHS drift: under-funding lengthens the waiting list, extra cash shortens
+ * it, and a service in crisis drags public services down without needing a
+ * headline event.
+ */
+function weeklyNhsDrift(s: GameState): GameState {
+  const performance = calculateNHSPerformance(nhsMetricsFromGame(s));
+  const nhsBudget = s.departments.find((d) => d.id === 'nhs')?.budget ?? 190;
+  const spendRatio = nhsBudget / 190;
+  const waitingDrift = clamp(0.06 - (spendRatio - 1) * 0.6, -0.2, 0.25);
+  const serviceDrag = performance < 45 ? -0.5 : performance > 65 ? 0.4 : 0;
+
+  const next = applyEffects(s, {
+    nhsWaitingList: waitingDrift,
+    publicServices: serviceDrag,
+    approval: performance < 35 ? -0.3 : 0,
+  });
+
+  return { ...next, nhsPerformance: performance };
+}
+
+/**
+ * Fiscal drag: with allowances frozen, pay growth drags taxpayers into
+ * higher bands. The module returns an annual figure; we apply a monthly
+ * slice so a full term accumulates roughly five years of creep.
+ */
+function weeklyFiscalDrag(s: GameState): GameState {
+  const result = calculateFiscalDrag({
+    personalAllowance: FROZEN_THRESHOLDS.personalAllowance,
+    basicRateCutoff: FROZEN_THRESHOLDS.basicRateCutoff,
+    higherRateCutoff: FROZEN_THRESHOLDS.higherRateCutoff,
+    additionalRateCutoff: FROZEN_THRESHOLDS.additionalRateCutoff,
+    basicRate: 20,
+    higherRate: 40,
+    additionalRate: 45,
+    cpiInflation: s.stats.cpiInflation,
+    realIncomeGrowth: s.stats.gdpGrowth,
+    fiscalYear: 2024 + Math.floor(s.week / 52),
+  });
+
+  let next = applyEffects(s, fiscalDragToEffects(result));
+  const frozenTurns = (s.thresholdFrozenTurns ?? 0) + 1;
+
+  next = {
+    ...next,
+    fiscalDragRevenue: result.additionalRevenue,
+    fiscalDragIntensity: result.intensity,
+    taxpayersAffectedByDrag: result.taxpayersAffected,
+    thresholdFrozenTurns: frozenTurns,
+  };
+
+  if (result.additionalRevenue > 0 && frozenTurns > 0 && frozenTurns % 26 === 0) {
+    next = {
+      ...next,
+      log: [`FISCAL DRAG: six months of frozen thresholds is quietly raising £${result.additionalRevenue}bn a year. ${result.taxpayersAffected} taxpayers dragged into a higher band.`, ...(next.log ?? [])].slice(0, 50),
+      headlines: [{ paper: 'The Clarion', title: 'FROZEN THRESHOLDS: FAMILIES PAY MORE AS PAY RISES', stance: 'left' as const }, ...(next.headlines ?? [])].slice(0, 4),
+    };
+  }
+
+  return next;
+}
+
+/**
+ * Trade position and the spending-review envelope. Both are slow-burn: the
+ * trade deal set nudges growth every month, and planning above the review
+ * envelope is punished by the bond market every year.
+ */
+function periodicExternal(s: GameState): GameState {
+  let next = s;
+
+  if (next.week % 4 === 0) {
+    const economics = calculateTradeDealEconomics(DEFAULT_TRADE_DEAL_STATUS);
+    next = applyEffects(next, {
+      gdpGrowth: Math.round(economics.gdpImpact * 0.01 * 100) / 100,
+      budgetBalance: Math.round(economics.exportGrowth * 0.02 * 100) / 100,
+    });
+    next = { ...next, tradeGdpImpact: economics.gdpImpact };
+  }
+
+  if (next.week % 12 === 0) {
+    const envelope =
+      DEFAULT_SPENDING_REVIEW.totalCapital +
+      DEFAULT_SPENDING_REVIEW.totalResource +
+      DEFAULT_SPENDING_REVIEW.totalAnnuity;
+    const planned = next.departments.reduce((sum, d) => sum + d.budget, 0);
+    if (planned > envelope) {
+      next = applyEffects(next, { giltYield: 0.1, approval: -1, partyConfidence: -1 });
+      next = {
+        ...next,
+        log: [`SPENDING REVIEW: departments plan £${Math.round(planned)}bn against a £${Math.round(envelope)}bn envelope. The bond market has noticed.`, ...(next.log ?? [])].slice(0, 50),
+      };
+    }
+  }
+
   return next;
 }
 
@@ -314,18 +520,37 @@ export function advanceWeek(s: GameState): GameState {
   next = weeklyEconomy(next);
   next = driftPolling(next, rng);
 
-  // 4. 1922 letters.
+  // 3b. NHS performance and waiting-list drift.
+  next = weeklyNhsDrift(next);
+
+  // 3c. Fiscal drag from frozen thresholds.
+  next = weeklyFiscalDrag(next);
+
+  // 3d. Trade position and spending-review envelope.
+  next = periodicExternal(next);
+
+  // 4. 1922 Committee pressure: graded on party unity and backbench mood.
+  const mood = calculate1922Mood(
+    next.backbenchers.map((b) => ({ loyalty: b.loyalty, ambition: b.ambition, faction: b.faction })),
+  );
   let letters = next.stats.lettersOfNoConfidence;
-  if (next.metrics.partyConfidence < 40) letters += 2;
-  else if (next.metrics.partyConfidence > 60 && letters > 0) letters -= 1;
+  const unity = next.metrics.partyConfidence;
+  if (unity < 25) letters += 2;
+  else if (unity < 40) letters += 1;
+  else if (unity > 70) letters -= 2;
+  else if (unity > 60) letters -= 1;
+  if (mood.consideringDefection >= 2) letters += 1;
   letters = clamp(letters, 0, 99);
-  next = { ...next, stats: { ...next.stats, lettersOfNoConfidence: letters } };
+  next = { ...next, stats: { ...next.stats, lettersOfNoConfidence: letters }, committeeMood: mood };
 
   // 5. Confidence vote.
   const threshold = next.stats.lettersThreshold || 15;
   if (letters >= threshold && !next.gameOver) {
     const conf = next.metrics.partyConfidence;
-    const chance = conf >= 60 ? 0.9 : conf >= 50 ? 0.7 : conf >= 40 ? 0.5 : 0.25;
+    const seatsHeld = next.parties.find((p) => p.id === next.player?.partyId)?.seats ?? 326;
+    const blindside = calculateBlindsideRisk(letters, conf, seatsHeld - 326);
+    const baseChance = conf >= 60 ? 0.9 : conf >= 50 ? 0.7 : conf >= 40 ? 0.5 : 0.25;
+    const chance = clamp(baseChance - blindside.risk / 500, 0.05, 0.95);
     const survive = rng() < chance;
     const name = next.player ? `${next.player.firstName} ${next.player.lastName}` : 'The Prime Minister';
     if (survive) {
@@ -367,7 +592,7 @@ export function advanceWeek(s: GameState): GameState {
 
   // 7. Draw fresh dossier.
   const activeIds = new Set(remaining.map((d) => d.id));
-  const available = DOSSIER_POOL.filter((d) => !activeIds.has(d.id));
+  const available = ALL_DOSSIERS.filter((d) => !activeIds.has(d.id));
   if (available.length > 0 && remaining.length < 4) {
     const pick = available[Math.floor(rng() * available.length)];
     remaining.push({ ...pick });
@@ -419,6 +644,49 @@ function resignMinister(s: GameState, name: string): GameState {
 /** Purdah: the pre-election quiet period when policy/nominal actions are locked. */
 function inPurdah(s: GameState): boolean {
   return s.phase === 'playing' && s.turnsUntilElection <= 6;
+}
+
+/**
+ * Merge an older save onto the current defaults.
+ *
+ * A plain spread would let a v7 save wholesale replace nested objects, so
+ * every field added since that save would come back undefined. Merging the
+ * nested stat/metric objects keeps old progress while filling in new keys.
+ */
+export function migrateState(saved: Partial<GameState> | null | undefined): GameState {
+  const base = createInitialState();
+  if (!saved) return base;
+
+  const merged: GameState = {
+    ...base,
+    ...saved,
+    stats: { ...base.stats, ...(saved.stats ?? {}) },
+    metrics: { ...base.metrics, ...(saved.metrics ?? {}) },
+    parties: saved.parties && saved.parties.length > 0 ? saved.parties : base.parties,
+    taxes: saved.taxes && saved.taxes.length > 0 ? saved.taxes : base.taxes,
+    departments:
+      saved.departments && saved.departments.length > 0 ? saved.departments : base.departments,
+  };
+
+  // Guard against NaN creeping in from an interrupted save.
+  const safe = (n: number | undefined, fallback: number) =>
+    typeof n === 'number' && Number.isFinite(n) ? n : fallback;
+
+  return {
+    ...merged,
+    stats: {
+      ...merged.stats,
+      cpiInflation: safe(merged.stats.cpiInflation, base.stats.cpiInflation),
+      gdpGrowth: safe(merged.stats.gdpGrowth, base.stats.gdpGrowth),
+      giltYield: safe(merged.stats.giltYield, base.stats.giltYield),
+      budgetBalance: safe(merged.stats.budgetBalance, base.stats.budgetBalance),
+      lettersOfNoConfidence: safe(merged.stats.lettersOfNoConfidence, 0),
+      lettersThreshold: safe(merged.stats.lettersThreshold, base.stats.lettersThreshold),
+    },
+    week: safe(merged.week, 1),
+    turnsUntilElection: safe(merged.turnsUntilElection, base.turnsUntilElection),
+    seed: safe(merged.seed, base.seed),
+  };
 }
 
 export function reducer(state: GameState, action: Action): GameState {

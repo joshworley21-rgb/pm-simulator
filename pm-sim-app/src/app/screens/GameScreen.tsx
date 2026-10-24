@@ -434,6 +434,11 @@ export default function GameScreen() {
                   <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 6 }}>
                     Hit the threshold and your own MPs will force a confidence vote.
                   </Text>
+                  {!!state.committeeMood && (
+                    <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 6 }}>
+                      Backbench loyalty {state.committeeMood.averageLoyalty} | defection risk {state.committeeMood.consideringDefection} | would challenge {state.committeeMood.readyToChallenge}
+                    </Text>
+                  )}
                 </Card>
 
                 <Text style={[styles.label, { marginTop: spacing.lg }]}>HOUSE OF COMMONS | 650 SEATS</Text>
@@ -512,8 +517,17 @@ export default function GameScreen() {
             </View>
             <View style={{ flexDirection: 'row', marginTop: spacing.sm }}>
               <StatTile label="NHS waiting" value={`${state.stats.nhsWaitingList}m`} />
-              <StatTile label="Migration" value={`${state.stats.netMigration}k`} />
+              <StatTile
+                label="NHS perf"
+                value={Math.round(state.nhsPerformance ?? 0)}
+                tone={(state.nhsPerformance ?? 0) >= 55 ? 'success' : 'danger'}
+              />
               <StatTile label="Services" value={Math.round(state.metrics.publicServices)} />
+            </View>
+            <View style={{ flexDirection: 'row', marginTop: spacing.sm }}>
+              <StatTile label="Migration" value={`${state.stats.netMigration}k`} />
+              <StatTile label="Trade effect" value={`${state.tradeGdpImpact ?? 0}%`} />
+              <StatTile label="Fiscal drag" value={`£${state.fiscalDragRevenue ?? 0}bn`} />
             </View>
 
             <Card>
