@@ -1,1 +1,5 @@
+architect: true
 model: openrouter/openai/gpt-6-luna
+editor-model: openrouter/openai/gpt-6-luna
+auto-commits: false
+model-settings-file: /app/game-data/.aider.model.settings.yml
