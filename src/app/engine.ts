@@ -53,6 +53,7 @@ import {
   healthSecretaryWaitingRelief,
   BUDGET_LEAK_GILT_DELTA,
   BUDGET_LEAK_APPROVAL_DELTA,
+  ministerSackingCost,
 } from './cabinetEffects';
 import { computeBlocs, blocAverage } from './voterBlocs';
 import { projectSeats } from './electionProjection';
@@ -1565,10 +1566,15 @@ export function advanceWeek(s: GameState): GameState {
 function resignMinister(s: GameState, name: string): GameState {
   const m = s.cabinet.find((x) => x.name === name);
   if (!m) return s;
+  const cost = ministerSackingCost(m);
+  const politicallyCosted = applyEffects(s, {
+    approval: -cost.approvalPenalty,
+    partyConfidence: -cost.partyConfidencePenalty,
+  });
   return {
-    ...s,
-    cabinet: s.cabinet.filter((x) => x.name !== name),
-    factionUnrest: clamp(s.factionUnrest + 8, 0, 100),
+    ...politicallyCosted,
+    cabinet: politicallyCosted.cabinet.filter((x) => x.name !== name),
+    factionUnrest: clamp(s.factionUnrest + cost.factionUnrestIncrease, 0, 100),
     log: [`CABINET: ${m.name} sacked as ${m.post}.`, ...s.log].slice(0, 50),
   };
 }

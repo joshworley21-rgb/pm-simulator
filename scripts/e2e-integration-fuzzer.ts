@@ -10,6 +10,7 @@ import {
 } from '../src/app/calendar';
 import { DEFAULT_NOMINAL_GDP } from '../src/app/budget';
 import { TAX_YIELD_PER_POINT } from '../src/app/taxes';
+import { ministerSackingCost } from '../src/app/cabinetEffects';
 
 interface TestResult {
   passed: boolean;
@@ -141,7 +142,12 @@ function assertSackMinisterTransition(before: any, after: any, name: string): vo
     );
   }
 
-  const expectedUnrest = clamp(before.factionUnrest + 8, 0, 100);
+  const cost = ministerSackingCost(minister);
+  const expectedUnrest = clamp(
+    before.factionUnrest + cost.factionUnrestIncrease,
+    0,
+    100,
+  );
   if (after.factionUnrest !== expectedUnrest) {
     throw new Error(
       `SACK_MINISTER factionUnrest mismatch: expected ${expectedUnrest}, got ${after.factionUnrest}`,
@@ -150,19 +156,123 @@ function assertSackMinisterTransition(before: any, after: any, name: string): vo
 
   const coalitionCollapse =
     minister.coalition === true && Boolean(before.supplyPartnerId);
-  const expectedConfidence = coalitionCollapse
-    ? clamp(before.metrics.partyConfidence - 6, 0, 100)
-    : before.metrics.partyConfidence;
+  const expectedApproval = clamp(
+    before.metrics.approval - cost.approvalPenalty,
+    0,
+    100,
+  );
+  const expectedConfidence = clamp(
+    before.metrics.partyConfidence -
+      cost.partyConfidencePenalty -
+      (coalitionCollapse ? 6 : 0),
+    0,
+    100,
+  );
 
+  if (after.metrics.approval !== expectedApproval) {
+    throw new Error(
+      `SACK_MINISTER approval mismatch: expected ${expectedApproval}, got ${after.metrics.approval}`,
+    );
+  }
   if (after.metrics.partyConfidence !== expectedConfidence) {
     throw new Error(
       `SACK_MINISTER partyConfidence mismatch: expected ${expectedConfidence}, got ${after.metrics.partyConfidence}`,
     );
   }
-
-  if (coalitionCollapse && after.supplyPartnerId !== undefined) {
-    throw new Error('Sacking a coalition minister should end the supply arrangement');
+  if (
+    (before.metrics.approval > 0 || before.metrics.partyConfidence > 0) &&
+    after.metrics.approval >= before.metrics.approval &&
+    after.metrics.partyConfidence >= before.metrics.partyConfidence
+  ) {
+    throw new Error('SACK_MINISTER should reduce approval or party confidence');
   }
+
+  if (coalitionCollapse) {
+    if (after.supplyPartnerId !== undefined) {
+      throw new Error('Sacking a coalition minister should end the supply arrangement');
+    }
+    if (after.coalition !== false || (after.coalitionPosts ?? []).length !== 0) {
+      throw new Error('Sacking a coalition minister should end coalition government');
+    }
+  }
+}
+
+function assertSackMinisterCosts(
+  createInitialState: () => any,
+  reducer: (state: any, action: any) => any,
+): void {
+  const initial = createInitialState();
+  const partyId = initial.parties[0]?.id;
+  const partnerId = initial.parties.find((party: any) => party.id !== partyId)?.id;
+  if (!partyId || !partnerId) {
+    throw new Error('Cannot test minister sackings without two parties');
+  }
+
+  const makeMinister = (
+    name: string,
+    post: string,
+    ministerPartyId: string,
+    coalition = false,
+  ) => ({
+    name,
+    post,
+    partyId: ministerPartyId,
+    loyalty: 60,
+    competence: 60,
+    faction: 'Test',
+    coalition,
+  });
+  const makeState = (minister: any, isCoalition = false) => ({
+    ...initial,
+    phase: 'playing',
+    player: {
+      firstName: 'Test',
+      lastName: 'Prime Minister',
+      partyId,
+      background: 'business',
+    },
+    cabinet: [minister],
+    metrics: { ...initial.metrics, approval: 60, partyConfidence: 60 },
+    factionUnrest: 20,
+    supplyPartnerId: isCoalition ? partnerId : undefined,
+    supplyCostPerWeek: isCoalition ? 0.01 : undefined,
+    supplyConcessions: isCoalition ? ['test concession'] : [],
+    coalition: isCoalition,
+    coalitionPosts: isCoalition ? ['Partner takes a Cabinet post'] : [],
+  });
+  const sack = (before: any) =>
+    reducer(before, { type: 'SACK_MINISTER', name: before.cabinet[0].name });
+  const combinedPoliticalCost = (before: any, after: any) =>
+    before.metrics.approval -
+    after.metrics.approval +
+    before.metrics.partyConfidence -
+    after.metrics.partyConfidence;
+
+  const seniorBefore = makeState(
+    makeMinister('Senior Minister', 'Chancellor of the Exchequer', partyId),
+  );
+  const seniorAfter = sack(seniorBefore);
+  assertSackMinisterTransition(seniorBefore, seniorAfter, 'Senior Minister');
+
+  const juniorBefore = makeState(
+    makeMinister('Junior Minister', 'Parliamentary Secretary', partyId),
+  );
+  const juniorAfter = sack(juniorBefore);
+  assertSackMinisterTransition(juniorBefore, juniorAfter, 'Junior Minister');
+
+  if (
+    combinedPoliticalCost(seniorBefore, seniorAfter) <
+    combinedPoliticalCost(juniorBefore, juniorAfter)
+  ) {
+    throw new Error('Sacking a senior minister should cost at least as much as a junior minister');
+  }
+
+  const coalitionBefore = makeState(
+    makeMinister('Coalition Minister', 'Health Secretary', partnerId, true),
+    true,
+  );
+  const coalitionAfter = sack(coalitionBefore);
+  assertSackMinisterTransition(coalitionBefore, coalitionAfter, 'Coalition Minister');
 }
 
 function assertBillProposal(
@@ -529,6 +639,7 @@ async function runSimulation(testCase: SeededTestCase): Promise<TestResult> {
     const { BILL_POOL } = await import('../src/app/bills');
     const { BILL_POOL_2 } = await import('../src/app/bills2');
 
+    assertSackMinisterCosts(createInitialState, reducer);
     assertFiscalActionGuards(createInitialState, reducer, getDefaultCustomPlan);
     assertFiscalMilestones(createInitialState, reducer);
     assertMacroDynamics(createInitialState, advanceWeek, effectiveTaxBurden);

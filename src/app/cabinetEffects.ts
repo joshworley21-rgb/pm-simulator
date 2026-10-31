@@ -28,7 +28,77 @@ export const HEALTH_SECRETARY_MAX_RELIEF = 0.04;
 /** Competence baseline for Chancellor fiscal management. */
 export const CHANCELLOR_COMPETENCE_BASELINE = 65;
 
+/** Political cost of dismissing a minister, in existing game metric points. */
+export const MINISTER_SACK_BASE_APPROVAL_PENALTY = 1;
+export const MINISTER_SACK_BASE_CONFIDENCE_PENALTY = 1;
+/** Preserve the existing baseline unrest increase from a dismissal. */
+export const MINISTER_SACK_BASE_UNREST_INCREASE = 8;
+
+/** Seniority scaling: junior posts have importance 0, ordinary posts 1, senior posts 2. */
+export const MINISTER_SACK_JUNIOR_POST_IMPORTANCE = 0;
+export const MINISTER_SACK_ORDINARY_POST_IMPORTANCE = 1;
+export const MINISTER_SACK_SENIOR_POST_IMPORTANCE = 2;
+export const MINISTER_SACK_SENIORITY_APPROVAL_PENALTY = 1;
+export const MINISTER_SACK_SENIORITY_CONFIDENCE_PENALTY = 1.5;
+export const MINISTER_SACK_SENIORITY_UNREST_INCREASE = 2;
+
+/** Dismissing a loyal minister is more likely to provoke a backlash. */
+export const MINISTER_SACK_LOYALTY_BASELINE = 40;
+export const MINISTER_SACK_MAX_LOYALTY_APPROVAL_PENALTY = 1;
+export const MINISTER_SACK_MAX_LOYALTY_CONFIDENCE_PENALTY = 1;
+export const MINISTER_SACK_MAX_LOYALTY_UNREST_INCREASE = 2;
+
+/** Extra political fallout for dismissing a coalition partner's minister. */
+export const MINISTER_SACK_COALITION_APPROVAL_PENALTY = 1;
+export const MINISTER_SACK_COALITION_CONFIDENCE_PENALTY = 2;
+export const MINISTER_SACK_COALITION_UNREST_INCREASE = 2;
+
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
+
+export interface MinisterSackingCost {
+  approvalPenalty: number;
+  partyConfidencePenalty: number;
+  factionUnrestIncrease: number;
+}
+
+/** Calculate the political fallout of dismissing a minister. */
+export function ministerSackingCost(minister: Minister): MinisterSackingCost {
+  const post = minister.post.toLowerCase();
+  const isJuniorPost =
+    /minister of state|parliamentary secretary|parliamentary under-secretary/.test(post);
+  const isSeniorPost =
+    /chancellor|secretary of state|home secretary|health secretary|foreign secretary|defence secretary/.test(post);
+  const importance = isJuniorPost
+    ? MINISTER_SACK_JUNIOR_POST_IMPORTANCE
+    : isSeniorPost
+      ? MINISTER_SACK_SENIOR_POST_IMPORTANCE
+      : MINISTER_SACK_ORDINARY_POST_IMPORTANCE;
+  const loyaltyBacklash = clamp(
+    (minister.loyalty - MINISTER_SACK_LOYALTY_BASELINE) /
+      (100 - MINISTER_SACK_LOYALTY_BASELINE),
+    0,
+    1,
+  );
+  const coalitionPenalty = minister.coalition === true;
+
+  return {
+    approvalPenalty:
+      MINISTER_SACK_BASE_APPROVAL_PENALTY +
+      importance * MINISTER_SACK_SENIORITY_APPROVAL_PENALTY +
+      loyaltyBacklash * MINISTER_SACK_MAX_LOYALTY_APPROVAL_PENALTY +
+      (coalitionPenalty ? MINISTER_SACK_COALITION_APPROVAL_PENALTY : 0),
+    partyConfidencePenalty:
+      MINISTER_SACK_BASE_CONFIDENCE_PENALTY +
+      importance * MINISTER_SACK_SENIORITY_CONFIDENCE_PENALTY +
+      loyaltyBacklash * MINISTER_SACK_MAX_LOYALTY_CONFIDENCE_PENALTY +
+      (coalitionPenalty ? MINISTER_SACK_COALITION_CONFIDENCE_PENALTY : 0),
+    factionUnrestIncrease:
+      MINISTER_SACK_BASE_UNREST_INCREASE +
+      importance * MINISTER_SACK_SENIORITY_UNREST_INCREASE +
+      loyaltyBacklash * MINISTER_SACK_MAX_LOYALTY_UNREST_INCREASE +
+      (coalitionPenalty ? MINISTER_SACK_COALITION_UNREST_INCREASE : 0),
+  };
+}
 
 /**
  * Headroom multiplier / bonus based on the Chancellor's competence.
