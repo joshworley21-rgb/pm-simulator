@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'node:url';
+import type { Effects } from '../src/app/types';
 
 interface TestResult {
   passed: boolean;
@@ -49,7 +50,7 @@ function expectedMetricAfterEffects(
 function assertPmqEffects(
   before: any,
   after: any,
-  effects: Record<string, number | undefined>,
+  effects: Effects,
 ): void {
   const metricNames = [
     'approval',
