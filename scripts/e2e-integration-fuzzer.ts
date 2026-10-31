@@ -9,17 +9,18 @@ import {
   TURNS_PER_QUARTER,
   TURNS_PER_YEAR,
 } from '../src/app/calendar';
-import { DEFAULT_NOMINAL_GDP } from '../src/app/budget';
+import { DEFAULT_NOMINAL_GDP, getDefaultCustomPlan } from '../src/app/budget';
 import { TAX_YIELD_PER_POINT } from '../src/app/taxes';
 import { ministerSackingCost } from '../src/app/cabinetEffects';
 
-type FuzzerArchetype = 'Spender' | 'Hawk' | 'Reshuffler' | 'Idle';
+type FuzzerArchetype = 'Spender' | 'Hawk' | 'Reshuffler' | 'Idle' | 'Random';
 
 const FUZZER_ARCHETYPES: FuzzerArchetype[] = [
   'Spender',
   'Hawk',
   'Reshuffler',
   'Idle',
+  'Random',
 ];
 
 interface RunTelemetry {
@@ -67,6 +68,7 @@ const TELEMETRY_FILE = path.join(__dirname, '../fuzzer-telemetry.json');
 const DEFAULT_MAX_RUNS = 500;
 const DEFAULT_SEED = 20260211;
 const DEFAULT_ARCHETYPE_HORIZON = 520;
+const RESHUFFLER_SACK_INTERVAL_WEEKS = 6;
 
 function envInteger(name: string, fallback: number, min: number, max: number): number {
   const raw = process.env[name];
@@ -94,7 +96,6 @@ function availableActions(
   state: any,
   allBills: any[],
   budgetPackages: any[],
-  getDefaultCustomPlan: (state: any) => any,
   random: () => number,
 ): AvailableAction[] {
   const actions: AvailableAction[] = [];
@@ -222,67 +223,53 @@ function availableActions(
   return actions;
 }
 
+/*
+ * Spender: 80% chance of a spending-biased action; otherwise choose uniformly.
+ * Hawk: 80% chance of an austerity/tax-hike-biased action; otherwise choose uniformly.
+ * Reshuffler: 70% chance of a sack-biased action on its existing six-week cadence.
+ * Idle: never takes a discretionary action.
+ * Random: choose uniformly from all available actions.
+ */
 function selectArchetypeAction(
   archetype: FuzzerArchetype,
   state: any,
   allBills: any[],
   budgetPackages: any[],
-  getDefaultCustomPlan: (state: any) => any,
   random: () => number,
 ): any | undefined {
   if (archetype === 'Idle') return undefined;
 
-  const actions = availableActions(state, allBills, budgetPackages, getDefaultCustomPlan, random);
-  const bias: ActionBias | undefined =
+  if (archetype === 'Reshuffler') {
+    if (state.ministerPicker) {
+      return { type: 'CONFIRM_APPOINT', post: 'Parliamentary Secretary' };
+    }
+    if (state.cabinet.length <= 1 && state.backbenchers.length > 0) {
+      return { type: 'PICK_MINISTER', name: state.backbenchers[0].name };
+    }
+    if (state.week % RESHUFFLER_SACK_INTERVAL_WEEKS !== 0) return undefined;
+  }
+
+  const actions = availableActions(state, allBills, budgetPackages, random);
+  if (actions.length === 0) return undefined;
+
+  if (archetype === 'Random') {
+    return actions[Math.floor(random() * actions.length)].action;
+  }
+
+  const bias: ActionBias =
     archetype === 'Spender'
       ? 'spender'
       : archetype === 'Hawk'
         ? 'hawk'
         : 'reshuffler';
   const preferredActions = actions.filter((candidate) => candidate.bias === bias);
+  const preferredProbability = archetype === 'Reshuffler' ? 0.7 : 0.8;
 
-  if (archetype === 'Reshuffler') {
-    const sackActions = preferredActions.filter(
-      (candidate) => candidate.action.type === 'SACK_MINISTER',
-    );
-    if (sackActions.length > 0) {
-      const sackPriority = (candidate: AvailableAction): number => {
-        const minister = state.cabinet.find(
-          (member: any) => member.name === candidate.action.name,
-        );
-        if (!minister) return -Infinity;
-        const cost = ministerSackingCost(minister);
-        return cost.lettersOfNoConfidenceIncrease + cost.partyConfidencePenalty * 2;
-      };
-      return [...sackActions].sort((a, b) => sackPriority(b) - sackPriority(a))[0].action;
-    }
+  if (preferredActions.length > 0 && random() < preferredProbability) {
+    return preferredActions[Math.floor(random() * preferredActions.length)].action;
   }
 
-  if (state.budgetDue && archetype === 'Spender') {
-    const recklessBudget = actions.find(
-      (candidate) => candidate.action.type === 'DELIVER_CUSTOM_BUDGET',
-    );
-    if (recklessBudget) return recklessBudget.action;
-  }
-
-  if (state.budgetDue && archetype === 'Hawk') {
-    const fiscalAction = preferredActions.find(
-      (candidate) => candidate.action.type === 'DELIVER_BUDGET',
-    );
-    if (fiscalAction) return fiscalAction.action;
-  }
-
-  const preferredProbability =
-    archetype === 'Spender' ? 1 : archetype === 'Reshuffler' ? 0.7 : 0.8;
-
-  // The Spender deliberately does not consult or react to primary-balance warnings.
-  const selectionPool =
-    preferredActions.length > 0 && random() < preferredProbability
-      ? preferredActions
-      : actions;
-
-  if (selectionPool.length === 0) return undefined;
-  return selectionPool[Math.floor(random() * selectionPool.length)].action;
+  return actions[Math.floor(random() * actions.length)].action;
 }
 
 /**
@@ -1057,7 +1044,7 @@ async function runSimulation(
       stats: {
         ...initialState.stats,
         lettersOfNoConfidence: 0,
-        lettersThreshold: 99,
+        lettersThreshold: 50,
       },
       termLength: Math.max(10_000, archetypeHorizon + 1),
       turnsUntilElection: Math.max(10_000, archetypeHorizon + 1),
@@ -1268,7 +1255,6 @@ async function runSimulation(
         state,
         allBills,
         BUDGET_PACKAGES,
-        getDefaultCustomPlan,
         random,
       );
 
