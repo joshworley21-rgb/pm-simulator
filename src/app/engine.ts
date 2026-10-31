@@ -4,9 +4,11 @@ import {
   FOREIGN_ISSUE_INTERVAL_MONTHS,
   HUNG_PARLIAMENT_GRACE_MONTHS,
   MONTHLY_PMQ_INTERVAL,
+  PURDAH_TURNS,
   RESHUFFLE_DISCIPLINE_MONTHS,
   RESHUFFLE_INTERVAL_MONTHS,
   TURNS_PER_HALF_YEAR,
+  TURNS_PER_MONTH,
   TURNS_PER_QUARTER,
   TURNS_PER_YEAR,
 } from './calendar';
@@ -80,6 +82,14 @@ const r1 = (n: number) => Math.round(n * 10) / 10;
 
 function clamp(n: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, n));
+}
+
+function monthlyRateToWeekly(monthlyRate: number): number {
+  return 1 - Math.pow(1 - monthlyRate, 1 / TURNS_PER_MONTH);
+}
+
+function monthlyChanceToWeekly(monthlyChance: number): number {
+  return 1 - Math.pow(1 - monthlyChance, 1 / TURNS_PER_MONTH);
 }
 
 /**
@@ -290,7 +300,7 @@ function driftPolling(s: GameState, rng: () => number): GameState {
     } else {
       target = p.baseSupport + (rng() * 2 - 1);
     }
-    const next = p.currentSupport + (target - p.currentSupport) * 0.15;
+    const next = p.currentSupport + (target - p.currentSupport) * monthlyRateToWeekly(0.15);
     return { ...p, currentSupport: r1(clamp(next, 1, 60)) };
   });
   return { ...s, parties };
@@ -469,7 +479,9 @@ function weeklyEconomy(s: GameState): GameState {
 
   // Published borrowing converges on the structural position at roughly
   // 10% a month, so a one-off bailout fades instead of compounding forever.
-  const balance = r1(st.budgetBalance + (structural - st.budgetBalance) * 0.1);
+  const balance = r1(
+    st.budgetBalance + (structural - st.budgetBalance) * monthlyRateToWeekly(0.1),
+  );
 
   let gilt = st.giltYield;
   let debt = st.debtToGdp;
@@ -484,25 +496,25 @@ function weeklyEconomy(s: GameState): GameState {
   if (structural < -100) {
     const excessDeficit = (-structural - 100) / 100;
     // Market panic multiplier: gilt spike scales non-linearly with deficit severity
-    gilt += 0.85 * excessDeficit + 0.55 * Math.pow(excessDeficit, 1.4);
+    gilt += (0.85 * excessDeficit + 0.55 * Math.pow(excessDeficit, 1.4)) / TURNS_PER_MONTH;
     // Unfunded debt accumulation (deficit compounding with interest costs)
-    debt += ((-structural) / 10.0) * (1 + Math.max(0, gilt - 4.2) * 0.35);
+    debt += ((-structural) / 10.0) * (1 + Math.max(0, gilt - 4.2) * 0.35) / TURNS_PER_MONTH;
     // Hyperinflation trigger: massive unfinanced deficits compound inflation
-    cpi += 5.2 * Math.pow(excessDeficit, 1.2);
-    confidence -= Math.min(5, Math.round(excessDeficit * 1.5));
+    cpi += (5.2 * Math.pow(excessDeficit, 1.2)) / TURNS_PER_MONTH;
+    confidence -= Math.min(5, Math.round(excessDeficit * 1.5)) / TURNS_PER_MONTH;
   } else if (structural < -65) {
     // Normal / sustainable deficit range
-    debt += Math.min(0.25, -structural / 400);
+    debt += Math.min(0.25, -structural / 400) / TURNS_PER_MONTH;
     // In calm conditions, gilts mean-revert towards 4.0%
-    if (gilt > 4.2) gilt -= (gilt - 4.2) * 0.1;
+    if (gilt > 4.2) gilt -= (gilt - 4.2) * monthlyRateToWeekly(0.1);
   } else if (structural > 120) {
     // Extreme austerity / severe fiscal contraction
     const excessSurplus = (structural - 120) / 100;
-    debt -= Math.min(1.5, excessSurplus * 0.6);
-    gdp -= 0.6 * excessSurplus;
-    cpi -= 0.2 * excessSurplus;
+    debt -= Math.min(1.5, excessSurplus * 0.6) / TURNS_PER_MONTH;
+    gdp -= (0.6 * excessSurplus) / TURNS_PER_MONTH;
+    cpi -= (0.2 * excessSurplus) / TURNS_PER_MONTH;
   } else if (structural > 0) {
-    gilt -= 0.04;
+    gilt -= 0.04 / TURNS_PER_MONTH;
     debt -= 0.2;
   }
 
@@ -516,35 +528,35 @@ function weeklyEconomy(s: GameState): GameState {
   // 3. Capital Flight: punitive average tax rates crush GDP growth (baseline is ~22%)
   const avgTax = s.taxes.reduce((acc, t) => acc + t.rate, 0) / (s.taxes.length || 1);
   if (avgTax > 35) {
-    gdp -= Math.pow((avgTax - 35) / 10, 1.1) * 0.75;
+    gdp -= (Math.pow((avgTax - 35) / 10, 1.1) * 0.75) / TURNS_PER_MONTH;
   }
 
   // 4. Bond Market Panic Shock to Growth: high gilt yields strangle investment
   if (gilt > 6.0) {
-    gdp -= ((gilt - 6.0) / 2) * 0.75;
+    gdp -= (((gilt - 6.0) / 2) * 0.75) / TURNS_PER_MONTH;
   }
 
   // High inflation drag on real growth
   if (cpi > 7.0) {
-    gdp -= ((cpi - 7.0) / 3) * 0.4;
+    gdp -= (((cpi - 7.0) / 3) * 0.4) / TURNS_PER_MONTH;
   }
 
   // Natural growth mean-reversion towards 1.2% in calm conditions
   if (gdp > 1.2) {
-    gdp -= (gdp - 1.2) * 0.05;
+    gdp -= (gdp - 1.2) * monthlyRateToWeekly(0.05);
   } else if (gdp < 1.2 && structural >= -95 && gilt < 5.0 && avgTax <= 30) {
-    gdp += (1.2 - gdp) * 0.08;
+    gdp += (1.2 - gdp) * monthlyRateToWeekly(0.08);
   }
 
   // Natural inflation mean-reversion towards 2.5% in calm conditions
   if (cpi > 2.5 && structural >= -95 && gilt < 5.0) {
-    cpi -= (cpi - 2.5) * 0.05;
+    cpi -= (cpi - 2.5) * monthlyRateToWeekly(0.05);
   }
 
   // Expensive borrowing drags on the real economy
-  if (st.giltYield > 6) economy -= 0.5;
-  else if (st.giltYield > 5) economy -= 0.25;
-  else if (st.giltYield < 3.5 && st.cpiInflation < 3) economy += 0.15;
+  if (st.giltYield > 6) economy -= 0.5 / TURNS_PER_MONTH;
+  else if (st.giltYield > 5) economy -= 0.25 / TURNS_PER_MONTH;
+  else if (st.giltYield < 3.5 && st.cpiInflation < 3) economy += 0.15 / TURNS_PER_MONTH;
   economy = clamp(economy, 0, 100);
 
   let approval = s.metrics.approval;
@@ -555,15 +567,15 @@ function weeklyEconomy(s: GameState): GameState {
     10,
     65,
   );
-  approval += (approvalTarget - approval) * 0.09;
+  approval += (approvalTarget - approval) * monthlyRateToWeekly(0.09);
 
-  if (cpi > 4) approval -= 1;
-  if (st.unemployment > 6) approval -= 1;
+  if (cpi > 4) approval -= 1 / TURNS_PER_MONTH;
+  if (st.unemployment > 6) approval -= 1 / TURNS_PER_MONTH;
   approval = clamp(approval, 0, 100);
 
   // Unity recovers toward what popularity can sustain
   const unityTarget = clamp(45 + (approval - 50) * 0.5, 15, 85);
-  confidence += (unityTarget - confidence) * 0.06;
+  confidence += (unityTarget - confidence) * monthlyRateToWeekly(0.06);
 
   return {
     ...s,
@@ -742,7 +754,11 @@ export function nhsWaitingDrift(s: GameState): number {
   const nhsBudget = s.departments.find((d) => d.id === 'nhs')?.budget ?? 190;
   const spendRatio = nhsBudget / 190;
   const secretaryRelief = healthSecretaryWaitingRelief(findPostHolder(s.cabinet, HEALTH_SECRETARY_POST));
-  return clamp(0.06 - (spendRatio - 1) * 0.6 - secretaryRelief, -0.2, 0.25);
+  return clamp(
+    (0.06 - (spendRatio - 1) * 0.6 - secretaryRelief) / TURNS_PER_MONTH,
+    -0.2 / TURNS_PER_MONTH,
+    0.25 / TURNS_PER_MONTH,
+  );
 }
 
 /**
@@ -755,12 +771,17 @@ function weeklyNhsDrift(s: GameState): GameState {
   const initialMetrics = nhsMetricsFromGame(s);
   const performance = calculateNHSPerformance(initialMetrics);
   const waitingDrift = nhsWaitingDrift(s);
-  const serviceDrag = performance < 45 ? -0.5 : performance > 65 ? 0.4 : 0;
+  const serviceDrag =
+    performance < 45
+      ? -0.5 / TURNS_PER_MONTH
+      : performance > 65
+        ? 0.4 / TURNS_PER_MONTH
+        : 0;
 
   const next = applyEffects(s, {
     nhsWaitingList: waitingDrift,
     publicServices: serviceDrag,
-    approval: performance < 35 ? -0.3 : 0,
+    approval: performance < 35 ? -0.3 / TURNS_PER_MONTH : 0,
   });
 
   const nhsMetrics = nhsMetricsFromGame(next);
@@ -801,7 +822,10 @@ function weeklyFiscalDrag(s: GameState): GameState {
   const frozen = s.thresholdsFrozen ?? true;
   const result = previewFiscalDrag(s, frozen);
 
-  let next = applyEffects(s, fiscalDragToEffects(result));
+  let next =
+    s.week % TURNS_PER_MONTH === 0
+      ? applyEffects(s, fiscalDragToEffects(result))
+      : s;
   const frozenTurns = frozen ? (s.thresholdFrozenTurns ?? 0) + 1 : 0;
 
   next = {
@@ -1035,7 +1059,8 @@ export function advanceWeek(s: GameState): GameState {
     const partnerSeats = next.supplyPartnerId
       ? next.parties.find((p) => p.id === next.supplyPartnerId)?.seats ?? 0
       : 0;
-    const cadence = next.metrics.approval < 30 ? 6 : 12;
+    const cadence =
+      next.metrics.approval < 30 ? TURNS_PER_HALF_YEAR : TURNS_PER_YEAR;
     // The hung-parliament opening gets a grace period: the opposition cannot
     // table a confidence motion during months 1–3, giving the new government a
     // 100-day window to settle into office and negotiate support.
@@ -1169,7 +1194,7 @@ export function advanceWeek(s: GameState): GameState {
     const partner = next.parties.find((p) => p.id === next.supplyPartnerId);
     if (partner) {
       next = applyEffects(next, { budgetBalance: -(next.supplyCostPerWeek ?? 0) });
-      if (next.metrics.approval < 30 && rng() < 0.12) {
+      if (next.metrics.approval < 30 && rng() < monthlyChanceToWeekly(0.12)) {
         // Warn the player via an urgent Red Box ultimatum instead of an instant
         // silent withdrawal, if an ultimatum is not already pending.
         if (!remaining.some((d) => d.id === SUPPLY_ULTIMATUM_ID)) {
@@ -1181,7 +1206,12 @@ export function advanceWeek(s: GameState): GameState {
 
   // 4d. Coalition discipline: a partner's ministers resign when the deal stops
   // being worth it, and the government loses its majority with them.
-  if (next.coalition && next.supplyPartnerId && !next.gameOver && rng() < 0.07) {
+  if (
+    next.coalition &&
+    next.supplyPartnerId &&
+    !next.gameOver &&
+    rng() < monthlyChanceToWeekly(0.07)
+  ) {
     const partner = next.parties.find((p) => p.id === next.supplyPartnerId);
     const coalitionMinisters = next.cabinet.filter((m) => m.coalition);
     const blocHostile = (next.blocs ?? []).some((b) => b.mood === 'hostile');
@@ -1204,7 +1234,7 @@ export function advanceWeek(s: GameState): GameState {
 
   // 4e. By-elections: seats change hands between general elections, and the
   // bloc numbers decide which way they go.
-  if (!next.gameOver && rng() < 0.05) {
+  if (!next.gameOver && rng() < monthlyChanceToWeekly(0.05)) {
     const regions = Object.keys(next.regionSeats ?? {});
     if (regions.length > 0) {
       const regionId = regions[Math.floor(rng() * regions.length)];
@@ -1324,7 +1354,11 @@ export function advanceWeek(s: GameState): GameState {
   next = { ...next, factionUnrest: unrest };
 
   // Occasional minister leak.
-  if (next.cabinet.length > 0 && !next.gameOver && rng() < 0.12) {
+  if (
+    next.cabinet.length > 0 &&
+    !next.gameOver &&
+    rng() < monthlyChanceToWeekly(0.12)
+  ) {
     const idx = Math.floor(rng() * next.cabinet.length);
     const mins = next.cabinet.map((m, i) => (i === idx ? { ...m, loyalty: clamp(m.loyalty - 10, 0, 100) } : m));
     next = {
@@ -1337,7 +1371,11 @@ export function advanceWeek(s: GameState): GameState {
 
   // 6b. Collective responsibility: a minister who no longer believes in the
   // direction of travel may resign rather than defend it.
-  if (next.cabinet.length > 0 && !next.gameOver && rng() < 0.06) {
+  if (
+    next.cabinet.length > 0 &&
+    !next.gameOver &&
+    rng() < monthlyChanceToWeekly(0.06)
+  ) {
     const unhappy = next.cabinet.filter((m) => m.loyalty < 35);
     if (unhappy.length > 0) {
       const quit = unhappy[Math.floor(rng() * unhappy.length)];
@@ -1489,7 +1527,7 @@ function resignMinister(s: GameState, name: string): GameState {
 
 /** Purdah: the pre-election quiet period when policy/nominal actions are locked. */
 function inPurdah(s: GameState): boolean {
-  return s.phase === 'playing' && s.turnsUntilElection <= 6;
+  return s.phase === 'playing' && s.turnsUntilElection <= PURDAH_TURNS;
 }
 
 /**
@@ -2049,7 +2087,7 @@ export function reducer(state: GameState, action: Action): GameState {
       return {
         ...state,
         supplyPartnerId: partner.id,
-        supplyCostPerWeek: Math.round((annualCost / 12) * 1000) / 1000,
+        supplyCostPerWeek: Math.round((annualCost / TURNS_PER_YEAR) * 1000) / 1000,
         supplyConcessions: [`GBP ${annualCost}bn a year in extra spending`, 'Prior notice of legislation'],
         relations: warmMutual(state.relations, state.player!.partyId, partner.id, SUPPLY_WARMTH),
         metrics: { ...state.metrics, partyConfidence: Math.max(0, state.metrics.partyConfidence - (hostile ? 4 : 2)) },
@@ -2082,7 +2120,7 @@ export function reducer(state: GameState, action: Action): GameState {
       return {
         ...state,
         supplyPartnerId: partner.id,
-        supplyCostPerWeek: Math.round((annualCost / 12) * 1000) / 1000,
+        supplyCostPerWeek: Math.round((annualCost / TURNS_PER_YEAR) * 1000) / 1000,
         supplyConcessions: [`GBP ${annualCost}bn a year in extra spending`, 'Cabinet seats for the partner', 'Agreed programme for government'],
         coalition: true,
         coalitionPosts: [`${partner.name} takes two Cabinet posts`],

@@ -2,7 +2,12 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'node:url';
 import type { Effects } from '../src/app/types';
-import { TURNS_PER_QUARTER } from '../src/app/calendar';
+import {
+  TURNS_PER_HALF_YEAR,
+  TURNS_PER_MONTH,
+  TURNS_PER_QUARTER,
+  TURNS_PER_YEAR,
+} from '../src/app/calendar';
 
 interface TestResult {
   passed: boolean;
@@ -225,7 +230,7 @@ function assertFiscalActionGuards(
   const outsidePurdah = {
     ...createInitialState(),
     phase: 'playing',
-    turnsUntilElection: 20,
+    turnsUntilElection: TURNS_PER_YEAR,
     budgetDue: false,
     fiscalEventKind: null,
   };
@@ -275,6 +280,93 @@ function assertFiscalActionGuards(
   }
 }
 
+function assertFiscalMilestones(
+  createInitialState: () => any,
+  reducer: (state: any, action: any) => any,
+): void {
+  const initial = createInitialState();
+  const governingPartyId = initial.parties[0]?.id;
+  if (!governingPartyId) throw new Error('Cannot test fiscal milestones without a governing party');
+
+  let state = {
+    ...initial,
+    phase: 'playing',
+    player: {
+      firstName: 'Test',
+      lastName: 'Prime Minister',
+      partyId: governingPartyId,
+      background: 'business',
+    },
+    parties: initial.parties.map((party: any, index: number) => ({
+      ...party,
+      seats: index === 0 ? 650 : 0,
+    })),
+    turnsUntilElection: 1000,
+    termLength: 1000,
+    stats: {
+      ...initial.stats,
+      lettersOfNoConfidence: 0,
+      lettersThreshold: 99,
+    },
+    cabinet: [],
+    backbenchers: [],
+    regionSeats: {},
+    thresholdsFrozen: true,
+    thresholdFrozenTurns: 0,
+    gameOver: null,
+  };
+
+  const budgetWeeks: number[] = [];
+  const autumnWeeks: number[] = [];
+  const quarterWeeks: number[] = [];
+  let dragReports = 0;
+
+  for (let turn = 0; turn < TURNS_PER_YEAR * 2; turn++) {
+    const previousDragReports = dragReports;
+    state = reducer(state, { type: 'START_TURN' });
+
+    if (state.week % TURNS_PER_QUARTER === 0) quarterWeeks.push(state.week);
+
+    if (state.fiscalEventKind === 'budget' && state.week % TURNS_PER_YEAR === 0) {
+      budgetWeeks.push(state.week);
+      if (!state.budgetDue) throw new Error(`Annual Budget window did not open at week ${state.week}`);
+    }
+    if (state.fiscalEventKind === 'autumn' && state.week % TURNS_PER_HALF_YEAR === 0) {
+      autumnWeeks.push(state.week);
+      if (!state.budgetDue) throw new Error(`Autumn Statement window did not open at week ${state.week}`);
+    }
+
+    dragReports = state.log.filter((line: string) =>
+      line.startsWith('FISCAL DRAG: six months'),
+    ).length;
+    const expectedNewDragReport = (turn + 1) % TURNS_PER_HALF_YEAR === 0 ? 1 : 0;
+    if (dragReports - previousDragReports !== expectedNewDragReport) {
+      throw new Error(
+        `Fiscal-drag report cadence mismatch at turn ${turn + 1}: expected ${expectedNewDragReport} new report(s)`,
+      );
+    }
+  }
+
+  const expectedBudgetWeeks = [TURNS_PER_YEAR, TURNS_PER_YEAR * 2];
+  const expectedAutumnWeeks = [TURNS_PER_HALF_YEAR, TURNS_PER_HALF_YEAR * 3];
+  if (JSON.stringify(budgetWeeks) !== JSON.stringify(expectedBudgetWeeks)) {
+    throw new Error(
+      `Annual Budget events should occur once per 52 weeks: expected ${expectedBudgetWeeks}, got ${budgetWeeks}`,
+    );
+  }
+  if (JSON.stringify(autumnWeeks) !== JSON.stringify(expectedAutumnWeeks)) {
+    throw new Error(
+      `Autumn Statement events should occur every 26 weeks: expected ${expectedAutumnWeeks}, got ${autumnWeeks}`,
+    );
+  }
+  if (quarterWeeks.length !== 8) {
+    throw new Error(`Expected 8 quarterly milestones in two years, got ${quarterWeeks.length}`);
+  }
+  if (dragReports !== 4) {
+    throw new Error(`Expected four six-month fiscal-drag reports in two years, got ${dragReports}`);
+  }
+}
+
 async function runSimulation(testCase: SeededTestCase): Promise<TestResult> {
   const startedAt = Date.now();
 
@@ -285,6 +377,7 @@ async function runSimulation(testCase: SeededTestCase): Promise<TestResult> {
     const { BILL_POOL_2 } = await import('../src/app/bills2');
 
     assertFiscalActionGuards(createInitialState, reducer, getDefaultCustomPlan);
+    assertFiscalMilestones(createInitialState, reducer);
 
     // Keep the engine and action-selection RNGs reproducible but independent.
     const runSeed = testCase.seed >>> 0;
@@ -481,7 +574,7 @@ async function runSimulation(testCase: SeededTestCase): Promise<TestResult> {
 
     // Drive the same real reducer actions and turn advancement used by the
     // reference fuzzer. Each choice uses this test case's seeded PRNG.
-    for (let turn = 0; turn < 50 && !state.gameOver; turn++) {
+    for (let turn = 0; turn < 60 && !state.gameOver; turn++) {
       const actions: any[] = [];
 
       const availableBills = allBills.filter(
@@ -551,6 +644,7 @@ async function runSimulation(testCase: SeededTestCase): Promise<TestResult> {
       const canCheckBalanceConvergence =
         !hasBillSettling &&
         !beforeTurn.supplyPartnerId &&
+        nextWeek % TURNS_PER_MONTH !== 0 &&
         nextWeek % TURNS_PER_QUARTER !== 0;
 
       state = reducer(state, { type: 'START_TURN' } as any);
@@ -580,9 +674,10 @@ async function runSimulation(testCase: SeededTestCase): Promise<TestResult> {
           );
         }
 
+        const weeklyConvergence = 1 - Math.pow(0.9, 1 / TURNS_PER_MONTH);
         const convergedBalance = roundToOneDecimal(
           balanceBeforeTurn +
-            (structuralBeforeTurn - balanceBeforeTurn) * 0.1,
+            (structuralBeforeTurn - balanceBeforeTurn) * weeklyConvergence,
         );
         if (
           oldDistance > 10 &&
