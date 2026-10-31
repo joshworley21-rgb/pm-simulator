@@ -106,13 +106,15 @@ const GILT_YIELD_MAX = 50;
 const GDP_GROWTH_MIN = -100;
 const GDP_GROWTH_MAX = 100;
 const NEUTRAL_GILT_YIELD = 4.2;
-const DEBT_YIELD_SENSITIVITY = 0.01;
+const DEBT_YIELD_SENSITIVITY = 0.03;
+const DEBT_YIELD_RISK_PREMIUM_CAP = 1.5;
+const DEBT_DYNAMICS_MULTIPLIER = 1.5;
 const INFLATION_EXPECTATION_YIELD_SENSITIVITY = 0.5;
 const GILT_MEAN_REVERSION_MONTHLY_RATE = 0.2;
 const POTENTIAL_GDP_GROWTH = 1.2;
 const OKUN_COEFFICIENT = 0.4;
 
-function resignationThreshold(seats: number): number {
+export function resignationThreshold(seats: number): number {
   return Math.max(15, Math.round(seats * 0.15));
 }
 
@@ -304,11 +306,11 @@ function driftPolling(s: GameState, rng: () => number): GameState {
   const parties = s.parties.map((p) => {
     let target = p.baseSupport;
     if (p.id === s.player?.partyId) {
-      target = clamp(p.baseSupport + (s.metrics.approval - 50) / 5, 5, 55);
+      target = clamp(p.baseSupport + (s.metrics.approval - 50) / 8, 5, 55);
     } else {
       target = p.baseSupport + (rng() * 2 - 1);
     }
-    const next = p.currentSupport + (target - p.currentSupport) * monthlyRateToWeekly(0.15);
+    const next = p.currentSupport + (target - p.currentSupport) * monthlyRateToWeekly(0.05);
     return { ...p, currentSupport: r1(clamp(next, 1, 60)) };
   });
   return { ...s, parties };
@@ -576,9 +578,12 @@ function weeklyEconomy(s: GameState): GameState {
   // Yields respond to debt and inflation expectations, while reverting toward
   // a neutral rate instead of compounding through a debt-spiral feedback loop.
   const inflationExpectations = Math.log(Math.max(0.1, cpi / 2.5));
+  const debtRiskPremium =
+    DEBT_YIELD_RISK_PREMIUM_CAP * Math.min(1, Math.max(0, debt - 120) / 120);
   const giltTarget =
     NEUTRAL_GILT_YIELD +
     (debt - 100) * DEBT_YIELD_SENSITIVITY +
+    debtRiskPremium +
     inflationExpectations * INFLATION_EXPECTATION_YIELD_SENSITIVITY;
   gilt +=
     (giltTarget - gilt) * monthlyRateToWeekly(GILT_MEAN_REVERSION_MONTHLY_RATE);
@@ -592,7 +597,9 @@ function weeklyEconomy(s: GameState): GameState {
       : DEFAULT_NOMINAL_GDP;
   const primaryDeficitRatio = (-primaryBalance(s) / currentNominalGdp) * 100;
   debt +=
-    (primaryDeficitRatio + ((gilt - nominalGrowth) / 100) * debt) / TURNS_PER_YEAR;
+    ((primaryDeficitRatio + ((gilt - nominalGrowth) / 100) * debt) *
+      DEBT_DYNAMICS_MULTIPLIER) /
+    TURNS_PER_YEAR;
   const nextNominalGdp = Math.max(
     1,
     currentNominalGdp * (1 + nominalGrowth / (100 * TURNS_PER_YEAR)),
@@ -705,9 +712,9 @@ function resolveBill(s: GameState, bill: Bill, rng: () => number): GameState {
     letters += 0;
   } else if (whip === 'three-line') {
     // Strict three-line whip: heavy-handedness increases backbench resentment
-    letters += Math.round(bill.rebellionRisk / 6);
+    letters += Math.round(bill.rebellionRisk / 20);
   } else {
-    letters += Math.round(bill.rebellionRisk / 8);
+    letters += Math.round(bill.rebellionRisk / 24);
   }
 
   const logMessage = passed
@@ -751,7 +758,7 @@ function resolveBill(s: GameState, bill: Bill, rng: () => number): GameState {
     // Defeat on a free vote does not damage party unity!
     if (whip !== 'free-vote') {
       next = applyEffects(next, { approval: -2, partyConfidence: -2 });
-      letters += Math.round(bill.rebellionRisk / (whip === 'three-line' ? 3 : 4));
+      letters += Math.round(bill.rebellionRisk / (whip === 'three-line' ? 10 : 12));
     } else {
       next = applyEffects(next, { approval: -1 });
     }
@@ -1183,7 +1190,7 @@ export function advanceWeek(s: GameState): GameState {
   const unity = next.metrics.partyConfidence;
   if (unity > 70) letters -= 2;
   else if (unity > 60) letters -= 1;
-  if (mood.consideringDefection >= 2) letters += 1;
+  if (mood.consideringDefection >= 2 && next.week % TURNS_PER_MONTH === 0) letters += 1;
   letters = clamp(letters, 0, 99);
   const playerSeatsNow = next.parties.find((p) => p.id === next.player?.partyId)?.seats ?? 326;
   const blindsideSnapshot = calculateBlindsideRisk(letters, unity, playerSeatsNow - 326);
@@ -1570,6 +1577,7 @@ function resignMinister(s: GameState, name: string): GameState {
   const politicallyCosted = applyEffects(s, {
     approval: -cost.approvalPenalty,
     partyConfidence: -cost.partyConfidencePenalty,
+    lettersDelta: cost.lettersOfNoConfidenceIncrease,
   });
   return {
     ...politicallyCosted,

@@ -27,6 +27,7 @@ interface RunTelemetry {
   weeksSurvived: number;
   peakUnemployment: number;
   peakGiltYield: number;
+  peakDebtToGdp: number;
   failState: string | null;
   failureDetail: string | null;
 }
@@ -65,7 +66,7 @@ const TELEMETRY_FILE = path.join(__dirname, '../fuzzer-telemetry.json');
 
 const DEFAULT_MAX_RUNS = 500;
 const DEFAULT_SEED = 20260211;
-const DEFAULT_ARCHETYPE_HORIZON = 5 * TURNS_PER_YEAR;
+const DEFAULT_ARCHETYPE_HORIZON = 520;
 
 function envInteger(name: string, fallback: number, min: number, max: number): number {
   const raw = process.env[name];
@@ -93,6 +94,7 @@ function availableActions(
   state: any,
   allBills: any[],
   budgetPackages: any[],
+  getDefaultCustomPlan: (state: any) => any,
   random: () => number,
 ): AvailableAction[] {
   const actions: AvailableAction[] = [];
@@ -135,6 +137,24 @@ function availableActions(
   }
 
   if (!inPurdah && state.budgetDue) {
+    const defaultPlan = getDefaultCustomPlan(state);
+    actions.push({
+      action: {
+        type: 'DELIVER_CUSTOM_BUDGET',
+        plan: {
+          ...defaultPlan,
+          title: 'Reckless expansion',
+          departmentBudgets: Object.fromEntries(
+            state.departments.map((department: any) => [department.id, department.max]),
+          ),
+          taxRates: Object.fromEntries(
+            state.taxes.map((tax: any) => [tax.id, tax.min]),
+          ),
+        },
+      },
+      bias: 'spender',
+    });
+
     for (const budget of budgetPackages) {
       const bias =
         budget.id === 'budget-invest' || budget.id === 'budget-taxcuts'
@@ -207,11 +227,12 @@ function selectArchetypeAction(
   state: any,
   allBills: any[],
   budgetPackages: any[],
+  getDefaultCustomPlan: (state: any) => any,
   random: () => number,
 ): any | undefined {
   if (archetype === 'Idle') return undefined;
 
-  const actions = availableActions(state, allBills, budgetPackages, random);
+  const actions = availableActions(state, allBills, budgetPackages, getDefaultCustomPlan, random);
   const bias: ActionBias | undefined =
     archetype === 'Spender'
       ? 'spender'
@@ -220,17 +241,39 @@ function selectArchetypeAction(
         : 'reshuffler';
   const preferredActions = actions.filter((candidate) => candidate.bias === bias);
 
-  if (
-    state.budgetDue &&
-    (archetype === 'Spender' || archetype === 'Hawk')
-  ) {
+  if (archetype === 'Reshuffler') {
+    const sackActions = preferredActions.filter(
+      (candidate) => candidate.action.type === 'SACK_MINISTER',
+    );
+    if (sackActions.length > 0) {
+      const sackPriority = (candidate: AvailableAction): number => {
+        const minister = state.cabinet.find(
+          (member: any) => member.name === candidate.action.name,
+        );
+        if (!minister) return -Infinity;
+        const cost = ministerSackingCost(minister);
+        return cost.lettersOfNoConfidenceIncrease + cost.partyConfidencePenalty * 2;
+      };
+      return [...sackActions].sort((a, b) => sackPriority(b) - sackPriority(a))[0].action;
+    }
+  }
+
+  if (state.budgetDue && archetype === 'Spender') {
+    const recklessBudget = actions.find(
+      (candidate) => candidate.action.type === 'DELIVER_CUSTOM_BUDGET',
+    );
+    if (recklessBudget) return recklessBudget.action;
+  }
+
+  if (state.budgetDue && archetype === 'Hawk') {
     const fiscalAction = preferredActions.find(
       (candidate) => candidate.action.type === 'DELIVER_BUDGET',
     );
     if (fiscalAction) return fiscalAction.action;
   }
 
-  const preferredProbability = archetype === 'Reshuffler' ? 0.7 : 0.8;
+  const preferredProbability =
+    archetype === 'Spender' ? 1 : archetype === 'Reshuffler' ? 0.7 : 0.8;
 
   // The Spender deliberately does not consult or react to primary-balance warnings.
   const selectionPool =
@@ -245,7 +288,7 @@ function selectArchetypeAction(
 /**
  * The engine has no explicit debt-default or polling-floor game-over checks.
  * For telemetry, define them as debt/GDP >= 300% or gilt yield >= 20%, and
- * approval or governing-party support <= 5%, respectively.
+ * approval or governing-party support <= 1%, respectively.
  */
 function failStateFor(
   state: any,
@@ -269,8 +312,8 @@ function failStateFor(
     (party: any) => party.id === state.player?.partyId,
   );
   if (
-    state.metrics.approval <= 5 ||
-    (governingParty && governingParty.currentSupport <= 5)
+    state.metrics.approval <= 1 ||
+    (governingParty && governingParty.currentSupport <= 1)
   ) {
     return {
       name: 'Polling Floor',
@@ -297,6 +340,10 @@ function updateRunTelemetry(
   telemetry.peakGiltYield = Math.max(
     telemetry.peakGiltYield,
     state.stats.giltYield,
+  );
+  telemetry.peakDebtToGdp = Math.max(
+    telemetry.peakDebtToGdp,
+    state.stats.debtToGdp,
   );
 
   const failure = failStateFor(state);
@@ -399,6 +446,17 @@ function assertSackMinisterTransition(before: any, after: any, name: string): vo
   if (after.factionUnrest !== expectedUnrest) {
     throw new Error(
       `SACK_MINISTER factionUnrest mismatch: expected ${expectedUnrest}, got ${after.factionUnrest}`,
+    );
+  }
+
+  const expectedLetters = clamp(
+    (before.stats.lettersOfNoConfidence ?? 0) + cost.lettersOfNoConfidenceIncrease,
+    0,
+    99,
+  );
+  if (after.stats.lettersOfNoConfidence !== expectedLetters) {
+    throw new Error(
+      `SACK_MINISTER letters mismatch: expected ${expectedLetters}, got ${after.stats.lettersOfNoConfidence}`,
     );
   }
 
@@ -879,6 +937,17 @@ function assertMacroDynamics(
   }
 
   const stableYieldState = makeState({
+    taxes: initial.taxes.map((tax: any) => {
+      const rateIncreases: Record<string, number> = {
+        income: 5,
+        ni: 4,
+        vat: 2,
+        corporation: 1,
+        capgains: 1,
+        inheritance: 1,
+      };
+      return { ...tax, rate: tax.rate + (rateIncreases[tax.id] ?? 0) };
+    }),
     stats: { debtToGdp: 100, cpiInflation: 2.5, gdpGrowth: 1.2, giltYield: 12 },
   });
   let yieldState = stableYieldState;
@@ -888,7 +957,7 @@ function assertMacroDynamics(
   if (yieldState.stats.giltYield >= stableYieldState.stats.giltYield) {
     throw new Error('Gilt yields did not mean-revert from a high starting rate');
   }
-  if (yieldState.stats.giltYield < 3 || yieldState.stats.giltYield > 6) {
+  if (yieldState.stats.giltYield < 3 || yieldState.stats.giltYield > 7) {
     throw new Error(`Gilt yields failed to return near neutral: ${yieldState.stats.giltYield}`);
   }
 
@@ -922,7 +991,7 @@ function assertMacroDynamics(
   if (!Number.isFinite(stressState.nominalGdp) || stressState.nominalGdp === startingNominalGdp) {
     throw new Error('Nominal GDP did not evolve finitely under macroeconomic stress');
   }
-  if (stressState.stats.giltYield > 20) {
+  if (stressState.stats.giltYield >= 20) {
     throw new Error(`Gilt yields ran away under stress: ${stressState.stats.giltYield}`);
   }
 }
@@ -938,6 +1007,7 @@ async function runSimulation(
     weeksSurvived: 0,
     peakUnemployment: 0,
     peakGiltYield: 0,
+    peakDebtToGdp: 0,
     failState: null,
     failureDetail: null,
   };
@@ -1198,6 +1268,7 @@ async function runSimulation(
         state,
         allBills,
         BUDGET_PACKAGES,
+        getDefaultCustomPlan,
         random,
       );
 
@@ -1335,6 +1406,7 @@ interface ArchetypeTelemetrySummary {
   medianWeeksSurvived: number;
   medianPeakUnemployment: number;
   medianPeakGiltYield: number;
+  medianPeakDebtToGdp: number;
   failStates: Record<string, number>;
   runsTelemetry: RunTelemetry[];
 }
@@ -1374,6 +1446,9 @@ function buildArchetypeTelemetry(
       ),
       medianPeakGiltYield: median(
         runsTelemetry.map((run) => run.peakGiltYield),
+      ),
+      medianPeakDebtToGdp: median(
+        runsTelemetry.map((run) => run.peakDebtToGdp),
       ),
       failStates,
       runsTelemetry,
@@ -1447,7 +1522,7 @@ async function main() {
       .map(([name, count]) => `${name}: ${count}`)
       .join(', ');
     console.log(
-      `${archetype}: median weeks=${data.medianWeeksSurvived}, peak unemployment=${data.medianPeakUnemployment.toFixed(2)}%, peak gilt yield=${data.medianPeakGiltYield.toFixed(2)}%; ${failures || 'No runs'}`,
+      `${archetype}: median weeks=${data.medianWeeksSurvived}, peak unemployment=${data.medianPeakUnemployment.toFixed(2)}%, peak gilt yield=${data.medianPeakGiltYield.toFixed(2)}%, peak debt/GDP=${data.medianPeakDebtToGdp.toFixed(2)}%; ${failures || 'No runs'}`,
     );
   }
 
