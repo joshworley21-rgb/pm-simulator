@@ -311,34 +311,6 @@ function failStateFor(
   return undefined;
 }
 
-function updateRunTelemetry(
-  telemetry: RunTelemetry,
-  state: any,
-  startingWeek: number,
-): void {
-  telemetry.weeksSurvived = Math.max(
-    telemetry.weeksSurvived,
-    state.week - startingWeek,
-  );
-  telemetry.peakUnemployment = Math.max(
-    telemetry.peakUnemployment,
-    state.stats.unemployment,
-  );
-  telemetry.peakGiltYield = Math.max(
-    telemetry.peakGiltYield,
-    state.stats.giltYield,
-  );
-  telemetry.peakDebtToGdp = Math.max(
-    telemetry.peakDebtToGdp,
-    state.stats.debtToGdp,
-  );
-
-  const failure = failStateFor(state);
-  if (failure && telemetry.failState === null) {
-    telemetry.failState = failure.name;
-    telemetry.failureDetail = failure.detail;
-  }
-}
 
 function roundToOneDecimal(value: number): number {
   return Math.round(value * 10) / 10;
@@ -987,17 +959,10 @@ async function runSimulation(
   testCase: SeededTestCase,
   archetype: FuzzerArchetype,
   archetypeHorizon: number,
+  telemetryTracker: TelemetryTracker,
 ): Promise<TestResult> {
   const startedAt = Date.now();
-  const telemetry: RunTelemetry = {
-    archetype,
-    weeksSurvived: 0,
-    peakUnemployment: 0,
-    peakGiltYield: 0,
-    peakDebtToGdp: 0,
-    failState: null,
-    failureDetail: null,
-  };
+  const telemetry = telemetryTracker.startNewRun(archetype);
 
   try {
     const { createInitialState, reducer, advanceWeek, structuralBalance, effectiveTaxBurden } = await import('../src/app/engine');
@@ -1054,7 +1019,7 @@ async function runSimulation(
       seed: runSeed,
     };
     const startingWeek = state.week;
-    updateRunTelemetry(telemetry, state, startingWeek);
+    telemetryTracker.updateFromState(state, startingWeek);
 
     const baselinePartySeats = state.parties.reduce((sum, party) => sum + party.seats, 0);
     const baselineDepartmentBudgets = new Map(
@@ -1300,7 +1265,7 @@ async function runSimulation(
         checkState();
       }
 
-      updateRunTelemetry(telemetry, state, startingWeek);
+      telemetryTracker.updateFromState(state, startingWeek);
       if (telemetry.failState) break;
 
       const beforeTurn = state;
@@ -1316,7 +1281,7 @@ async function runSimulation(
 
       state = reducer(state, { type: 'START_TURN' } as any);
       checkState();
-      updateRunTelemetry(telemetry, state, startingWeek);
+      telemetryTracker.updateFromState(state, startingWeek);
 
       if (state.week !== nextWeek) {
         throw new Error(
@@ -1358,6 +1323,7 @@ async function runSimulation(
       }
     }
 
+    telemetryTracker.finalizeRun(archetype, telemetry.failState);
     return {
       passed: true,
       duration: Date.now() - startedAt,
@@ -1376,6 +1342,7 @@ async function runSimulation(
       telemetry.failureDetail = errorDetails;
     }
 
+    telemetryTracker.finalizeRun(archetype, telemetry.failState);
     return {
       passed: false,
       error: errorDetails,
@@ -1406,42 +1373,146 @@ function median(values: number[]): number {
     : sorted[middle];
 }
 
-function buildArchetypeTelemetry(
-  results: TestResult[],
-): Record<FuzzerArchetype, ArchetypeTelemetrySummary> {
-  const summaries = {} as Record<FuzzerArchetype, ArchetypeTelemetrySummary>;
+class TelemetryTracker {
+  private readonly runsByArchetype: Record<FuzzerArchetype, RunTelemetry[]> = {
+    Spender: [],
+    Hawk: [],
+    Reshuffler: [],
+    Idle: [],
+    Random: [],
+  };
+  private currentRun: RunTelemetry | undefined = undefined;
 
-  for (const archetype of FUZZER_ARCHETYPES) {
-    const runsTelemetry = results
-      .filter((result) => result.archetype === archetype && result.telemetry)
-      .map((result) => result.telemetry as RunTelemetry);
-    const failStates: Record<string, number> = {};
+  constructor(
+    private readonly maxRunsPerArchetype: number,
+    private readonly archetypeHorizon: number,
+    private readonly seed: number,
+  ) {}
 
-    for (const run of runsTelemetry) {
-      const name = run.failState ?? 'No failure';
-      failStates[name] = (failStates[name] ?? 0) + 1;
+  startNewRun(archetype: FuzzerArchetype): RunTelemetry {
+    if (this.currentRun) {
+      throw new Error('Cannot start a run before finalizing the current run');
     }
 
-    summaries[archetype] = {
-      runs: runsTelemetry.length,
-      medianWeeksSurvived: median(
-        runsTelemetry.map((run) => run.weeksSurvived),
-      ),
-      medianPeakUnemployment: median(
-        runsTelemetry.map((run) => run.peakUnemployment),
-      ),
-      medianPeakGiltYield: median(
-        runsTelemetry.map((run) => run.peakGiltYield),
-      ),
-      medianPeakDebtToGdp: median(
-        runsTelemetry.map((run) => run.peakDebtToGdp),
-      ),
-      failStates,
-      runsTelemetry,
+    this.currentRun = {
+      archetype,
+      weeksSurvived: 0,
+      peakUnemployment: 0,
+      peakGiltYield: 0,
+      peakDebtToGdp: 0,
+      failState: null,
+      failureDetail: null,
     };
+    return this.currentRun;
   }
 
-  return summaries;
+  updateMetrics(unemployment: number, bondYield: number): void {
+    if (!this.currentRun) throw new Error('No active telemetry run');
+    this.currentRun.peakUnemployment = Math.max(
+      this.currentRun.peakUnemployment,
+      unemployment,
+    );
+    this.currentRun.peakGiltYield = Math.max(
+      this.currentRun.peakGiltYield,
+      bondYield,
+    );
+  }
+
+  updateFromState(state: any, startingWeek: number): RunTelemetry {
+    if (!this.currentRun) throw new Error('No active telemetry run');
+
+    this.currentRun.weeksSurvived = Math.max(
+      this.currentRun.weeksSurvived,
+      state.week - startingWeek,
+    );
+    this.updateMetrics(state.stats.unemployment, state.stats.giltYield);
+    this.currentRun.peakDebtToGdp = Math.max(
+      this.currentRun.peakDebtToGdp,
+      state.stats.debtToGdp,
+    );
+
+    const failure = failStateFor(state);
+    if (failure && this.currentRun.failState === null) {
+      this.currentRun.failState = failure.name;
+      this.currentRun.failureDetail = failure.detail;
+    }
+    return this.currentRun;
+  }
+
+  finalizeRun(
+    archetype: FuzzerArchetype,
+    failState: string | null,
+  ): RunTelemetry {
+    if (!this.currentRun) throw new Error('No active telemetry run');
+    if (this.currentRun.failState === null && failState !== null) {
+      this.currentRun.failState = failState;
+    }
+
+    const run = this.currentRun;
+    this.runsByArchetype[archetype].push(run);
+    this.currentRun = undefined;
+    return run;
+  }
+
+  exportReport(): Record<FuzzerArchetype, ArchetypeTelemetrySummary> {
+    const summaries = {} as Record<FuzzerArchetype, ArchetypeTelemetrySummary>;
+
+    for (const archetype of FUZZER_ARCHETYPES) {
+      const runsTelemetry = this.runsByArchetype[archetype];
+      const failStates: Record<string, number> = {};
+
+      for (const run of runsTelemetry) {
+        const name = run.failState ?? 'No failure';
+        failStates[name] = (failStates[name] ?? 0) + 1;
+      }
+
+      summaries[archetype] = {
+        runs: runsTelemetry.length,
+        medianWeeksSurvived: median(
+          runsTelemetry.map((run) => run.weeksSurvived),
+        ),
+        medianPeakUnemployment: median(
+          runsTelemetry.map((run) => run.peakUnemployment),
+        ),
+        medianPeakGiltYield: median(
+          runsTelemetry.map((run) => run.peakGiltYield),
+        ),
+        medianPeakDebtToGdp: median(
+          runsTelemetry.map((run) => run.peakDebtToGdp),
+        ),
+        failStates,
+        runsTelemetry,
+      };
+    }
+
+    fs.writeFileSync(
+      TELEMETRY_FILE,
+      JSON.stringify(
+        {
+          generatedAt: new Date().toISOString(),
+          maxRunsPerArchetype: this.maxRunsPerArchetype,
+          archetypeHorizon: this.archetypeHorizon,
+          seed: this.seed,
+          archetypes: summaries,
+        },
+        null,
+        2,
+      ),
+    );
+
+    console.log('\\n=== Archetype Telemetry ===');
+    for (const archetype of FUZZER_ARCHETYPES) {
+      const data = summaries[archetype];
+      const failures = Object.entries(data.failStates)
+        .map(([name, count]) => `${name}: ${count}`)
+        .join(', ');
+      console.log(
+        `${archetype}: median weeks=${data.medianWeeksSurvived}, peak unemployment=${data.medianPeakUnemployment.toFixed(2)}%, peak gilt yield=${data.medianPeakGiltYield.toFixed(2)}%, peak debt/GDP=${data.medianPeakDebtToGdp.toFixed(2)}%; ${failures || 'No runs'}`,
+      );
+    }
+
+    return summaries;
+  }
 }
 
 async function main() {
@@ -1459,6 +1530,7 @@ async function main() {
   );
   const baseSeed = envInteger('SEED', DEFAULT_SEED, 0, 0xffffffff);
   const results: TestResult[] = [];
+  const telemetryTracker = new TelemetryTracker(maxRuns, archetypeHorizon, baseSeed);
   const startTime = Date.now();
 
   for (
@@ -1470,7 +1542,12 @@ async function main() {
     const testCases = generateTestCases(archetypeIndex, maxRuns, baseSeed);
 
     for (const testCase of testCases) {
-      const result = await runSimulation(testCase, archetype, archetypeHorizon);
+      const result = await runSimulation(
+        testCase,
+        archetype,
+        archetypeHorizon,
+        telemetryTracker,
+      );
       results.push(result);
 
       if (VERBOSE) {
@@ -1483,7 +1560,6 @@ async function main() {
 
   const duration = Date.now() - startTime;
   const summary = buildSummary(results, duration);
-  const telemetry = buildArchetypeTelemetry(results);
 
   console.log('\n=== E2E Test Summary ===');
   console.log(`Total: ${summary.total}`);
@@ -1501,32 +1577,9 @@ async function main() {
     );
   }
 
-  console.log('\n=== Archetype Telemetry ===');
-  for (const archetype of FUZZER_ARCHETYPES) {
-    const data = telemetry[archetype];
-    const failures = Object.entries(data.failStates)
-      .map(([name, count]) => `${name}: ${count}`)
-      .join(', ');
-    console.log(
-      `${archetype}: median weeks=${data.medianWeeksSurvived}, peak unemployment=${data.medianPeakUnemployment.toFixed(2)}%, peak gilt yield=${data.medianPeakGiltYield.toFixed(2)}%, peak debt/GDP=${data.medianPeakDebtToGdp.toFixed(2)}%; ${failures || 'No runs'}`,
-    );
-  }
+  telemetryTracker.exportReport();
 
   fs.writeFileSync(RESULTS_FILE, JSON.stringify({ summary, results }, null, 2));
-  fs.writeFileSync(
-    TELEMETRY_FILE,
-    JSON.stringify(
-      {
-        generatedAt: new Date().toISOString(),
-        maxRunsPerArchetype: maxRuns,
-        archetypeHorizon,
-        seed: baseSeed,
-        archetypes: telemetry,
-      },
-      null,
-      2,
-    ),
-  );
   console.log(`\nResults saved to ${RESULTS_FILE}`);
   console.log(`Telemetry saved to ${TELEMETRY_FILE}`);
 
