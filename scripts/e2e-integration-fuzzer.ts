@@ -1,8 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'node:url';
-import type { Effects } from '../src/app/types';
+import type { Effects, GameState } from '../src/app/types';
 import {
+  PURDAH_TURNS,
   TURNS_PER_HALF_YEAR,
   TURNS_PER_MONTH,
   TURNS_PER_QUARTER,
@@ -12,11 +13,31 @@ import { DEFAULT_NOMINAL_GDP } from '../src/app/budget';
 import { TAX_YIELD_PER_POINT } from '../src/app/taxes';
 import { ministerSackingCost } from '../src/app/cabinetEffects';
 
+type FuzzerArchetype = 'Spender' | 'Hawk' | 'Reshuffler' | 'Idle';
+
+const FUZZER_ARCHETYPES: FuzzerArchetype[] = [
+  'Spender',
+  'Hawk',
+  'Reshuffler',
+  'Idle',
+];
+
+interface RunTelemetry {
+  archetype: FuzzerArchetype;
+  weeksSurvived: number;
+  peakUnemployment: number;
+  peakGiltYield: number;
+  failState: string | null;
+  failureDetail: string | null;
+}
+
 interface TestResult {
   passed: boolean;
   error?: string;
   duration: number;
   testCase: unknown;
+  archetype?: FuzzerArchetype;
+  telemetry?: RunTelemetry;
 }
 
 interface Summary {
@@ -40,8 +61,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const VERBOSE = process.env.VERBOSE === 'true';
 const RESULTS_FILE = path.join(__dirname, '../e2e-results.json');
 
-const DEFAULT_MAX_RUNS = 2000;
+const TELEMETRY_FILE = path.join(__dirname, '../fuzzer-telemetry.json');
+
+const DEFAULT_MAX_RUNS = 500;
 const DEFAULT_SEED = 20260211;
+const DEFAULT_ARCHETYPE_HORIZON = 5 * TURNS_PER_YEAR;
 
 function envInteger(name: string, fallback: number, min: number, max: number): number {
   const raw = process.env[name];
@@ -56,6 +80,230 @@ function envInteger(name: string, fallback: number, min: number, max: number): n
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
+}
+
+type ActionBias = 'spender' | 'hawk' | 'reshuffler';
+
+interface AvailableAction {
+  action: any;
+  bias?: ActionBias;
+}
+
+function availableActions(
+  state: any,
+  allBills: any[],
+  budgetPackages: any[],
+  random: () => number,
+): AvailableAction[] {
+  const actions: AvailableAction[] = [];
+  const inPurdah =
+    state.phase === 'playing' && state.turnsUntilElection <= PURDAH_TURNS;
+
+  if (!inPurdah) {
+    const availableBills = allBills.filter(
+      (bill) =>
+        !state.bills.some((active: any) => active.id === bill.id) &&
+        !state.passedLaws.includes(bill.title),
+    );
+    for (const bill of availableBills) {
+      const whipLevels = ['three-line', 'two-line', 'free-vote'] as const;
+      actions.push({
+        action: {
+          type: 'PROPOSE_BILL',
+          billId: bill.id,
+          whipLevel: whipLevels[Math.floor(random() * whipLevels.length)],
+        },
+      });
+    }
+  }
+
+  // Sacking is the engine's only explicit discretionary cabinet action;
+  // reshuffles themselves are triggered automatically during START_TURN.
+  for (const minister of state.cabinet) {
+    actions.push({
+      action: { type: 'SACK_MINISTER', name: minister.name },
+      bias: 'reshuffler',
+    });
+  }
+
+  if (state.pmq) {
+    for (const option of state.pmq.options) {
+      actions.push({
+        action: { type: 'ANSWER_PMQ', optionId: option.id },
+      });
+    }
+  }
+
+  if (!inPurdah && state.budgetDue) {
+    for (const budget of budgetPackages) {
+      const bias =
+        budget.id === 'budget-invest' || budget.id === 'budget-taxcuts'
+          ? 'spender'
+          : budget.id === 'budget-restraint'
+            ? 'hawk'
+            : undefined;
+      actions.push({
+        action: { type: 'DELIVER_BUDGET', packageId: budget.id },
+        bias,
+      });
+    }
+
+    for (const department of state.departments) {
+      if (department.budget + department.step <= department.max) {
+        actions.push({
+          action: {
+            type: 'ADJUST_SPENDING',
+            deptId: department.id,
+            delta: department.step,
+          },
+          bias: 'spender',
+        });
+      }
+      if (department.budget - department.step >= department.min) {
+        actions.push({
+          action: {
+            type: 'ADJUST_SPENDING',
+            deptId: department.id,
+            delta: -department.step,
+          },
+          bias: 'hawk',
+        });
+      }
+    }
+  }
+
+  if (!inPurdah) {
+    const fiscalWindowOpen = state.budgetDue === true;
+    const emergencyActionsAvailable =
+      (state.emergencyFiscalActions ?? 0) < 2;
+
+    for (const tax of state.taxes) {
+      if (!fiscalWindowOpen && !(tax.emergency && emergencyActionsAvailable)) {
+        continue;
+      }
+      const step =
+        typeof tax.step === 'number' && tax.step > 0 ? tax.step : 1;
+
+      if (tax.rate + step <= tax.max) {
+        actions.push({
+          action: { type: 'ADJUST_TAX', taxId: tax.id, delta: step },
+          bias: 'hawk',
+        });
+      }
+      if (tax.rate - step >= tax.min) {
+        actions.push({
+          action: { type: 'ADJUST_TAX', taxId: tax.id, delta: -step },
+          bias: 'spender',
+        });
+      }
+    }
+  }
+
+  return actions;
+}
+
+function selectArchetypeAction(
+  archetype: FuzzerArchetype,
+  state: any,
+  allBills: any[],
+  budgetPackages: any[],
+  random: () => number,
+): any | undefined {
+  if (archetype === 'Idle') return undefined;
+
+  const actions = availableActions(state, allBills, budgetPackages, random);
+  const bias: ActionBias | undefined =
+    archetype === 'Spender'
+      ? 'spender'
+      : archetype === 'Hawk'
+        ? 'hawk'
+        : 'reshuffler';
+  const preferredActions = actions.filter((candidate) => candidate.bias === bias);
+
+  if (
+    state.budgetDue &&
+    (archetype === 'Spender' || archetype === 'Hawk')
+  ) {
+    const fiscalAction = preferredActions.find(
+      (candidate) => candidate.action.type === 'DELIVER_BUDGET',
+    );
+    if (fiscalAction) return fiscalAction.action;
+  }
+
+  const preferredProbability = archetype === 'Reshuffler' ? 0.7 : 0.8;
+
+  // The Spender deliberately does not consult or react to primary-balance warnings.
+  const selectionPool =
+    preferredActions.length > 0 && random() < preferredProbability
+      ? preferredActions
+      : actions;
+
+  if (selectionPool.length === 0) return undefined;
+  return selectionPool[Math.floor(random() * selectionPool.length)].action;
+}
+
+/**
+ * The engine has no explicit debt-default or polling-floor game-over checks.
+ * For telemetry, define them as debt/GDP >= 300% or gilt yield >= 20%, and
+ * approval or governing-party support <= 5%, respectively.
+ */
+function failStateFor(
+  state: any,
+): { name: string; detail: string } | undefined {
+  if (state.gameOver) {
+    const detail = String(state.gameOver);
+    return {
+      name: /confidence/i.test(detail) ? 'No Confidence Vote' : detail,
+      detail,
+    };
+  }
+
+  if (state.stats.debtToGdp >= 300 || state.stats.giltYield >= 20) {
+    return {
+      name: 'Debt Default',
+      detail: `Debt/GDP ${state.stats.debtToGdp}% or gilt yield ${state.stats.giltYield}% reached the telemetry threshold.`,
+    };
+  }
+
+  const governingParty = state.parties.find(
+    (party: any) => party.id === state.player?.partyId,
+  );
+  if (
+    state.metrics.approval <= 5 ||
+    (governingParty && governingParty.currentSupport <= 5)
+  ) {
+    return {
+      name: 'Polling Floor',
+      detail: `Approval ${state.metrics.approval}% or governing-party support ${governingParty?.currentSupport}% reached the telemetry threshold.`,
+    };
+  }
+
+  return undefined;
+}
+
+function updateRunTelemetry(
+  telemetry: RunTelemetry,
+  state: any,
+  startingWeek: number,
+): void {
+  telemetry.weeksSurvived = Math.max(
+    telemetry.weeksSurvived,
+    state.week - startingWeek,
+  );
+  telemetry.peakUnemployment = Math.max(
+    telemetry.peakUnemployment,
+    state.stats.unemployment,
+  );
+  telemetry.peakGiltYield = Math.max(
+    telemetry.peakGiltYield,
+    state.stats.giltYield,
+  );
+
+  const failure = failStateFor(state);
+  if (failure && telemetry.failState === null) {
+    telemetry.failState = failure.name;
+    telemetry.failureDetail = failure.detail;
+  }
 }
 
 function roundToOneDecimal(value: number): number {
@@ -307,16 +555,64 @@ function assertBillProposal(
 }
 
 function assertBillResolution(before: any, after: any): void {
-  const dueBills = before.bills.filter((bill: any) => bill.weeksToPass <= 1);
+  const hasDurableRecord = (resolutions: any, billId: string): boolean =>
+    resolutions !== null &&
+    typeof resolutions === 'object' &&
+    Object.prototype.hasOwnProperty.call(resolutions, billId);
+
+  const logBefore: string[] = before.log;
+  const logAfter: string[] = after.log;
+  let newLogEntries: string[];
+
+  if (
+    logAfter.length >= logBefore.length &&
+    logBefore.every((line, index) => logAfter[index] === line)
+  ) {
+    newLogEntries = logAfter.slice(logBefore.length);
+  } else {
+    let overlap = Math.min(logBefore.length, logAfter.length);
+    while (overlap > 0) {
+      const matches = logBefore
+        .slice(logBefore.length - overlap)
+        .every((line, index) => line === logAfter[index]);
+      if (matches) break;
+      overlap -= 1;
+    }
+    newLogEntries = logAfter.slice(overlap);
+  }
+
+  const dueBills = before.bills.filter(
+    (bill: any) =>
+      bill.weeksToPass <= 1 &&
+      !hasDurableRecord(before.billResolutions, bill.id),
+  );
+
   for (const bill of dueBills) {
     const passedMessage = `LAW PASSED: ${bill.title}`;
     const defeatedMessage = `BILL DEFEATED: ${bill.title}`;
-    const passed = after.log.some((line: string) => line.startsWith(passedMessage));
-    const defeated = after.log.some((line: string) => line.startsWith(defeatedMessage));
+    const outcomes = newLogEntries
+      .map((line, index) => ({ line, index }))
+      .filter(
+        ({ line }) =>
+          line.startsWith(passedMessage) || line.startsWith(defeatedMessage),
+      );
 
-    if (passed === defeated) {
+    if (outcomes.length !== 1) {
       throw new Error(
-        `Due bill ${bill.title} should have exactly one recorded resolution outcome`,
+        `Due bill ${bill.title} should have exactly one new resolution outcome`,
+      );
+    }
+
+    const [outcome] = outcomes;
+    newLogEntries.splice(outcome.index, 1);
+
+    if (
+      (before.billResolutions !== undefined ||
+        after.billResolutions !== undefined) &&
+      !hasDurableRecord(after.billResolutions, bill.id)
+    ) {
+      throw new Error(
+        `Due bill ${bill.title} should have exactly one durable resolution record`,
       );
     }
 
@@ -324,11 +620,12 @@ function assertBillResolution(before: any, after: any): void {
       throw new Error(`Resolved bill ${bill.title} remained active`);
     }
 
+    const passed = outcome.line.startsWith(passedMessage);
     if (passed && !after.passedLaws.includes(bill.title)) {
       throw new Error(`Passed bill ${bill.title} was not added to passedLaws`);
     }
 
-    if (defeated && after.passedLaws.includes(bill.title)) {
+    if (!passed && after.passedLaws.includes(bill.title)) {
       throw new Error(`Defeated bill ${bill.title} was incorrectly added to passedLaws`);
     }
   }
@@ -630,12 +927,24 @@ function assertMacroDynamics(
   }
 }
 
-async function runSimulation(testCase: SeededTestCase): Promise<TestResult> {
+async function runSimulation(
+  testCase: SeededTestCase,
+  archetype: FuzzerArchetype,
+  archetypeHorizon: number,
+): Promise<TestResult> {
   const startedAt = Date.now();
+  const telemetry: RunTelemetry = {
+    archetype,
+    weeksSurvived: 0,
+    peakUnemployment: 0,
+    peakGiltYield: 0,
+    failState: null,
+    failureDetail: null,
+  };
 
   try {
     const { createInitialState, reducer, advanceWeek, structuralBalance, effectiveTaxBurden } = await import('../src/app/engine');
-    const { getDefaultCustomPlan } = await import('../src/app/budget');
+    const { getDefaultCustomPlan, BUDGET_PACKAGES } = await import('../src/app/budget');
     const { BILL_POOL } = await import('../src/app/bills');
     const { BILL_POOL_2 } = await import('../src/app/bills2');
 
@@ -654,16 +963,60 @@ async function runSimulation(testCase: SeededTestCase): Promise<TestResult> {
       return randomState / 0x100000000;
     };
 
-    let state = { ...createInitialState(), seed: runSeed };
+    const initialState = createInitialState();
+    const governingParty = initialState.parties[0];
+    if (!governingParty) {
+      throw new Error('Cannot start archetype run without a governing party');
+    }
+
+    const parties = initialState.parties.map((party, index) => ({
+      ...party,
+      seats: index === 0 ? 650 : 0,
+    }));
+
+    let state: GameState = {
+      ...initialState,
+      phase: 'playing',
+      player: {
+        firstName: 'Test',
+        lastName: 'Prime Minister',
+        partyId: governingParty.id,
+        background: 'business',
+      },
+      parties,
+      stats: {
+        ...initialState.stats,
+        lettersOfNoConfidence: 0,
+        lettersThreshold: 99,
+      },
+      termLength: Math.max(10_000, archetypeHorizon + 1),
+      turnsUntilElection: Math.max(10_000, archetypeHorizon + 1),
+      thresholdsFrozen: true,
+      thresholdFrozenTurns: 0,
+      gameOver: null,
+      seed: runSeed,
+    };
+    const startingWeek = state.week;
+    updateRunTelemetry(telemetry, state, startingWeek);
 
     const baselinePartySeats = state.parties.reduce((sum, party) => sum + party.seats, 0);
     const baselineDepartmentBudgets = new Map(
       state.departments.map((department) => [department.id, department.budget] as const),
     );
-    const baselineDepartmentTotal = state.departments.reduce(
+    let baselineDepartmentTotal = state.departments.reduce(
       (sum, department) => sum + department.budget,
       0,
     );
+    const recordExpectedDepartmentBudgets = (): void => {
+      baselineDepartmentBudgets.clear();
+      for (const department of state.departments) {
+        baselineDepartmentBudgets.set(department.id, department.budget);
+      }
+      baselineDepartmentTotal = state.departments.reduce(
+        (sum, department) => sum + department.budget,
+        0,
+      );
+    };
 
     const checkState = (): void => {
       const checkFinite = (value: unknown, location: string): void => {
@@ -833,39 +1186,22 @@ async function runSimulation(testCase: SeededTestCase): Promise<TestResult> {
     checkState();
 
     const allBills = [...BILL_POOL, ...BILL_POOL_2];
-    const whipLevels = ['three-line', 'two-line', 'free-vote'] as const;
 
-    // Drive the same real reducer actions and turn advancement used by the
-    // reference fuzzer. Each choice uses this test case's seeded PRNG.
-    for (let turn = 0; turn < 60 && !state.gameOver; turn++) {
-      const actions: any[] = [];
-
-      const availableBills = allBills.filter(
-        (bill) =>
-          !state.bills.some((active) => active.id === bill.id) &&
-          !state.passedLaws.includes(bill.title),
+    // Drive real reducer actions with reproducible, archetype-weighted choices.
+    for (
+      let turn = 0;
+      turn < archetypeHorizon && !state.gameOver && !telemetry.failState;
+      turn++
+    ) {
+      const action = selectArchetypeAction(
+        archetype,
+        state,
+        allBills,
+        BUDGET_PACKAGES,
+        random,
       );
-      if (availableBills.length > 0) {
-        const bill = availableBills[Math.floor(random() * availableBills.length)];
-        actions.push({
-          type: 'PROPOSE_BILL',
-          billId: bill.id,
-          whipLevel: whipLevels[Math.floor(random() * whipLevels.length)],
-        });
-      }
 
-      if (state.cabinet.length > 0) {
-        const minister = state.cabinet[Math.floor(random() * state.cabinet.length)];
-        actions.push({ type: 'SACK_MINISTER', name: minister.name });
-      }
-
-      if (state.pmq && state.pmq.options.length > 0) {
-        const option = state.pmq.options[Math.floor(random() * state.pmq.options.length)];
-        actions.push({ type: 'ANSWER_PMQ', optionId: option.id });
-      }
-
-      if (actions.length > 0) {
-        const action = actions[Math.floor(random() * actions.length)];
+      if (action) {
         const beforeAction = state;
         state = reducer(state, action);
 
@@ -896,8 +1232,19 @@ async function runSimulation(testCase: SeededTestCase): Promise<TestResult> {
           assertPmqTransition(beforeAction, state);
         }
 
+        if (
+          action.type === 'ADJUST_SPENDING' ||
+          action.type === 'DELIVER_BUDGET' ||
+          action.type === 'DELIVER_CUSTOM_BUDGET'
+        ) {
+          recordExpectedDepartmentBudgets();
+        }
+
         checkState();
       }
+
+      updateRunTelemetry(telemetry, state, startingWeek);
+      if (telemetry.failState) break;
 
       const beforeTurn = state;
       const nextWeek = beforeTurn.week + 1;
@@ -912,6 +1259,7 @@ async function runSimulation(testCase: SeededTestCase): Promise<TestResult> {
 
       state = reducer(state, { type: 'START_TURN' } as any);
       checkState();
+      updateRunTelemetry(telemetry, state, startingWeek);
 
       if (state.week !== nextWeek) {
         throw new Error(
@@ -957,6 +1305,8 @@ async function runSimulation(testCase: SeededTestCase): Promise<TestResult> {
       passed: true,
       duration: Date.now() - startedAt,
       testCase,
+      archetype,
+      telemetry,
     };
   } catch (error) {
     const errorDetails =
@@ -964,80 +1314,175 @@ async function runSimulation(testCase: SeededTestCase): Promise<TestResult> {
         ? `${error.message}${error.stack ? `\nStack Trace:\n${error.stack}` : ''}`
         : `Error: ${String(error)}`;
 
+    if (telemetry.failState === null) {
+      telemetry.failState = 'Runner Error';
+      telemetry.failureDetail = errorDetails;
+    }
+
     return {
       passed: false,
       error: errorDetails,
       duration: Date.now() - startedAt,
       testCase,
+      archetype,
+      telemetry,
     };
   }
 }
 
+interface ArchetypeTelemetrySummary {
+  runs: number;
+  medianWeeksSurvived: number;
+  medianPeakUnemployment: number;
+  medianPeakGiltYield: number;
+  failStates: Record<string, number>;
+  runsTelemetry: RunTelemetry[];
+}
+
+function median(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? (sorted[middle - 1] + sorted[middle]) / 2
+    : sorted[middle];
+}
+
+function buildArchetypeTelemetry(
+  results: TestResult[],
+): Record<FuzzerArchetype, ArchetypeTelemetrySummary> {
+  const summaries = {} as Record<FuzzerArchetype, ArchetypeTelemetrySummary>;
+
+  for (const archetype of FUZZER_ARCHETYPES) {
+    const runsTelemetry = results
+      .filter((result) => result.archetype === archetype && result.telemetry)
+      .map((result) => result.telemetry as RunTelemetry);
+    const failStates: Record<string, number> = {};
+
+    for (const run of runsTelemetry) {
+      const name = run.failState ?? 'No failure';
+      failStates[name] = (failStates[name] ?? 0) + 1;
+    }
+
+    summaries[archetype] = {
+      runs: runsTelemetry.length,
+      medianWeeksSurvived: median(
+        runsTelemetry.map((run) => run.weeksSurvived),
+      ),
+      medianPeakUnemployment: median(
+        runsTelemetry.map((run) => run.peakUnemployment),
+      ),
+      medianPeakGiltYield: median(
+        runsTelemetry.map((run) => run.peakGiltYield),
+      ),
+      failStates,
+      runsTelemetry,
+    };
+  }
+
+  return summaries;
+}
+
 async function main() {
-  const testCases = generateTestCases();
+  const archetypeHorizon = envInteger(
+    'ARCHETYPE_HORIZON',
+    DEFAULT_ARCHETYPE_HORIZON,
+    1,
+    Number.MAX_SAFE_INTEGER,
+  );
+  const maxRuns = envInteger(
+    'MAX_RUNS',
+    DEFAULT_MAX_RUNS,
+    1,
+    Number.MAX_SAFE_INTEGER,
+  );
+  const baseSeed = envInteger('SEED', DEFAULT_SEED, 0, 0xffffffff);
   const results: TestResult[] = [];
   const startTime = Date.now();
 
-  for (const testCase of testCases) {
-    try {
-      const result = await runSimulation(testCase);
+  for (
+    let archetypeIndex = 0;
+    archetypeIndex < FUZZER_ARCHETYPES.length;
+    archetypeIndex++
+  ) {
+    const archetype = FUZZER_ARCHETYPES[archetypeIndex];
+    const testCases = generateTestCases(archetypeIndex, maxRuns, baseSeed);
+
+    for (const testCase of testCases) {
+      const result = await runSimulation(testCase, archetype, archetypeHorizon);
       results.push(result);
 
       if (VERBOSE) {
-        console.log(`Test ${result.passed ? 'PASSED' : 'FAILED'} in ${result.duration.toFixed(2)}ms`);
-      }
-    } catch (error) {
-      const errorDetails = error instanceof Error ? 
-        `${error.message}\nStack Trace:\n${error.stack}` : 
-        `Error: ${String(error)}`;
-      
-      const failedResult: TestResult = {
-        passed: false,
-        error: errorDetails,
-        duration: 0,
-        testCase
-      };
-      results.push(failedResult);
-
-      if (VERBOSE) {
-        console.error(`Test FAILED with error: ${failedResult.error}`);
+        console.log(
+          `${archetype} test ${result.passed ? 'PASSED' : 'FAILED'} in ${result.duration.toFixed(2)}ms`,
+        );
       }
     }
   }
 
   const duration = Date.now() - startTime;
   const summary = buildSummary(results, duration);
+  const telemetry = buildArchetypeTelemetry(results);
 
-  // Always print final summary
   console.log('\n=== E2E Test Summary ===');
   console.log(`Total: ${summary.total}`);
   console.log(`Passed: ${summary.passed}`);
   console.log(`Failed: ${summary.failed}`);
   console.log(`Duration: ${summary.duration}ms`);
   console.log(
-    `Configuration: MAX_RUNS=${summary.total} (default ${DEFAULT_MAX_RUNS}), SEED=${testCases[0]?.seed ?? DEFAULT_SEED} (default ${DEFAULT_SEED})`,
+    `Configuration: MAX_RUNS=${maxRuns} per archetype (${FUZZER_ARCHETYPES.length} sequential batches), ARCHETYPE_HORIZON=${archetypeHorizon}, SEED=${baseSeed} (default ${DEFAULT_SEED})`,
   );
 
   for (const failure of summary.failures) {
     const testCase = failure.testCase as SeededTestCase;
-    console.error(`REPORTED ISSUE run=${testCase.id} seed=${testCase.seed}\n${failure.error}`);
+    console.error(
+      `REPORTED ISSUE run=${testCase.id} seed=${testCase.seed}\n${failure.error}`,
+    );
   }
 
-  // Always save results
+  console.log('\n=== Archetype Telemetry ===');
+  for (const archetype of FUZZER_ARCHETYPES) {
+    const data = telemetry[archetype];
+    const failures = Object.entries(data.failStates)
+      .map(([name, count]) => `${name}: ${count}`)
+      .join(', ');
+    console.log(
+      `${archetype}: median weeks=${data.medianWeeksSurvived}, peak unemployment=${data.medianPeakUnemployment.toFixed(2)}%, peak gilt yield=${data.medianPeakGiltYield.toFixed(2)}%; ${failures || 'No runs'}`,
+    );
+  }
+
   fs.writeFileSync(RESULTS_FILE, JSON.stringify({ summary, results }, null, 2));
+  fs.writeFileSync(
+    TELEMETRY_FILE,
+    JSON.stringify(
+      {
+        generatedAt: new Date().toISOString(),
+        maxRunsPerArchetype: maxRuns,
+        archetypeHorizon,
+        seed: baseSeed,
+        archetypes: telemetry,
+      },
+      null,
+      2,
+    ),
+  );
   console.log(`\nResults saved to ${RESULTS_FILE}`);
+  console.log(`Telemetry saved to ${TELEMETRY_FILE}`);
+
+  // Reaching a simulated fail state is telemetry, not a runner failure.
   if (summary.failed > 0) {
     process.exitCode = 1;
   }
 }
 
-function generateTestCases(): SeededTestCase[] {
-  const maxRuns = envInteger('MAX_RUNS', DEFAULT_MAX_RUNS, 1, Number.MAX_SAFE_INTEGER);
-  const baseSeed = envInteger('SEED', DEFAULT_SEED, 0, 0xffffffff);
-
+function generateTestCases(
+  archetypeIndex: number,
+  maxRuns: number,
+  baseSeed: number,
+): SeededTestCase[] {
   return Array.from({ length: maxRuns }, (_, id) => ({
     id,
-    seed: (baseSeed + id) >>> 0,
+    seed: (baseSeed + archetypeIndex * maxRuns + id) >>> 0,
   }));
 }
 
