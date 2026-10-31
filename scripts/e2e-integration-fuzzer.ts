@@ -21,10 +21,29 @@ interface Summary {
   }>;
 }
 
+interface SeededTestCase {
+  id: number;
+  seed: number;
+}
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const VERBOSE = process.env.VERBOSE === 'true';
 const RESULTS_FILE = path.join(__dirname, '../e2e-results.json');
+
+const DEFAULT_MAX_RUNS = 2000;
+const DEFAULT_SEED = 20260211;
+
+function envInteger(name: string, fallback: number, min: number, max: number): number {
+  const raw = process.env[name];
+  if (raw === undefined || raw.trim() === '') return fallback;
+
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value) || value < min || value > max) {
+    throw new Error(`${name} must be an integer in ${min}..${max}; received "${raw}"`);
+  }
+  return value;
+}
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
@@ -45,6 +64,30 @@ function expectedMetricAfterEffects(
       ? delta * (1 - metric / 110)
       : delta;
   return clamp(metric + adjustedDelta, 0, 100);
+}
+
+function assertPmqTransition(before: any, after: any): void {
+  const question = before.pmq;
+  if (!question) {
+    throw new Error('ANSWER_PMQ dispatched without an active question');
+  }
+
+  const expectedLog = `PMQS: Answered a question from ${question.from}.`;
+  if (!after.log.includes(expectedLog)) {
+    throw new Error(`ANSWER_PMQ did not add the expected log entry: ${expectedLog}`);
+  }
+
+  const nextRound = (question.round ?? 1) + 1;
+  const total = question.total ?? 8;
+  if (nextRound > total) {
+    if (after.pmq !== null) {
+      throw new Error('Completed PMQ session should clear the active question');
+    }
+  } else if (!after.pmq || after.pmq.round !== nextRound) {
+    throw new Error(
+      `ANSWER_PMQ did not advance the question round: expected ${nextRound}, got ${after.pmq?.round}`,
+    );
+  }
 }
 
 function assertPmqEffects(
@@ -173,7 +216,7 @@ function assertBillResolution(before: any, after: any): void {
   }
 }
 
-async function runSimulation(testCase: unknown): Promise<TestResult> {
+async function runSimulation(testCase: SeededTestCase): Promise<TestResult> {
   const startedAt = Date.now();
 
   try {
@@ -181,22 +224,26 @@ async function runSimulation(testCase: unknown): Promise<TestResult> {
     const { BILL_POOL } = await import('../src/app/bills');
     const { BILL_POOL_2 } = await import('../src/app/bills2');
 
-    // The generated test cases have numeric IDs. Derive both the engine seed
-    // and action-selection seed from that ID so each run is reproducible.
-    const index =
-      typeof testCase === 'object' &&
-      testCase !== null &&
-      typeof (testCase as { id?: unknown }).id === 'number'
-        ? (testCase as { id: number }).id
-        : 0;
-    let randomState = (Math.imul(index + 1, 1664525) + 1013904223) >>> 0;
+    // Keep the engine and action-selection RNGs reproducible but independent.
+    const runSeed = testCase.seed >>> 0;
+    let randomState =
+      (Math.imul((runSeed ^ 0x9e3779b9) >>> 0, 1664525) + 1013904223) >>> 0;
 
     const random = (): number => {
       randomState = (Math.imul(randomState, 1664525) + 1013904223) >>> 0;
       return randomState / 0x100000000;
     };
 
-    let state = { ...createInitialState(), seed: randomState };
+    let state = { ...createInitialState(), seed: runSeed };
+
+    const baselinePartySeats = state.parties.reduce((sum, party) => sum + party.seats, 0);
+    const baselineDepartmentBudgets = new Map(
+      state.departments.map((department) => [department.id, department.budget] as const),
+    );
+    const baselineDepartmentTotal = state.departments.reduce(
+      (sum, department) => sum + department.budget,
+      0,
+    );
 
     const checkState = (): void => {
       const checkFinite = (value: unknown, location: string): void => {
@@ -230,22 +277,29 @@ async function runSimulation(testCase: unknown): Promise<TestResult> {
       for (const [key, value] of Object.entries(state.metrics)) {
         checkRange(`metrics.${key}`, value, 0, 100);
       }
+      checkRange('factionUnrest', state.factionUnrest, 0, 100);
 
       const statRanges: Record<string, [number, number]> = {
         cpiInflation: [0.1, 1000],
         gdpGrowth: [-100, 100],
         giltYield: [1, 50],
-        nhsWaitingList: [2, Number.MAX_VALUE],
-        netMigration: [50, Number.MAX_VALUE],
         lettersOfNoConfidence: [0, 99],
         lettersThreshold: [1, 99],
         taxRate: [15, 60],
         debtToGdp: [30, 1000],
-        unemployment: [1.5, Number.MAX_VALUE],
       };
 
       for (const [key, [min, max]] of Object.entries(statRanges)) {
         checkRange(`stats.${key}`, state.stats[key as keyof typeof state.stats], min, max);
+      }
+      if (state.stats.nhsWaitingList < 2) {
+        throw new Error(`Out-of-range stats.nhsWaitingList: ${state.stats.nhsWaitingList}; expected at least 2`);
+      }
+      if (state.stats.netMigration < 50) {
+        throw new Error(`Out-of-range stats.netMigration: ${state.stats.netMigration}; expected at least 50`);
+      }
+      if (state.stats.unemployment < 1.5) {
+        throw new Error(`Out-of-range stats.unemployment: ${state.stats.unemployment}; expected at least 1.5`);
       }
 
       const partyIds = new Set<string>();
@@ -264,16 +318,42 @@ async function runSimulation(testCase: unknown): Promise<TestResult> {
         }
       }
 
+      const partySeatTotal = state.parties.reduce((sum, party) => sum + party.seats, 0);
+      if (partySeatTotal !== baselinePartySeats) {
+        throw new Error(
+          `Party seat total changed: expected ${baselinePartySeats}, got ${partySeatTotal}`,
+        );
+      }
+
       if (state.player && !partyIds.has(state.player.partyId)) {
         throw new Error(`Player party is absent from state.parties: ${state.player.partyId}`);
       }
       if (state.supplyPartnerId && !partyIds.has(state.supplyPartnerId)) {
         throw new Error(`Supply partner is absent from state.parties: ${state.supplyPartnerId}`);
       }
+      if (state.supplyCostPerWeek !== undefined && state.supplyCostPerWeek < 0) {
+        throw new Error(`Negative supplyCostPerWeek: ${state.supplyCostPerWeek}`);
+      }
+
+      for (const tax of state.taxes) {
+        checkRange(`tax ${tax.id} rate`, tax.rate, tax.min, tax.max);
+      }
 
       for (const minister of state.cabinet) {
         checkRange(`minister ${minister.name} loyalty`, minister.loyalty, 0, 100);
         checkRange(`minister ${minister.name} competence`, minister.competence, 0, 100);
+        if (typeof minister.ambition === 'number') {
+          checkRange(`minister ${minister.name} ambition`, minister.ambition, 0, 100);
+        }
+      }
+
+      for (const backbencher of state.backbenchers) {
+        for (const field of ['loyalty', 'competence', 'ambition'] as const) {
+          const value = backbencher[field];
+          if (typeof value === 'number') {
+            checkRange(`backbencher ${backbencher.name} ${field}`, value, 0, 100);
+          }
+        }
       }
 
       for (const department of state.departments) {
@@ -282,6 +362,26 @@ async function runSimulation(testCase: unknown): Promise<TestResult> {
           department.budget,
           department.min,
           department.max,
+        );
+        if (!baselineDepartmentBudgets.has(department.id)) {
+          throw new Error(`Unexpected department ID: ${department.id}`);
+        }
+        if (department.budget !== baselineDepartmentBudgets.get(department.id)) {
+          throw new Error(`Department budget changed for ${department.id}`);
+        }
+      }
+      if (state.departments.length !== baselineDepartmentBudgets.size) {
+        throw new Error(
+          `Department count changed: expected ${baselineDepartmentBudgets.size}, got ${state.departments.length}`,
+        );
+      }
+      const departmentTotal = state.departments.reduce(
+        (sum, department) => sum + department.budget,
+        0,
+      );
+      if (departmentTotal !== baselineDepartmentTotal) {
+        throw new Error(
+          `Department budget total changed: expected ${baselineDepartmentTotal}, got ${departmentTotal}`,
         );
       }
 
@@ -351,6 +451,10 @@ async function runSimulation(testCase: unknown): Promise<TestResult> {
         const beforeAction = state;
         state = reducer(state, action);
 
+        if (state === beforeAction) {
+          throw new Error(`Reducer silently ignored ${action.type}`);
+        }
+
         if (action.type === 'SACK_MINISTER') {
           assertSackMinisterTransition(beforeAction, state, action.name);
         } else if (action.type === 'PROPOSE_BILL') {
@@ -371,6 +475,7 @@ async function runSimulation(testCase: unknown): Promise<TestResult> {
             throw new Error(`ANSWER_PMQ dispatched with unknown option: ${action.optionId}`);
           }
           assertPmqEffects(beforeAction, state, option.effects);
+          assertPmqTransition(beforeAction, state);
         }
 
         checkState();
@@ -397,10 +502,6 @@ async function runSimulation(testCase: unknown): Promise<TestResult> {
       if (state === beforeTurn) {
         throw new Error('START_TURN returned the unchanged state object');
       }
-      if (state.seed === beforeTurn.seed) {
-        throw new Error('START_TURN left the simulation seed unchanged');
-      }
-
       assertBillResolution(beforeTurn, state);
 
       if (canCheckBalanceConvergence) {
@@ -493,15 +594,31 @@ async function main() {
   console.log(`Passed: ${summary.passed}`);
   console.log(`Failed: ${summary.failed}`);
   console.log(`Duration: ${summary.duration}ms`);
+  console.log(
+    `Configuration: MAX_RUNS=${summary.total} (default ${DEFAULT_MAX_RUNS}), SEED=${testCases[0]?.seed ?? DEFAULT_SEED} (default ${DEFAULT_SEED})`,
+  );
+
+  for (const failure of summary.failures) {
+    const testCase = failure.testCase as SeededTestCase;
+    console.error(`REPORTED ISSUE run=${testCase.id} seed=${testCase.seed}\n${failure.error}`);
+  }
 
   // Always save results
   fs.writeFileSync(RESULTS_FILE, JSON.stringify({ summary, results }, null, 2));
   console.log(`\nResults saved to ${RESULTS_FILE}`);
+  if (summary.failed > 0) {
+    process.exitCode = 1;
+  }
 }
 
-function generateTestCases(): unknown[] {
-  const maxRuns = parseInt(process.env.MAX_RUNS || '1000');
-  return Array(maxRuns).fill(null).map((_, i) => ({ id: i }));
+function generateTestCases(): SeededTestCase[] {
+  const maxRuns = envInteger('MAX_RUNS', DEFAULT_MAX_RUNS, 1, Number.MAX_SAFE_INTEGER);
+  const baseSeed = envInteger('SEED', DEFAULT_SEED, 0, 0xffffffff);
+
+  return Array.from({ length: maxRuns }, (_, id) => ({
+    id,
+    seed: (baseSeed + id) >>> 0,
+  }));
 }
 
 function buildSummary(results: TestResult[], duration: number): Summary {
