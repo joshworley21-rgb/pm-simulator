@@ -183,8 +183,9 @@ export function createInitialState(): GameState {
     obrAssessment: undefined,
     efficiencyTargetPct: 0,
   };
-  const nhsMetrics = nhsMetricsFromGame(s);
-  return { ...s, nhsMetrics, nhsPerformance: calculateNHSPerformance(nhsMetrics) };
+  const initial = { ...s, billResolutions: {} };
+  const nhsMetrics = nhsMetricsFromGame(initial);
+  return { ...initial, nhsMetrics, nhsPerformance: calculateNHSPerformance(nhsMetrics) };
 }
 
 function largestRemainder(weights: Record<string, number>, seats: number): Record<string, number> {
@@ -574,7 +575,28 @@ function weeklyEconomy(s: GameState): GameState {
   };
 }
 
+type BillResolutionOutcome = 'passed' | 'defeated';
+
+interface BillResolution {
+  billId: string;
+  title: string;
+  outcome: BillResolutionOutcome;
+  logMessage: string;
+}
+
+type BillResolutionMap = Record<string, BillResolution>;
+
+function getBillResolutions(s: GameState): BillResolutionMap {
+  return (s as GameState & { billResolutions?: BillResolutionMap }).billResolutions ?? {};
+}
+
+function isBillDue(bill: Bill): boolean {
+  return !Number.isFinite(bill.weeksToPass) || bill.weeksToPass <= 1;
+}
+
 function resolveBill(s: GameState, bill: Bill, rng: () => number): GameState {
+  if (Object.prototype.hasOwnProperty.call(getBillResolutions(s), bill.id)) return s;
+
   const party = s.parties.find((p) => p.id === s.player?.partyId);
   const ownSeats = party?.seats ?? 0;
   // A confidence-and-supply partner votes with the government on money and
@@ -612,7 +634,7 @@ function resolveBill(s: GameState, bill: Bill, rng: () => number): GameState {
   }
 
   // Letters accumulation from backbench rebellion:
-  let letters = s.stats.lettersOfNoConfidence;
+  let letters = s.stats.lettersOfNoConfidence + (bill.effects.lettersDelta ?? 0);
   if (whip === 'free-vote') {
     // Free vote: zero mutiny letters added because MPs are free to vote their conscience!
     letters += 0;
@@ -622,6 +644,12 @@ function resolveBill(s: GameState, bill: Bill, rng: () => number): GameState {
   } else {
     letters += Math.round(bill.rebellionRisk / 8);
   }
+
+  const logMessage = passed
+    ? `LAW PASSED: ${bill.title} (${whip === 'three-line' ? 'three-line whip' : whip === 'free-vote' ? 'free vote' : 'standard whip'})`
+    : partner || ownSeats >= 326
+      ? `BILL DEFEATED: ${bill.title} was voted down in the Commons.`
+      : `BILL DEFEATED: ${bill.title} fell for want of a majority in the Commons.`;
 
   let next = s;
 
@@ -651,7 +679,7 @@ function resolveBill(s: GameState, bill: Bill, rng: () => number): GameState {
       ...next,
       stats: { ...next.stats, budgetBalance: r1(next.stats.budgetBalance - bill.fiscalCost) },
       passedLaws: [bill.title, ...next.passedLaws],
-      log: [`LAW PASSED: ${bill.title} (${whip === 'three-line' ? 'three-line whip' : whip === 'free-vote' ? 'free vote' : 'standard whip'})`, ...(next.log ?? [])].slice(0, 50),
+      log: [logMessage, ...(next.log ?? [])].slice(0, 50),
       headlines: [{ paper: 'The National Standard', title: bill.kicker, stance: 'centrist' as const }, ...next.headlines].slice(0, 4),
     };
   } else {
@@ -664,17 +692,24 @@ function resolveBill(s: GameState, bill: Bill, rng: () => number): GameState {
     }
     next = {
       ...next,
-      log: [
-        partner || ownSeats >= 326
-          ? `BILL DEFEATED: ${bill.title} was voted down in the Commons.`
-          : `BILL DEFEATED: ${bill.title} fell for want of a majority in the Commons.`,
-        ...(next.log ?? []),
-      ].slice(0, 50),
+      log: [logMessage, ...(next.log ?? [])].slice(0, 50),
     };
   }
 
   next = { ...next, stats: { ...next.stats, lettersOfNoConfidence: clamp(letters, 0, 99) } };
-  return next;
+  const resolved: GameState & { billResolutions: BillResolutionMap } = {
+    ...next,
+    billResolutions: {
+      ...getBillResolutions(s),
+      [bill.id]: {
+        billId: bill.id,
+        title: bill.title,
+        outcome: passed ? 'passed' : 'defeated',
+        logMessage,
+      },
+    },
+  };
+  return resolved;
 }
 
 
@@ -896,6 +931,7 @@ function periodicExternal(s: GameState): GameState {
 }
 
 export function advanceWeek(s: GameState): GameState {
+  const resolutionsAtStart = getBillResolutions(s);
   let seed = (s.seed ?? 20260211) >>> 0;
   const rng = (): number => {
     const r = nextRandom(seed);
@@ -954,10 +990,18 @@ export function advanceWeek(s: GameState): GameState {
   }
 
   // 2. Advance bills.
+  const uniqueBills = new Map<string, Bill>();
+  for (const bill of next.bills) {
+    const existing = uniqueBills.get(bill.id);
+    if (!existing || (isBillDue(bill) && !isBillDue(existing))) {
+      uniqueBills.set(bill.id, bill);
+    }
+  }
+
   const stillActive: Bill[] = [];
-  for (const b of next.bills) {
-    if (b.weeksToPass <= 1) next = resolveBill(next, b, rng);
-    else stillActive.push({ ...b, weeksToPass: b.weeksToPass - 1 });
+  for (const bill of uniqueBills.values()) {
+    if (isBillDue(bill)) next = resolveBill(next, bill, rng);
+    else stillActive.push({ ...bill, weeksToPass: bill.weeksToPass - 1 });
   }
   next.bills = stillActive;
 
@@ -1402,6 +1446,20 @@ export function advanceWeek(s: GameState): GameState {
   }
 
   next.seed = seed >>> 0;
+
+  const resolvedThisTurn = Object.entries(getBillResolutions(next))
+    .filter(([id]) => !Object.prototype.hasOwnProperty.call(resolutionsAtStart, id))
+    .map(([, resolution]) => resolution);
+  if (resolvedThisTurn.length > 0) {
+    const resolutionMessages = resolvedThisTurn.map((resolution) => resolution.logMessage);
+    const resolutionMessageSet = new Set(resolutionMessages);
+    const otherLog = next.log.filter((line) => !resolutionMessageSet.has(line));
+    next = {
+      ...next,
+      log: [...resolutionMessages, ...otherLog].slice(0, Math.max(50, resolutionMessages.length)),
+    };
+  }
+
   return next;
 }
 
