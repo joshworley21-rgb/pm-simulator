@@ -1,4 +1,15 @@
 import type { GameState, Action, Party, Effects, Dossier, Bill, Minister, PmqQuestion } from './types';
+import {
+  DEFAULT_TERM_LENGTH,
+  FOREIGN_ISSUE_INTERVAL_MONTHS,
+  HUNG_PARLIAMENT_GRACE_MONTHS,
+  MONTHLY_PMQ_INTERVAL,
+  RESHUFFLE_DISCIPLINE_MONTHS,
+  RESHUFFLE_INTERVAL_MONTHS,
+  TURNS_PER_HALF_YEAR,
+  TURNS_PER_QUARTER,
+  TURNS_PER_YEAR,
+} from './calendar';
 import { INITIAL_PARTIES, INITIAL_RELATIONS, REGIONS, DOSSIER_POOL } from './data';
 import { BILL_POOL } from './bills';
 import { BILL_POOL_2 } from './bills2';
@@ -58,16 +69,9 @@ export const FPTP_EXPONENT = 2.5;
 
 /** Scenario id for the minority-government opening. */
 const HUNG_PARLIAMENT_SCENARIO_ID = 'hung-parliament';
-/**
- * First month a no-confidence motion may be tabled in the hung-parliament
- * scenario (months 1–3 are blocked as the first-100-days protection; allowed from month 4).
- */
-const HUNG_PARLIAMENT_GRACE_MONTH = 4;
 
 /** Modest party-discipline boost earned by a reshuffle that promotes a backbencher. */
 const RESHUFFLE_DISCIPLINE_BONUS = 2;
-/** How many weeks the reshuffle honeymoon lasts on the existing week clock. */
-const RESHUFFLE_DISCIPLINE_WEEKS = 4;
 
 /** Full dossier pool: the original six plus both expanded slates. */
 const ALL_DOSSIERS = [...DOSSIER_POOL, ...DOSSIER_POOL_2, ...DOSSIER_POOL_3];
@@ -125,7 +129,7 @@ export function createInitialState(): GameState {
       budgetBalance: -75,
     },
     week: 1,
-    turnsUntilElection: 60,
+    turnsUntilElection: DEFAULT_TERM_LENGTH,
     isElection: false,
     redBox: [{ ...ALL_DOSSIERS[0] }, { ...ALL_DOSSIERS[2] }],
     selectedDossierId: null,
@@ -147,7 +151,7 @@ export function createInitialState(): GameState {
     budgetDue: false,
     emergencyFiscalActions: 0,
     backbenchers: BACKBENCHERS.map((b) => ({ ...b })),
-    termLength: 60,
+    termLength: DEFAULT_TERM_LENGTH,
     taxes: INITIAL_TAXES.map((t) => ({ ...t })),
     fiscalEventKind: null,
     departments: INITIAL_DEPARTMENTS.map((d) => ({ ...d })),
@@ -229,7 +233,7 @@ function runElection(s: GameState): GameState {
     parties,
     metrics: { ...s.metrics, approval },
     stats: { ...s.stats, lettersOfNoConfidence: 0, lettersThreshold: resignationThreshold(playerSeats) },
-    turnsUntilElection: s.termLength || 60,
+    turnsUntilElection: s.termLength || DEFAULT_TERM_LENGTH,
     isElection: true,
     legacyScore,
     termsWon,
@@ -464,7 +468,7 @@ function weeklyEconomy(s: GameState): GameState {
   const structural = structuralBalance(s);
 
   // Published borrowing converges on the structural position at roughly
-  // 10% a week, so a one-off bailout fades instead of compounding forever.
+  // 10% a month, so a one-off bailout fades instead of compounding forever.
   const balance = r1(st.budgetBalance + (structural - st.budgetBalance) * 0.1);
 
   let gilt = st.giltYield;
@@ -730,7 +734,7 @@ function nhsMetricsFromGame(s: GameState): NHSMetrics {
 }
 
 /**
- * Weekly waiting-list drift in millions, given NHS funding and the Health
+ * Monthly waiting-list drift in millions, given NHS funding and the Health
  * Secretary. Positive growth is the norm; a loyal or skilled secretary offsets
  * part of it, capped so a crisis is only slowed, never reversed.
  */
@@ -742,7 +746,7 @@ export function nhsWaitingDrift(s: GameState): number {
 }
 
 /**
- * NHS drift: under-funding lengthens the waiting list, extra cash shortens
+ * Monthly NHS drift: under-funding lengthens the waiting list, extra cash shortens
  * it, and a service in crisis drags public services down without needing a
  * headline event. The Health Secretary's relief is applied inside
  * nhsWaitingDrift above.
@@ -809,7 +813,11 @@ function weeklyFiscalDrag(s: GameState): GameState {
     thresholdFrozenTurns: frozenTurns,
   };
 
-  if (result.additionalRevenue > 0 && frozenTurns > 0 && frozenTurns % 26 === 0) {
+  if (
+    result.additionalRevenue > 0 &&
+    frozenTurns > 0 &&
+    frozenTurns % TURNS_PER_HALF_YEAR === 0
+  ) {
     next = {
       ...next,
       log: [`FISCAL DRAG: six months of frozen thresholds is quietly raising £${result.additionalRevenue}bn a year. ${result.taxpayersAffected} taxpayers dragged into a higher band.`, ...(next.log ?? [])].slice(0, 50),
@@ -849,8 +857,8 @@ function periodicExternal(s: GameState): GameState {
   let next = s;
   const tradeStatus = next.tradeDealStatus ? cloneTradeDealStatus(next.tradeDealStatus) : cloneTradeDealStatus(DEFAULT_TRADE_DEAL_STATUS);
 
-  // Bank of England Monetary Policy Committee (MPC) review (quarterly: month % 3 == 0)
-  if (next.week % 3 === 0 && !next.gameOver) {
+  // Bank of England Monetary Policy Committee (MPC) review (quarterly).
+  if (next.week % TURNS_PER_QUARTER === 0 && !next.gameOver) {
     if (next.stats.cpiInflation > 4.5) {
       next = applyEffects(next, {
         cpiInflation: -0.2,
@@ -875,8 +883,8 @@ function periodicExternal(s: GameState): GameState {
     }
   }
 
-  // Quarterly trade progression & economic impact (month % 4 == 0)
-  if (next.week % 4 === 0) {
+  // Quarterly trade progression and economic impact.
+  if (next.week % TURNS_PER_QUARTER === 0) {
     const fs = findPostHolder(next.cabinet, 'Foreign Secretary');
     const fsBonus = fs ? Math.max(0, Math.round(((fs.competence - 50) / 50) * 15)) : 0;
     const progressGain = 20 + fsBonus;
@@ -910,7 +918,7 @@ function periodicExternal(s: GameState): GameState {
     next = { ...next, tradeGdpImpact: economics.gdpImpact };
   }
 
-  if (next.week % 12 === 0) {
+  if (next.week % TURNS_PER_YEAR === 0) {
     const effSavings = spendingReviewEfficiencySavings((next.efficiencyTargetPct ?? 0) as EfficiencyTargetPct);
     const envelope =
       DEFAULT_SPENDING_REVIEW.totalCapital +
@@ -947,12 +955,12 @@ export function advanceWeek(s: GameState): GameState {
     isElection: false,
   };
 
-  // A reshuffle honeymoon is temporary: once its window on the week clock has
+  // A reshuffle honeymoon is temporary: once its window on the month clock has
   // passed, remove the confidence that was actually granted at the time.
   if (
     next.reshuffleDisciplineBonus !== undefined &&
     next.lastReshuffleWeek !== undefined &&
-    next.week > next.lastReshuffleWeek + RESHUFFLE_DISCIPLINE_WEEKS
+    next.week > next.lastReshuffleWeek + RESHUFFLE_DISCIPLINE_MONTHS
   ) {
     const bonus = next.reshuffleDisciplineBonus;
     next = {
@@ -1032,7 +1040,8 @@ export function advanceWeek(s: GameState): GameState {
     // table a confidence motion during months 1–3, giving the new government a
     // 100-day window to settle into office and negotiate support.
     const inGracePeriod =
-      next.scenarioId === HUNG_PARLIAMENT_SCENARIO_ID && next.week < HUNG_PARLIAMENT_GRACE_MONTH;
+      next.scenarioId === HUNG_PARLIAMENT_SCENARIO_ID &&
+      next.week < HUNG_PARLIAMENT_GRACE_MONTHS;
     if (pmSeats + partnerSeats < 326 && next.week % cadence === 0 && !inGracePeriod) {
       const sponsor = [...next.parties]
         .filter((p) => p.id !== next.player?.partyId)
@@ -1116,7 +1125,7 @@ export function advanceWeek(s: GameState): GameState {
   if (
     !next.gameOver &&
     next.cabinet.filter((m) => !m.coalition).length > 1 &&
-    (next.lastReshuffleWeek ?? -99) + 8 <= next.week &&
+    (next.lastReshuffleWeek ?? -99) + RESHUFFLE_INTERVAL_MONTHS <= next.week &&
     (mood.consideringDefection >= 2 || mood.averageLoyalty < 40) &&
     next.backbenchers.length > 0
   ) {
@@ -1387,15 +1396,19 @@ export function advanceWeek(s: GameState): GameState {
     }
   }
 
-  // 8. Every ~5 weeks, PMQs or a foreign call arises.
-  // PMQs is a weekly fixture when the House sits (LOTO gets six questions,
-  // the third party two), so it fires more often than a summit would.
-  if (next.week % 4 === 0 && !next.gameOver && !next.pmq) {
+  // 8. PMQs or a foreign call arises on its scheduled monthly intervals.
+  // PMQs is a monthly fixture when the House sits (LOTO gets six questions,
+  // the third party two).
+  if (next.week % MONTHLY_PMQ_INTERVAL === 0 && !next.gameOver && !next.pmq) {
     const q = pmqQuestion(next, 1, [], next.pmqRecentIds ?? []);
     next.pmq = q;
     next.pmqSessionAskedIds = [q.id];
   }
-  if (next.week % 7 === 0 && !next.gameOver && next.foreignIssues.length < 2) {
+  if (
+    next.week % FOREIGN_ISSUE_INTERVAL_MONTHS === 0 &&
+    !next.gameOver &&
+    next.foreignIssues.length < 2
+  ) {
     const fi = FOREIGN_POOL[Math.floor(rng() * FOREIGN_POOL.length)];
     if (!next.foreignIssues.some((f) => f.id === fi.id)) {
       next.foreignIssues = [...next.foreignIssues, { ...fi }];
@@ -1405,7 +1418,7 @@ export function advanceWeek(s: GameState): GameState {
   // 8b. Two fiscal events per year: Autumn Statement (week % 6 == 0) and Budget (week % 12 == 0).
   if (!next.gameOver) {
     let fiscalEvent = false;
-    if (next.week % 12 === 0) {
+    if (next.week % TURNS_PER_YEAR === 0) {
       // Annual boundary: settle the Personal Allowance for the new tax year
       // exactly once per cycle. A frozen allowance is held; otherwise it is
       // uprated by the CPI-like proxy. Delivery sets the freeze *duration*,
@@ -1414,7 +1427,7 @@ export function advanceWeek(s: GameState): GameState {
       next.budgetDue = true;
       next.fiscalEventKind = 'budget';
       fiscalEvent = true;
-    } else if (next.week % 6 === 0) {
+    } else if (next.week % TURNS_PER_HALF_YEAR === 0) {
       next.budgetDue = true;
       next.fiscalEventKind = 'autumn';
       fiscalEvent = true;
@@ -1765,7 +1778,7 @@ export function reducer(state: GameState, action: Action): GameState {
       return { ...state, ministerPicker: null };
 
     case 'SET_TERM_LENGTH': {
-      const len = action.months ?? action.weeks ?? 60;
+      const len = action.months ?? action.weeks ?? DEFAULT_TERM_LENGTH;
       return { ...state, termLength: len, turnsUntilElection: len };
     }
 
@@ -1827,7 +1840,7 @@ export function reducer(state: GameState, action: Action): GameState {
 
     case 'DELIVER_CUSTOM_BUDGET':
     case 'DELIVER_BUDGET': {
-      if (inPurdah(state)) return state;
+      if (inPurdah(state) || !isFiscalWindow(state)) return state;
 
       const plan = action.type === 'DELIVER_CUSTOM_BUDGET' ? action.plan : action.customPlan;
       if (plan) {
@@ -1898,6 +1911,7 @@ export function reducer(state: GameState, action: Action): GameState {
     }
 
     case 'SKIP_BUDGET':
+      if (!isFiscalWindow(state)) return state;
       return {
         ...state,
         budgetDue: false,
@@ -1951,6 +1965,7 @@ export function reducer(state: GameState, action: Action): GameState {
 
     case 'SET_AUTUMN_TAXES': {
       // The Autumn Statement delivers the tax changes set since the last Budget.
+      if (!isFiscalWindow(state)) return state;
       return {
         ...state,
         budgetDue: false,

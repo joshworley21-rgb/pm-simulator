@@ -8,6 +8,7 @@
  */
 
 import type { Effects } from './types';
+import { TURNS_PER_HALF_YEAR, TURNS_PER_YEAR } from './calendar';
 
 export interface FiscalDragParameters {
   /** Personal allowance (£) — frozen at the 2022/23 level of £12,570 */
@@ -238,7 +239,7 @@ export function previewFiscalDrag(
     additionalRate: 45,
     cpiInflation,
     realIncomeGrowth,
-    fiscalYear: 2024 + Math.floor((week - 1) / 12),
+    fiscalYear: 2024 + Math.floor((week - 1) / TURNS_PER_YEAR),
   });
 }
 
@@ -246,9 +247,9 @@ export function previewFiscalDrag(
 export function fiscalDragToEffects(result: FiscalDragResult): Effects {
   if (result.additionalRevenue <= 0) return {};
   return {
-    // A twelfth of the annual figure each month-ish, so a 60-week term
-    // accumulates roughly five years of drag.
-    budgetBalance: Math.round((result.additionalRevenue / 12) * 100) / 100,
+    // A monthly slice of the annual figure, so a 60-month term accumulates
+    // roughly five years of drag.
+    budgetBalance: Math.round((result.additionalRevenue / TURNS_PER_YEAR) * 100) / 100,
     // Voters notice stealth taxation, but gently.
     approval: -Math.min(2, result.effectiveTaxRateChange * 1.5),
     partyConfidence: -Math.min(1, result.effectiveTaxRateChange * 0.5),

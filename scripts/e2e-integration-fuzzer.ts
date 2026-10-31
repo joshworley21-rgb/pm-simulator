@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'node:url';
 import type { Effects } from '../src/app/types';
+import { TURNS_PER_QUARTER } from '../src/app/calendar';
 
 interface TestResult {
   passed: boolean;
@@ -216,13 +217,74 @@ function assertBillResolution(before: any, after: any): void {
   }
 }
 
+function assertFiscalActionGuards(
+  createInitialState: () => any,
+  reducer: (state: any, action: any) => any,
+  getDefaultCustomPlan: (state: any) => any,
+): void {
+  const outsidePurdah = {
+    ...createInitialState(),
+    phase: 'playing',
+    turnsUntilElection: 20,
+    budgetDue: false,
+    fiscalEventKind: null,
+  };
+
+  const cases = [
+    {
+      name: 'DELIVER_BUDGET',
+      makeAction: () => ({ type: 'DELIVER_BUDGET', packageId: 'budget-restraint' }),
+    },
+    {
+      name: 'DELIVER_CUSTOM_BUDGET',
+      makeAction: (state: any) => ({
+        type: 'DELIVER_CUSTOM_BUDGET',
+        plan: getDefaultCustomPlan(state),
+      }),
+    },
+    {
+      name: 'SKIP_BUDGET',
+      makeAction: () => ({ type: 'SKIP_BUDGET' }),
+    },
+    {
+      name: 'SET_AUTUMN_TAXES',
+      makeAction: () => ({ type: 'SET_AUTUMN_TAXES' }),
+    },
+  ];
+
+  for (const fiscalAction of cases) {
+    const offCycleAction = fiscalAction.makeAction(outsidePurdah);
+    if (reducer(outsidePurdah, offCycleAction) !== outsidePurdah) {
+      throw new Error(`${fiscalAction.name} changed state outside a fiscal window`);
+    }
+
+    const openWindow = {
+      ...outsidePurdah,
+      budgetDue: true,
+      fiscalEventKind: 'budget',
+    };
+    const action = fiscalAction.makeAction(openWindow);
+    const delivered = reducer(openWindow, action);
+    if (delivered.budgetDue !== false || delivered.fiscalEventKind !== null) {
+      throw new Error(`${fiscalAction.name} did not consume the open fiscal window`);
+    }
+
+    if (reducer(delivered, action) !== delivered) {
+      throw new Error(`${fiscalAction.name} changed state after its fiscal window was consumed`);
+    }
+  }
+}
+
 async function runSimulation(testCase: SeededTestCase): Promise<TestResult> {
   const startedAt = Date.now();
 
   try {
     const { createInitialState, reducer, structuralBalance } = await import('../src/app/engine');
+    const { getDefaultCustomPlan } = await import('../src/app/budget');
     const { BILL_POOL } = await import('../src/app/bills');
     const { BILL_POOL_2 } = await import('../src/app/bills2');
+
+    assertFiscalActionGuards(createInitialState, reducer, getDefaultCustomPlan);
 
     // Keep the engine and action-selection RNGs reproducible but independent.
     const runSeed = testCase.seed >>> 0;
@@ -489,7 +551,7 @@ async function runSimulation(testCase: SeededTestCase): Promise<TestResult> {
       const canCheckBalanceConvergence =
         !hasBillSettling &&
         !beforeTurn.supplyPartnerId &&
-        nextWeek % 4 !== 0;
+        nextWeek % TURNS_PER_QUARTER !== 0;
 
       state = reducer(state, { type: 'START_TURN' } as any);
       checkState();

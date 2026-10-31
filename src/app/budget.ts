@@ -1,4 +1,5 @@
 import type { BudgetPackage, CustomBudgetPlan, GameState, Effects } from './types';
+import { TURNS_PER_YEAR } from './calendar';
 import { TAX_YIELD_PER_POINT } from './taxes';
 import {
   FROZEN_THRESHOLDS,
@@ -37,7 +38,7 @@ export const FISCAL_RULE_DEFICIT_CEILING = -65;
  * five-year term caps the freeze at five years.
  */
 export function personalAllowanceFreezeCap(termLength?: number): number {
-  return Math.max(0, Math.floor((termLength || 60) / 12));
+  return Math.max(0, Math.floor((termLength || 60) / TURNS_PER_YEAR));
 }
 
 /**
