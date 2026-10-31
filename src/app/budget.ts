@@ -32,6 +32,9 @@ export const STAMP_DUTY_RELIEF_COST = 3.0;
 /** Sustainable annual borrowing benchmark for debt-to-GDP stability (£bn) */
 export const FISCAL_RULE_DEFICIT_CEILING = -65;
 
+/** Opening UK nominal GDP estimate (£bn), used to scale the primary balance. */
+export const DEFAULT_NOMINAL_GDP = 2_800;
+
 /**
  * Longest Personal Allowance freeze a campaign can contain, in annual Budget
  * cycles (tax years). One annual Budget falls every twelve turns, so a

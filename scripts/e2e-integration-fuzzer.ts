@@ -8,6 +8,8 @@ import {
   TURNS_PER_QUARTER,
   TURNS_PER_YEAR,
 } from '../src/app/calendar';
+import { DEFAULT_NOMINAL_GDP } from '../src/app/budget';
+import { TAX_YIELD_PER_POINT } from '../src/app/taxes';
 
 interface TestResult {
   passed: boolean;
@@ -367,17 +369,169 @@ function assertFiscalMilestones(
   }
 }
 
+function assertMacroDynamics(
+  createInitialState: () => any,
+  advanceWeek: (state: any) => any,
+  effectiveTaxBurden: (state: any) => number,
+): void {
+  const initial = createInitialState();
+  const parties = initial.parties.map((party: any, index: number) => ({
+    ...party,
+    seats: index === 0 ? 650 : 0,
+  }));
+
+  const makeState = (overrides: any = {}) => {
+    const { stats: statsOverride, ...rest } = overrides;
+    return {
+      ...initial,
+      phase: 'playing',
+      player: {
+        firstName: 'Test',
+        lastName: 'Prime Minister',
+        partyId: parties[0].id,
+        background: 'business',
+      },
+      parties,
+      cabinet: [],
+      backbenchers: [],
+      regionSeats: {},
+      turnsUntilElection: 10000,
+      termLength: 10000,
+      gameOver: null,
+      ...rest,
+      stats: {
+        ...initial.stats,
+        lettersOfNoConfidence: 0,
+        lettersThreshold: 99,
+        ...(statsOverride ?? {}),
+      },
+    };
+  };
+
+  const weightedCandidates = initial.taxes
+    .map((tax: any) => ({
+      tax,
+      weight: Math.max(0, TAX_YIELD_PER_POINT[tax.id] ?? 0),
+    }))
+    .filter((candidate: any) => candidate.weight > 0)
+    .sort((a: any, b: any) => a.weight - b.weight);
+  if (weightedCandidates.length < 2) {
+    throw new Error('Cannot verify weighted tax burden with fewer than two tax bases');
+  }
+  const lowWeight = weightedCandidates[0];
+  const highWeight = weightedCandidates[weightedCandidates.length - 1];
+  if (lowWeight.weight === highWeight.weight) {
+    throw new Error('Tax-base weights must differ to verify GDP-weighted tax burden');
+  }
+  const taxState = {
+    taxes: [
+      { ...lowWeight.tax, rate: 20 },
+      { ...highWeight.tax, rate: 40 },
+    ],
+  };
+  const expectedWeightedBurden =
+    (20 * lowWeight.weight + 40 * highWeight.weight) /
+    (lowWeight.weight + highWeight.weight);
+  const actualWeightedBurden = effectiveTaxBurden(taxState);
+  if (Math.abs(actualWeightedBurden - expectedWeightedBurden) > 1e-10) {
+    throw new Error(
+      `Tax burden is not GDP-weighted: expected ${expectedWeightedBurden}, got ${actualWeightedBurden}`,
+    );
+  }
+  if (Math.abs(actualWeightedBurden - 30) < 1e-10) {
+    throw new Error('Tax burden unexpectedly matches the unweighted average');
+  }
+
+  const unemploymentHorizon = TURNS_PER_QUARTER;
+  let recession = makeState({ stats: { gdpGrowth: -2, unemployment: 5 } });
+  const recessionStartingUnemployment = recession.stats.unemployment;
+  for (let turn = 0; turn < unemploymentHorizon; turn++) {
+    recession = advanceWeek(recession);
+    if (recession.stats.unemployment < 0 || recession.stats.unemployment > 20) {
+      throw new Error(
+        `Unemployment escaped 0..20 during recession: ${recession.stats.unemployment}`,
+      );
+    }
+  }
+  if (recession.stats.unemployment <= recessionStartingUnemployment) {
+    throw new Error('Unemployment should rise when GDP growth is below potential');
+  }
+
+  let expansion = makeState({ stats: { gdpGrowth: 5, unemployment: 5 } });
+  const expansionStartingUnemployment = expansion.stats.unemployment;
+  for (let turn = 0; turn < unemploymentHorizon; turn++) {
+    expansion = advanceWeek(expansion);
+    if (expansion.stats.unemployment < 0 || expansion.stats.unemployment > 20) {
+      throw new Error(
+        `Unemployment escaped 0..20 during expansion: ${expansion.stats.unemployment}`,
+      );
+    }
+  }
+  if (expansion.stats.unemployment >= expansionStartingUnemployment) {
+    throw new Error('Unemployment should fall when GDP growth is above potential');
+  }
+
+  const stableYieldState = makeState({
+    stats: { debtToGdp: 100, cpiInflation: 2.5, gdpGrowth: 1.2, giltYield: 12 },
+  });
+  let yieldState = stableYieldState;
+  for (let turn = 0; turn < TURNS_PER_YEAR; turn++) {
+    yieldState = advanceWeek(yieldState);
+  }
+  if (yieldState.stats.giltYield >= stableYieldState.stats.giltYield) {
+    throw new Error('Gilt yields did not mean-revert from a high starting rate');
+  }
+  if (yieldState.stats.giltYield < 3 || yieldState.stats.giltYield > 6) {
+    throw new Error(`Gilt yields failed to return near neutral: ${yieldState.stats.giltYield}`);
+  }
+
+  let stressState = makeState({
+    nominalGdp: DEFAULT_NOMINAL_GDP,
+    stats: {
+      debtToGdp: 250,
+      budgetBalance: -300,
+      cpiInflation: 8,
+      gdpGrowth: -2,
+      unemployment: 19.5,
+    },
+  });
+  const startingDebtRatio = stressState.stats.debtToGdp;
+  const startingNominalGdp = stressState.nominalGdp;
+  for (let turn = 0; turn < TURNS_PER_YEAR; turn++) {
+    stressState = advanceWeek(stressState);
+    if (!Number.isFinite(stressState.stats.debtToGdp)) {
+      throw new Error('Debt-to-GDP became non-finite under macroeconomic stress');
+    }
+    if (stressState.stats.unemployment < 0 || stressState.stats.unemployment > 20) {
+      throw new Error(`Unemployment escaped 0..20 under stress: ${stressState.stats.unemployment}`);
+    }
+  }
+  if (stressState.stats.debtToGdp === startingDebtRatio) {
+    throw new Error('Debt-to-GDP did not evolve under macroeconomic stress');
+  }
+  if (stressState.stats.debtToGdp <= 30 || stressState.stats.debtToGdp >= 1000) {
+    throw new Error(`Debt-to-GDP saturated under stress: ${stressState.stats.debtToGdp}`);
+  }
+  if (!Number.isFinite(stressState.nominalGdp) || stressState.nominalGdp === startingNominalGdp) {
+    throw new Error('Nominal GDP did not evolve finitely under macroeconomic stress');
+  }
+  if (stressState.stats.giltYield > 20) {
+    throw new Error(`Gilt yields ran away under stress: ${stressState.stats.giltYield}`);
+  }
+}
+
 async function runSimulation(testCase: SeededTestCase): Promise<TestResult> {
   const startedAt = Date.now();
 
   try {
-    const { createInitialState, reducer, structuralBalance } = await import('../src/app/engine');
+    const { createInitialState, reducer, advanceWeek, structuralBalance, effectiveTaxBurden } = await import('../src/app/engine');
     const { getDefaultCustomPlan } = await import('../src/app/budget');
     const { BILL_POOL } = await import('../src/app/bills');
     const { BILL_POOL_2 } = await import('../src/app/bills2');
 
     assertFiscalActionGuards(createInitialState, reducer, getDefaultCustomPlan);
     assertFiscalMilestones(createInitialState, reducer);
+    assertMacroDynamics(createInitialState, advanceWeek, effectiveTaxBurden);
 
     // Keep the engine and action-selection RNGs reproducible but independent.
     const runSeed = testCase.seed >>> 0;
@@ -442,6 +596,7 @@ async function runSimulation(testCase: SeededTestCase): Promise<TestResult> {
         lettersThreshold: [1, 99],
         taxRate: [15, 60],
         debtToGdp: [30, 1000],
+        unemployment: [0, 20],
       };
 
       for (const [key, [min, max]] of Object.entries(statRanges)) {
@@ -452,9 +607,6 @@ async function runSimulation(testCase: SeededTestCase): Promise<TestResult> {
       }
       if (state.stats.netMigration < 50) {
         throw new Error(`Out-of-range stats.netMigration: ${state.stats.netMigration}; expected at least 50`);
-      }
-      if (state.stats.unemployment < 1.5) {
-        throw new Error(`Out-of-range stats.unemployment: ${state.stats.unemployment}; expected at least 1.5`);
       }
 
       const partyIds = new Set<string>();

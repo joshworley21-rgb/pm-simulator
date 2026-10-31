@@ -150,8 +150,16 @@ export const FISCAL_DRAG_SCENARIOS = {
   },
 } as const;
 
+/** Annual nominal GDP growth (%) from real growth and inflation. */
+export function nominalGdpGrowthRate(realGrowth: number, inflation: number): number {
+  return realGrowth + inflation + (realGrowth * inflation) / 100;
+}
+
 export function calculateFiscalDrag(params: FiscalDragParameters): FiscalDragResult {
-  const nominalGrowth = Math.max(0, params.realIncomeGrowth + params.cpiInflation);
+  const nominalGrowth = Math.max(
+    0,
+    nominalGdpGrowthRate(params.realIncomeGrowth, params.cpiInflation),
+  );
   // Bracket-creep drag is driven by the general threshold-freeze policy applied
   // to the rate cutoffs only. The Personal Allowance level is deliberately NOT
   // part of this gate: it is scored once, as a separate recurring estimate

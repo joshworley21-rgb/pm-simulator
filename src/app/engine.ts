@@ -16,14 +16,14 @@ import { INITIAL_PARTIES, INITIAL_RELATIONS, REGIONS, DOSSIER_POOL } from './dat
 import { BILL_POOL } from './bills';
 import { BILL_POOL_2 } from './bills2';
 import { DEFAULT_CABINET, FOREIGN_POOL, PMQ_POOL, PMQ_TEMPLATES, BACKBENCHERS } from './politics';
-import { BUDGET_PACKAGES, calculateCustomBudget, DEFAULT_PERSONAL_ALLOWANCE, personalAllowanceFreezeCap, fuelDutyRecurringRevenue, tripleLockRecurringRevenue, publicSectorPayRecurringRevenue, stampDutyRecurringRevenue } from './budget';
+import { BUDGET_PACKAGES, calculateCustomBudget, DEFAULT_PERSONAL_ALLOWANCE, DEFAULT_NOMINAL_GDP, personalAllowanceFreezeCap, fuelDutyRecurringRevenue, tripleLockRecurringRevenue, publicSectorPayRecurringRevenue, stampDutyRecurringRevenue } from './budget';
 import { INITIAL_TAXES, TAX_YIELD_PER_POINT } from './taxes';
 import { INITIAL_DEPARTMENTS } from './spending';
 import type { Region } from './data';
 import { advanceRelationDecay, warmMutual, COALITION_WARMTH, SUPPLY_WARMTH } from './diplomacy';
 
 // ===== Simulation modules (all of these run inside advanceWeek) =====
-import { fiscalDragToEffects, FROZEN_THRESHOLDS, previewFiscalDrag, calculatePersonalAllowanceRevenue } from './fiscalDragIntegration';
+import { fiscalDragToEffects, FROZEN_THRESHOLDS, previewFiscalDrag, calculatePersonalAllowanceRevenue, nominalGdpGrowthRate } from './fiscalDragIntegration';
 import {
   calculateTradeDealEconomics,
   calculateTradeDealChange,
@@ -104,6 +104,12 @@ const DEBT_TO_GDP_MAX = 1000;
 const GILT_YIELD_MAX = 50;
 const GDP_GROWTH_MIN = -100;
 const GDP_GROWTH_MAX = 100;
+const NEUTRAL_GILT_YIELD = 4.2;
+const DEBT_YIELD_SENSITIVITY = 0.01;
+const INFLATION_EXPECTATION_YIELD_SENSITIVITY = 0.5;
+const GILT_MEAN_REVERSION_MONTHLY_RATE = 0.2;
+const POTENTIAL_GDP_GROWTH = 1.2;
+const OKUN_COEFFICIENT = 0.4;
 
 function resignationThreshold(seats: number): number {
   return Math.max(15, Math.round(seats * 0.15));
@@ -138,6 +144,7 @@ export function createInitialState(): GameState {
       unemployment: 4.2,
       budgetBalance: -75,
     },
+    nominalGdp: DEFAULT_NOMINAL_GDP,
     week: 1,
     turnsUntilElection: DEFAULT_TERM_LENGTH,
     isElection: false,
@@ -286,7 +293,7 @@ function applyEffects(s: GameState, fx: Effects): GameState {
     lettersThreshold: s.stats.lettersThreshold,
     taxRate: r1(clamp(s.stats.taxRate + (fx.taxRate ?? 0), 15, 60)),
     debtToGdp: r1(clamp(s.stats.debtToGdp + (fx.debtToGdp ?? 0), 30, DEBT_TO_GDP_MAX)),
-    unemployment: r1(Math.max(1.5, s.stats.unemployment + (fx.unemployment ?? 0))),
+    unemployment: clamp(s.stats.unemployment + (fx.unemployment ?? 0), 0, 20),
     budgetBalance: r1(s.stats.budgetBalance + (fx.budgetBalance ?? 0)),
   };
   return { ...s, parties, metrics, stats };
@@ -431,6 +438,15 @@ export function personalAllowanceRevenue(s: GameState): number {
   return calculatePersonalAllowanceRevenue(s.personalAllowance ?? DEFAULT_PERSONAL_ALLOWANCE);
 }
 
+function structuralInterestBill(s: GameState): number {
+  return Math.max(0, (s.stats.debtToGdp - 100) * 0.6);
+}
+
+/** Primary balance is revenue minus spending, excluding the structural interest adjustment. */
+export function primaryBalance(s: GameState): number {
+  return structuralBalance(s) + structuralInterestBill(s);
+}
+
 export function structuralBalance(s: GameState): number {
   const BASE_DEFICIT = -75;
   const BASE_SPEND = 510;
@@ -457,7 +473,7 @@ export function structuralBalance(s: GameState): number {
   // Spending Review efficiency target: cross-Whitehall efficiency savings
   // offset resource spending pressure each year.
   const efficiencySavings = spendingReviewEfficiencySavings((s.efficiencyTargetPct ?? 0) as EfficiencyTargetPct);
-  const interestBill = Math.max(0, (s.stats.debtToGdp - 100) * 0.6);
+  const interestBill = structuralInterestBill(s);
   return (
     BASE_DEFICIT +
     taxDelta -
@@ -471,6 +487,18 @@ export function structuralBalance(s: GameState): number {
     efficiencySavings -
     interestBill
   );
+}
+
+/** GDP-exposure-weighted average of the current tax rates. */
+export function effectiveTaxBurden(s: Pick<GameState, 'taxes'>): number {
+  let weightedRates = 0;
+  let totalWeight = 0;
+  for (const tax of s.taxes) {
+    const weight = Math.max(0, TAX_YIELD_PER_POINT[tax.id] ?? 0);
+    weightedRates += tax.rate * weight;
+    totalWeight += weight;
+  }
+  return totalWeight > 0 ? weightedRates / totalWeight : 0;
 }
 
 function weeklyEconomy(s: GameState): GameState {
@@ -489,44 +517,27 @@ function weeklyEconomy(s: GameState): GameState {
   let gdp = st.gdpGrowth;
   let confidence = s.metrics.partyConfidence;
   let economy = s.metrics.economy;
+  let unemployment = st.unemployment;
 
   // 1. Severe Deficit & Non-Linear Market Panic / Hyperinflation:
   // Baseline UK structural deficit is ~ -75bn to -81bn.
   // When deficits spiral past -100bn, markets panic and uncosted borrowing compounds.
   if (structural < -100) {
     const excessDeficit = (-structural - 100) / 100;
-    // Market panic multiplier: gilt spike scales non-linearly with deficit severity
-    gilt += (0.85 * excessDeficit + 0.55 * Math.pow(excessDeficit, 1.4)) / TURNS_PER_MONTH;
-    // Unfunded debt accumulation (deficit compounding with interest costs)
-    debt += ((-structural) / 10.0) * (1 + Math.max(0, gilt - 4.2) * 0.35) / TURNS_PER_MONTH;
     // Hyperinflation trigger: massive unfinanced deficits compound inflation
     cpi += (5.2 * Math.pow(excessDeficit, 1.2)) / TURNS_PER_MONTH;
     confidence -= Math.min(5, Math.round(excessDeficit * 1.5)) / TURNS_PER_MONTH;
   } else if (structural < -65) {
     // Normal / sustainable deficit range
-    debt += Math.min(0.25, -structural / 400) / TURNS_PER_MONTH;
-    // In calm conditions, gilts mean-revert towards 4.0%
-    if (gilt > 4.2) gilt -= (gilt - 4.2) * monthlyRateToWeekly(0.1);
   } else if (structural > 120) {
     // Extreme austerity / severe fiscal contraction
     const excessSurplus = (structural - 120) / 100;
-    debt -= Math.min(1.5, excessSurplus * 0.6) / TURNS_PER_MONTH;
     gdp -= (0.6 * excessSurplus) / TURNS_PER_MONTH;
     cpi -= (0.2 * excessSurplus) / TURNS_PER_MONTH;
-  } else if (structural > 0) {
-    gilt -= 0.04 / TURNS_PER_MONTH;
-    debt -= 0.2;
-  }
-
-  // 2. Debt Death Spiral: when debt exceeds 120% of GDP, interest burden escalates
-  if (debt > 120) {
-    const excessDebt = (debt - 120) / 10;
-    gilt += excessDebt * 0.55;
-    debt += excessDebt * 2.8;
   }
 
   // 3. Capital Flight: punitive average tax rates crush GDP growth (baseline is ~22%)
-  const avgTax = s.taxes.reduce((acc, t) => acc + t.rate, 0) / (s.taxes.length || 1);
+  const avgTax = effectiveTaxBurden(s);
   if (avgTax > 35) {
     gdp -= (Math.pow((avgTax - 35) / 10, 1.1) * 0.75) / TURNS_PER_MONTH;
   }
@@ -553,10 +564,43 @@ function weeklyEconomy(s: GameState): GameState {
     cpi -= (cpi - 2.5) * monthlyRateToWeekly(0.05);
   }
 
+  // Okun's law: growth above potential lowers unemployment; below-potential
+  // growth raises it. The coefficient is an annual change per growth point.
+  unemployment = clamp(
+    unemployment - (OKUN_COEFFICIENT * (gdp - POTENTIAL_GDP_GROWTH)) / TURNS_PER_YEAR,
+    0,
+    20,
+  );
+
+  // Yields respond to debt and inflation expectations, while reverting toward
+  // a neutral rate instead of compounding through a debt-spiral feedback loop.
+  const inflationExpectations = Math.log(Math.max(0.1, cpi / 2.5));
+  const giltTarget =
+    NEUTRAL_GILT_YIELD +
+    (debt - 100) * DEBT_YIELD_SENSITIVITY +
+    inflationExpectations * INFLATION_EXPECTATION_YIELD_SENSITIVITY;
+  gilt +=
+    (giltTarget - gilt) * monthlyRateToWeekly(GILT_MEAN_REVERSION_MONTHLY_RATE);
+
+  // Debt-ratio dynamics: primary deficit/GDP plus (interest minus nominal
+  // GDP growth) times the current debt ratio, applied at the weekly cadence.
+  const nominalGrowth = nominalGdpGrowthRate(gdp, cpi);
+  const currentNominalGdp =
+    typeof s.nominalGdp === 'number' && Number.isFinite(s.nominalGdp) && s.nominalGdp > 0
+      ? s.nominalGdp
+      : DEFAULT_NOMINAL_GDP;
+  const primaryDeficitRatio = (-primaryBalance(s) / currentNominalGdp) * 100;
+  debt +=
+    (primaryDeficitRatio + ((gilt - nominalGrowth) / 100) * debt) / TURNS_PER_YEAR;
+  const nextNominalGdp = Math.max(
+    1,
+    currentNominalGdp * (1 + nominalGrowth / (100 * TURNS_PER_YEAR)),
+  );
+
   // Expensive borrowing drags on the real economy
-  if (st.giltYield > 6) economy -= 0.5 / TURNS_PER_MONTH;
-  else if (st.giltYield > 5) economy -= 0.25 / TURNS_PER_MONTH;
-  else if (st.giltYield < 3.5 && st.cpiInflation < 3) economy += 0.15 / TURNS_PER_MONTH;
+  if (gilt > 6) economy -= 0.5 / TURNS_PER_MONTH;
+  else if (gilt > 5) economy -= 0.25 / TURNS_PER_MONTH;
+  else if (gilt < 3.5 && cpi < 3) economy += 0.15 / TURNS_PER_MONTH;
   economy = clamp(economy, 0, 100);
 
   let approval = s.metrics.approval;
@@ -570,7 +614,7 @@ function weeklyEconomy(s: GameState): GameState {
   approval += (approvalTarget - approval) * monthlyRateToWeekly(0.09);
 
   if (cpi > 4) approval -= 1 / TURNS_PER_MONTH;
-  if (st.unemployment > 6) approval -= 1 / TURNS_PER_MONTH;
+  if (unemployment > 6) approval -= 1 / TURNS_PER_MONTH;
   approval = clamp(approval, 0, 100);
 
   // Unity recovers toward what popularity can sustain
@@ -579,6 +623,7 @@ function weeklyEconomy(s: GameState): GameState {
 
   return {
     ...s,
+    nominalGdp: r1(nextNominalGdp),
     stats: {
       ...st,
       budgetBalance: balance,
@@ -586,6 +631,9 @@ function weeklyEconomy(s: GameState): GameState {
       debtToGdp: r1(clamp(debt, 30, DEBT_TO_GDP_MAX)),
       cpiInflation: r1(clamp(cpi, 0.1, CPI_INFLATION_MAX)),
       gdpGrowth: r1(clamp(gdp, GDP_GROWTH_MIN, GDP_GROWTH_MAX)),
+      // Preserve weekly changes so Okun's law can accumulate instead of
+      // rounding each sub-0.1-point movement away.
+      unemployment: clamp(unemployment, 0, 20),
     },
     metrics: { ...s.metrics, approval: r1(approval), economy: r1(economy), partyConfidence: clamp(r1(confidence), 0, 100) },
   };
@@ -1604,8 +1652,11 @@ export function migrateState(saved: Partial<GameState> | null | undefined): Game
       budgetBalance: safe(merged.stats.budgetBalance, base.stats.budgetBalance),
       lettersOfNoConfidence: safe(merged.stats.lettersOfNoConfidence, 0),
       lettersThreshold: safe(merged.stats.lettersThreshold, base.stats.lettersThreshold),
+      debtToGdp: clamp(safe(merged.stats.debtToGdp, base.stats.debtToGdp), 30, DEBT_TO_GDP_MAX),
+      unemployment: clamp(safe(merged.stats.unemployment, base.stats.unemployment), 0, 20),
     },
     week: safe(merged.week, 1),
+    nominalGdp: Math.max(1, safe(merged.nominalGdp, DEFAULT_NOMINAL_GDP)),
     turnsUntilElection: safe(merged.turnsUntilElection, base.turnsUntilElection),
     seed: safe(merged.seed, base.seed),
     thresholdsFrozen:

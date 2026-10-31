@@ -229,6 +229,8 @@ export interface GameState {
   relations: Relation[];
   metrics: Metrics;
   stats: NationalStats;
+  /** Nominal GDP (£bn), used to scale primary borrowing in debt dynamics. */
+  nominalGdp?: number;
   week: number;
   turnsUntilElection: number;
   isElection: boolean;
