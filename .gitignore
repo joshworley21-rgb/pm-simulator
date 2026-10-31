@@ -46,4 +46,3 @@ yarn-error.*
 *-results.json
 !.aider.conf.yml
 !.aider.model.settings.yml
-!.aider.model.settings.yml
