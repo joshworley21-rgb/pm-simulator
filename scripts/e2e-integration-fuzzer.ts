@@ -25,11 +25,158 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const VERBOSE = process.env.VERBOSE === 'true';
 const RESULTS_FILE = path.join(__dirname, '../e2e-results.json');
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function roundToOneDecimal(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+function expectedMetricAfterEffects(
+  metric: number,
+  effect: number | undefined,
+  metricName: string,
+): number {
+  const delta = effect ?? 0;
+  const adjustedDelta =
+    metricName === 'approval' && delta > 0
+      ? delta * (1 - metric / 110)
+      : delta;
+  return clamp(metric + adjustedDelta, 0, 100);
+}
+
+function assertPmqEffects(
+  before: any,
+  after: any,
+  effects: Record<string, number | undefined>,
+): void {
+  const metricNames = [
+    'approval',
+    'partyConfidence',
+    'economy',
+    'publicServices',
+    'security',
+    'mediaAttention',
+  ] as const;
+
+  for (const metricName of metricNames) {
+    const expected = expectedMetricAfterEffects(
+      before.metrics[metricName],
+      effects[metricName],
+      metricName,
+    );
+    if (after.metrics[metricName] !== expected) {
+      throw new Error(
+        `PMQ ${metricName} effect mismatch: expected ${expected}, got ${after.metrics[metricName]}`,
+      );
+    }
+  }
+}
+
+function assertSackMinisterTransition(before: any, after: any, name: string): void {
+  const minister = before.cabinet.find((candidate: any) => candidate.name === name);
+  if (!minister) {
+    throw new Error(`SACK_MINISTER dispatched for missing minister: ${name}`);
+  }
+
+  if (after.cabinet.some((candidate: any) => candidate.name === name)) {
+    throw new Error(`SACK_MINISTER did not remove ${name} from the cabinet`);
+  }
+  if (after.cabinet.length !== before.cabinet.length - 1) {
+    throw new Error(
+      `SACK_MINISTER should remove exactly one minister: expected ${before.cabinet.length - 1}, got ${after.cabinet.length}`,
+    );
+  }
+
+  const expectedUnrest = clamp(before.factionUnrest + 8, 0, 100);
+  if (after.factionUnrest !== expectedUnrest) {
+    throw new Error(
+      `SACK_MINISTER factionUnrest mismatch: expected ${expectedUnrest}, got ${after.factionUnrest}`,
+    );
+  }
+
+  const coalitionCollapse =
+    minister.coalition === true && Boolean(before.supplyPartnerId);
+  const expectedConfidence = coalitionCollapse
+    ? clamp(before.metrics.partyConfidence - 6, 0, 100)
+    : before.metrics.partyConfidence;
+
+  if (after.metrics.partyConfidence !== expectedConfidence) {
+    throw new Error(
+      `SACK_MINISTER partyConfidence mismatch: expected ${expectedConfidence}, got ${after.metrics.partyConfidence}`,
+    );
+  }
+
+  if (coalitionCollapse && after.supplyPartnerId !== undefined) {
+    throw new Error('Sacking a coalition minister should end the supply arrangement');
+  }
+}
+
+function assertBillProposal(
+  before: any,
+  after: any,
+  billBlueprint: any,
+  whipLevel: string,
+): void {
+  const proposed = after.bills.find((bill: any) => bill.id === billBlueprint.id);
+  if (!proposed) {
+    throw new Error(`PROPOSE_BILL did not add ${billBlueprint.id} to active bills`);
+  }
+  if (proposed.whipLevel !== whipLevel) {
+    throw new Error(
+      `PROPOSE_BILL whip mismatch for ${billBlueprint.id}: expected ${whipLevel}, got ${proposed.whipLevel}`,
+    );
+  }
+  if (proposed.weeksToPass !== billBlueprint.weeksToPass) {
+    throw new Error(
+      `PROPOSE_BILL timing mismatch for ${billBlueprint.id}: expected ${billBlueprint.weeksToPass}, got ${proposed.weeksToPass}`,
+    );
+  }
+  if (after.passedLaws.includes(billBlueprint.title)) {
+    throw new Error(`Newly proposed bill was already recorded as passed: ${billBlueprint.title}`);
+  }
+
+  // Introducing a bill queues a division; it does not immediately apply its
+  // effects or alter the cabinet, departments, or headline fiscal settings.
+  if (after.departments !== before.departments) {
+    throw new Error('PROPOSE_BILL unexpectedly replaced department allocations');
+  }
+}
+
+function assertBillResolution(before: any, after: any): void {
+  const dueBills = before.bills.filter((bill: any) => bill.weeksToPass <= 1);
+  for (const bill of dueBills) {
+    const passedMessage = `LAW PASSED: ${bill.title}`;
+    const defeatedMessage = `BILL DEFEATED: ${bill.title}`;
+    const passed = after.log.some((line: string) => line.startsWith(passedMessage));
+    const defeated = after.log.some((line: string) => line.startsWith(defeatedMessage));
+
+    if (passed === defeated) {
+      throw new Error(
+        `Due bill ${bill.title} should have exactly one recorded resolution outcome`,
+      );
+    }
+
+    if (after.bills.some((active: any) => active.id === bill.id)) {
+      throw new Error(`Resolved bill ${bill.title} remained active`);
+    }
+
+    if (passed && !after.passedLaws.includes(bill.title)) {
+      throw new Error(`Passed bill ${bill.title} was not added to passedLaws`);
+    }
+
+    if (defeated && after.passedLaws.includes(bill.title)) {
+      throw new Error(`Defeated bill ${bill.title} was incorrectly added to passedLaws`);
+    }
+  }
+}
+
 async function runSimulation(testCase: unknown): Promise<TestResult> {
   const startedAt = Date.now();
 
   try {
-    const { createInitialState, reducer } = await import('../src/app/engine');
+    const { createInitialState, reducer, structuralBalance } = await import('../src/app/engine');
     const { BILL_POOL } = await import('../src/app/bills');
     const { BILL_POOL_2 } = await import('../src/app/bills2');
 
@@ -200,12 +347,88 @@ async function runSimulation(testCase: unknown): Promise<TestResult> {
 
       if (actions.length > 0) {
         const action = actions[Math.floor(random() * actions.length)];
+        const beforeAction = state;
         state = reducer(state, action);
+
+        if (action.type === 'SACK_MINISTER') {
+          assertSackMinisterTransition(beforeAction, state, action.name);
+        } else if (action.type === 'PROPOSE_BILL') {
+          const blueprint = allBills.find((bill) => bill.id === action.billId);
+          if (!blueprint) {
+            throw new Error(`Selected unknown bill ID: ${action.billId}`);
+          }
+          assertBillProposal(beforeAction, state, blueprint, action.whipLevel);
+        } else if (action.type === 'ANSWER_PMQ') {
+          const question = beforeAction.pmq;
+          if (!question) {
+            throw new Error('ANSWER_PMQ dispatched without an active question');
+          }
+          const option = question.options.find(
+            (candidate: any) => candidate.id === action.optionId,
+          );
+          if (!option) {
+            throw new Error(`ANSWER_PMQ dispatched with unknown option: ${action.optionId}`);
+          }
+          assertPmqEffects(beforeAction, state, option.effects);
+        }
+
         checkState();
       }
 
+      const beforeTurn = state;
+      const nextWeek = beforeTurn.week + 1;
+      const balanceBeforeTurn = beforeTurn.stats.budgetBalance;
+      const structuralBeforeTurn = structuralBalance(beforeTurn);
+      const hasBillSettling = beforeTurn.bills.some((bill: any) => bill.weeksToPass <= 1);
+      const canCheckBalanceConvergence =
+        !hasBillSettling &&
+        !beforeTurn.supplyPartnerId &&
+        nextWeek % 4 !== 0;
+
       state = reducer(state, { type: 'START_TURN' } as any);
       checkState();
+
+      if (state.week !== nextWeek) {
+        throw new Error(
+          `START_TURN did not advance the week: expected ${nextWeek}, got ${state.week}`,
+        );
+      }
+      if (state === beforeTurn) {
+        throw new Error('START_TURN returned the unchanged state object');
+      }
+      if (state.seed === beforeTurn.seed) {
+        throw new Error('START_TURN left the simulation seed unchanged');
+      }
+
+      assertBillResolution(beforeTurn, state);
+
+      if (canCheckBalanceConvergence) {
+        const oldDistance = Math.abs(balanceBeforeTurn - structuralBeforeTurn);
+        const newDistance = Math.abs(state.stats.budgetBalance - structuralBeforeTurn);
+
+        // weeklyEconomy moves the published balance 10% toward the structural
+        // position. Fiscal-drag accounting can also affect the weekly result,
+        // so allow a small margin while still rejecting a material move away
+        // from the engine's stated convergence direction.
+        if (newDistance > oldDistance + 5) {
+          throw new Error(
+            `START_TURN budget balance moved away from structural balance: distance ${oldDistance.toFixed(2)} -> ${newDistance.toFixed(2)}`,
+          );
+        }
+
+        const convergedBalance = roundToOneDecimal(
+          balanceBeforeTurn +
+            (structuralBeforeTurn - balanceBeforeTurn) * 0.1,
+        );
+        if (
+          oldDistance > 10 &&
+          Math.abs(state.stats.budgetBalance - convergedBalance) > oldDistance * 0.5 + 5
+        ) {
+          throw new Error(
+            `START_TURN budget balance diverged from 10% structural convergence: expected near ${convergedBalance}, got ${state.stats.budgetBalance}`,
+          );
+        }
+      }
     }
 
     return {
