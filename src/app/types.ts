@@ -275,6 +275,8 @@ export interface GameState {
   reshuffleDisciplineBonus?: number;
   /** True once the one-off minority-government confidence warning has been issued. */
   confidenceWarningShown?: boolean;
+  /** Dossier IDs whose ignored-crisis escalation has already been applied. */
+  escalatedDossierIds?: string[];
 
   /** Two manifesto promises judged at the next election. */
   pledges?: import('./pledges').Pledge[];

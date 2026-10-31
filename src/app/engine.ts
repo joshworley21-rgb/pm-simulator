@@ -75,6 +75,8 @@ const HUNG_PARLIAMENT_SCENARIO_ID = 'hung-parliament';
 
 /** Modest party-discipline boost earned by a reshuffle that promotes a backbencher. */
 const RESHUFFLE_DISCIPLINE_BONUS = 2;
+/** Weekly 1922 pressure when a reshuffle-related sacking leaves the Cabinet empty. */
+const CABINET_STRAIN_LETTERS_PER_WEEK = 1;
 
 /** Full dossier pool: the original six plus both expanded slates. */
 const ALL_DOSSIERS = [...DOSSIER_POOL, ...DOSSIER_POOL_2, ...DOSSIER_POOL_3];
@@ -197,6 +199,7 @@ export function createInitialState(): GameState {
     lastReshuffleWeek: undefined,
     reshuffleDisciplineBonus: undefined,
     confidenceWarningShown: false,
+    escalatedDossierIds: [],
     personalAllowance: DEFAULT_PERSONAL_ALLOWANCE,
     personalAllowanceFreezeYears: 0,
     fuelDutyFrozen: true,
@@ -1068,9 +1071,13 @@ export function advanceWeek(s: GameState): GameState {
             headlines: [{ paper: 'The Courier', title: `${partner?.abbreviation ?? 'PARTNER'} PULLS THE PLUG ON SUPPLY`, stance: 'right' as const }, ...next.headlines].slice(0, 4),
           };
         }
-      } else if (d.urgent) {
+      } else if (d.urgent && !(next.escalatedDossierIds ?? []).includes(d.id)) {
         next = applyEffects(next, { approval: -3, partyConfidence: -2, mediaAttention: 10 });
-        next.log = [`CRISIS ESCALATION: ${d.title} went unanswered and damaged the government.`, ...(next.log ?? [])].slice(0, 50);
+        next = {
+          ...next,
+          escalatedDossierIds: [...(next.escalatedDossierIds ?? []), d.id],
+          log: [`CRISIS ESCALATION: ${d.title} went unanswered and damaged the government.`, ...(next.log ?? [])].slice(0, 50),
+        };
       }
     } else {
       remaining.push({ ...d, weeksRemaining: d.weeksRemaining - 1 });
@@ -1103,7 +1110,9 @@ export function advanceWeek(s: GameState): GameState {
   // 3e. Voter blocs: recompute who is with you and who has turned.
   const blocs = computeBlocs(next);
   next = { ...next, blocs };
-  next = applyEffects(next, { approval: (blocAverage(blocs) - next.metrics.approval) * 0.04 });
+  next = applyEffects(next, {
+    approval: clamp((blocAverage(blocs) - next.metrics.approval) * 0.005, -0.01, 0.01),
+  });
 
   // 3f. Opposition business: without a majority a confidence motion is tabled
   // on a fixed timetable, not by dice roll.
@@ -1191,6 +1200,9 @@ export function advanceWeek(s: GameState): GameState {
   if (unity > 70) letters -= 2;
   else if (unity > 60) letters -= 1;
   if (mood.consideringDefection >= 2 && next.week % TURNS_PER_MONTH === 0) letters += 1;
+  if (next.cabinet.length === 0 && next.lastReshuffleWeek !== undefined) {
+    letters += CABINET_STRAIN_LETTERS_PER_WEEK;
+  }
   letters = clamp(letters, 0, 99);
   const playerSeatsNow = next.parties.find((p) => p.id === next.player?.partyId)?.seats ?? 326;
   const blindsideSnapshot = calculateBlindsideRisk(letters, unity, playerSeatsNow - 326);
@@ -1447,7 +1459,8 @@ export function advanceWeek(s: GameState): GameState {
 
   // 7. Draw fresh dossier.
   const activeIds = new Set(remaining.map((d) => d.id));
-  const available = ALL_DOSSIERS.filter((d) => !activeIds.has(d.id));
+  const escalatedIds = new Set(next.escalatedDossierIds ?? []);
+  const available = ALL_DOSSIERS.filter((d) => !activeIds.has(d.id) && !escalatedIds.has(d.id));
   if (available.length > 0 && remaining.length < 4) {
     const pick = available[Math.floor(rng() * available.length)];
     remaining.push({ ...pick });
@@ -1579,9 +1592,11 @@ function resignMinister(s: GameState, name: string): GameState {
     partyConfidence: -cost.partyConfidencePenalty,
     lettersDelta: cost.lettersOfNoConfidenceIncrease,
   });
+  const cabinet = politicallyCosted.cabinet.filter((x) => x.name !== name);
   return {
     ...politicallyCosted,
-    cabinet: politicallyCosted.cabinet.filter((x) => x.name !== name),
+    cabinet,
+    lastReshuffleWeek: cabinet.length === 0 ? s.week : s.lastReshuffleWeek,
     factionUnrest: clamp(s.factionUnrest + cost.factionUnrestIncrease, 0, 100),
     log: [`CABINET: ${m.name} sacked as ${m.post}.`, ...s.log].slice(0, 50),
   };
@@ -1685,6 +1700,9 @@ export function migrateState(saved: Partial<GameState> | null | undefined): Game
     lastReshuffleWeek: savedLastReshuffleWeek,
     reshuffleDisciplineBonus: savedReshuffleBonus,
     confidenceWarningShown: saved.confidenceWarningShown === true,
+    escalatedDossierIds: Array.isArray(saved.escalatedDossierIds)
+      ? saved.escalatedDossierIds.filter((id): id is string => typeof id === 'string')
+      : base.escalatedDossierIds,
     pmqSessionAskedIds: Array.isArray(saved.pmqSessionAskedIds) ? saved.pmqSessionAskedIds : undefined,
     pmqRecentIds: Array.isArray(saved.pmqRecentIds) ? saved.pmqRecentIds : undefined,
     personalAllowance: safe(saved.personalAllowance, DEFAULT_PERSONAL_ALLOWANCE),
