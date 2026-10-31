@@ -1,0 +1,1455 @@
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useGame } from '../state';
+import { colors, font, radius, spacing } from '../theme';
+import { Button, Card, Chip, EffectChips, EmptyState, Meter, SectionTitle, Segmented, Sheet, StatTile } from '../components/ui';
+import { BILL_POOL } from '../bills';
+import { BILL_POOL_2 } from '../bills2';
+import { FUEL_DUTY_FREEZE_COST, STAMP_DUTY_RELIEF_COST, TRIPLE_LOCK_COST, PUBLIC_SECTOR_PAY_COST } from '../budget';
+import { TAX_YIELD_PER_POINT } from '../taxes';
+import { evaluatePledges } from '../pledges';
+import { fundedEnvelope, isFiscalWindow, remainingEmergencyFiscalActions, personalAllowanceRevenue } from '../engine';
+import { spendingReviewEfficiencySavings } from '../spendingReview';
+import type { EfficiencyTargetPct } from '../spendingReview';
+import { relationBand } from '../diplomacy';
+import { getTraitDetails } from '../backgrounds';
+import { CHANCELLOR_LEAK_LOYALTY_THRESHOLD } from '../cabinetEffects';
+import { ElectionMap } from '../components/ElectionMap';
+import { BudgetWorkbench } from '../components/BudgetWorkbench';
+import type { RelationBand } from '../diplomacy';
+import type { RootStackParamList } from '../types';
+import type { Bill, Dossier, Effects } from '../types';
+import type { TradePartner, UKTradeDealStatus } from '../tradeDeals';
+
+type Nav = NativeStackNavigationProp<RootStackParamList, 'Game'>;
+
+type Tab = 'desk' | 'govern' | 'money' | 'politics' | 'world';
+type MoneyTab = 'spending' | 'taxes';
+type PoliticsTab = 'cabinet' | 'westminster' | 'press';
+
+type IconName = keyof typeof Ionicons.glyphMap;
+const TABS: { key: Tab; label: string; icon: IconName }[] = [
+  { key: 'desk', label: 'Red Box', icon: 'file-tray-full-outline' },
+  { key: 'govern', label: 'Laws', icon: 'document-text-outline' },
+  { key: 'money', label: 'Money', icon: 'cash-outline' },
+  { key: 'politics', label: 'Politics', icon: 'business-outline' },
+  { key: 'world', label: 'World', icon: 'globe-outline' },
+];
+
+/** Plain-English wording for how much the public cares about a tax. */
+function angerLabel(weight: number): { text: string; tone: 'danger' | 'warning' | 'neutral' } {
+  if (weight >= 1.8) return { text: 'Very high anger', tone: 'danger' };
+  if (weight >= 1.2) return { text: 'High anger', tone: 'warning' };
+  if (weight >= 0.7) return { text: 'Moderate anger', tone: 'neutral' };
+  return { text: 'Low anger', tone: 'neutral' };
+}
+
+function budgetLabel(v: number): string {
+  return v < 0 ? `£${Math.abs(Math.round(v))}bn deficit` : `£${Math.round(v)}bn surplus`;
+}
+
+function money(v: number): string {
+  return `£${Math.round(v)}bn`;
+}
+
+function dossierTone(d: Dossier): 'danger' | 'default' {
+  return d.urgent ? 'danger' : 'default';
+}
+
+const BAND_TONE: Record<RelationBand, 'success' | 'accent' | 'warning' | 'danger' | 'neutral'> = {
+  alliance: 'success',
+  friendly: 'accent',
+  neutral: 'neutral',
+  tense: 'warning',
+  hostile: 'danger',
+};
+
+export default function GameScreen() {
+  const { state, dispatch } = useGame();
+  const nav = useNavigation<Nav>();
+  const insets = useSafeAreaInsets();
+
+  const [tab, setTab] = useState<Tab>('desk');
+  const [moneyTab, setMoneyTab] = useState<MoneyTab>('spending');
+  const [politicsTab, setPoliticsTab] = useState<PoliticsTab>('cabinet');
+  const [electionViewTab, setElectionViewTab] = useState<'summary' | 'map'>('summary');
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [confirmSack, setConfirmSack] = useState<string | null>(null);
+
+  /* ---- weekly briefing: diff the log before/after advancing ---- */
+  const previousLog = useRef<string[]>(state.log);
+  const [briefing, setBriefing] = useState<string[] | null>(null);
+  const [showBriefing, setShowBriefing] = useState(true);
+  const awaitingTurn = useRef(false);
+
+  useEffect(() => {
+    if (!awaitingTurn.current) return;
+    awaitingTurn.current = false;
+    const before = previousLog.current;
+    const grew = state.log.length - before.length;
+    const fresh =
+      grew > 0 ? state.log.slice(0, grew) : state.log.filter((line) => !before.includes(line));
+    // Never stack a briefing on top of an election or game-over modal.
+    setBriefing(state.gameOver || state.isElection || !showBriefing ? null : fresh.slice(0, 8));
+  }, [state.log, state.gameOver, state.isElection, showBriefing]);
+
+  const advanceWeek = () => {
+    previousLog.current = state.log;
+    awaitingTurn.current = true;
+    dispatch({ type: 'START_TURN' });
+  };
+
+  /* ---- derived data ---- */
+  const player = state.player;
+  const party = state.parties.find((p) => p.id === player?.partyId);
+  const rankedParties = useMemo(() => [...state.parties].sort((a, b) => b.seats - a.seats), [state.parties]);
+  const ownSeats = party ? party.seats : 0;
+
+  const proposable = useMemo(() => {
+    const inFlight = new Set(state.bills.map((b) => b.id));
+    const passed = new Set(state.passedLaws);
+    return [...BILL_POOL, ...BILL_POOL_2].filter((b) => !inFlight.has(b.id) && !passed.has(b.title));
+  }, [state.bills, state.passedLaws]);
+
+  const redBox = useMemo(
+    () => [...state.redBox].sort((a, b) => Number(b.urgent) - Number(a.urgent) || a.weeksRemaining - b.weeksRemaining),
+    [state.redBox],
+  );
+
+  const threshold = state.stats.lettersThreshold || 15;
+  const letters = state.stats.lettersOfNoConfidence;
+  const revoltPct = Math.min(100, Math.round((letters / Math.max(1, threshold)) * 100));
+  const urgentCount = state.redBox.filter((d) => d.urgent).length;
+  const inPurdah = state.turnsUntilElection <= 6;
+  const fiscalWindowOpen = isFiscalWindow(state);
+  const emergencyLevyLeft = remainingEmergencyFiscalActions(state);
+  const traitDetails = useMemo(() => getTraitDetails(player?.background), [player?.background]);
+
+  // Single source of truth: the engine decides what the country can afford, so
+  // the Treasury tab can never contradict the deficit headline.
+  const envelope = fundedEnvelope(state);
+
+  // Standing recurring effect of the allowance currently in force (the committed
+  // state). Shown to one decimal to match the Budget preview's standing row.
+  const allowanceRecurringBn = personalAllowanceRevenue(state);
+
+  const activeDossier = state.redBox.find((d) => d.id === state.selectedDossierId) ?? null;
+  const dossierIndex = activeDossier ? redBox.findIndex((d) => d.id === activeDossier.id) + 1 : 0;
+
+  /* ---- alerts ---- */
+  const alerts: { label: string; tone: 'danger' | 'warning' | 'accent' }[] = [];
+  if (urgentCount > 0) alerts.push({ label: `${urgentCount} urgent paper${urgentCount > 1 ? 's' : ''}`, tone: 'danger' });
+  if (state.pmq) alerts.push({ label: 'PMQs waiting', tone: 'warning' });
+  if (state.budgetDue) alerts.push({ label: state.fiscalEventKind === 'autumn' ? 'Autumn Statement due' : 'Budget due', tone: 'warning' });
+  if (revoltPct >= 65) alerts.push({ label: `Leadership threat ${revoltPct}%`, tone: 'danger' });
+  if (inPurdah) alerts.push({ label: 'Purdah in force', tone: 'accent' });
+  if (state.foreignIssues.length > 0) alerts.push({ label: `${state.foreignIssues.length} diplomatic call${state.foreignIssues.length > 1 ? 's' : ''}`, tone: 'accent' });
+
+  const restart = () => {
+    dispatch({ type: 'NEW_GAME' });
+    nav.navigate('Menu');
+  };
+
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      {/* ================= HEADER ================= */}
+      <View style={{ paddingHorizontal: spacing.lg, paddingTop: insets.top + spacing.sm, paddingBottom: spacing.sm }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.muted, fontSize: font.tiny, letterSpacing: 1.4, fontWeight: '700' }}>
+              10 DOWNING STREET
+            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={{ color: colors.text, fontSize: font.h2, fontWeight: '800' }} numberOfLines={1}>
+                {player?.firstName} {player?.lastName}
+              </Text>
+              {traitDetails && (
+                <View style={{ marginLeft: spacing.sm }}>
+                  <Chip label={traitDetails.badge} tone="accent" />
+                </View>
+              )}
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: party?.color ?? colors.muted, marginRight: 6 }} />
+              <Text style={{ color: colors.muted, fontSize: font.small }} numberOfLines={1}>
+                {party ? party.abbreviation : '--'} | Month {state.week} | {state.turnsUntilElection}m to election
+              </Text>
+            </View>
+            {traitDetails && (
+              <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 2 }} numberOfLines={1}>
+                {player?.background} • {traitDetails.description}
+              </Text>
+            )}
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="How to play"
+            onPress={() => setHelpOpen(true)}
+            style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', marginRight: spacing.sm, borderWidth: 1, borderColor: colors.cardBorder }}
+          >
+            <Text style={{ color: colors.muted, fontWeight: '800' }}>?</Text>
+          </Pressable>
+          <Button label="Advance" onPress={advanceWeek} compact disabled={!!state.gameOver} testID="advance-week" />
+        </View>
+
+        {/* vitals */}
+        <View style={{ flexDirection: 'row', marginTop: spacing.md }}>
+          <StatTile label="Approval" value={`${Math.round(state.metrics.approval)}%`} tone={state.metrics.approval >= 45 ? 'success' : 'danger'} />
+          <StatTile label="Party unity" value={`${Math.round(state.metrics.partyConfidence)}%`} tone={state.metrics.partyConfidence >= 45 ? 'success' : 'danger'} />
+          <StatTile label="Inflation" value={`${state.stats.cpiInflation}%`} tone={state.stats.cpiInflation <= 3 ? 'success' : 'warning'} />
+          <StatTile label="Budget" value={budgetLabel(state.stats.budgetBalance)} tone={state.stats.budgetBalance < 0 ? 'danger' : 'success'} />
+        </View>
+
+        {/* alerts */}
+        {alerts.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: spacing.sm }}>
+            {alerts.map((a) => (
+              <Chip key={a.label} label={a.label} tone={a.tone} />
+            ))}
+          </ScrollView>
+        )}
+      </View>
+
+      {/* ================= CONTENT ================= */}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: 110 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {briefing && briefing.length > 0 && (
+          <Card>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={{ color: colors.accent, fontSize: font.tiny, fontWeight: '800', flex: 1 }}>
+                MONTH {state.week} BRIEFING
+              </Text>
+              <Pressable onPress={() => setShowBriefing(false)} hitSlop={8} style={{ marginRight: 14 }}>
+                <Text style={{ color: colors.muted, fontSize: font.tiny, fontWeight: '700' }}>Don't show again</Text>
+              </Pressable>
+              <Pressable onPress={() => setBriefing(null)} hitSlop={8} testID="briefing-dismiss">
+                <Text style={{ color: colors.accent, fontSize: font.small, fontWeight: '800' }}>Dismiss</Text>
+              </Pressable>
+            </View>
+            {briefing.map((line, i) => (
+              <View key={`brief-${i}`} style={{ flexDirection: 'row', marginTop: 6 }}>
+                <Text style={{ color: colors.accent, marginRight: 8 }}>-</Text>
+                <Text style={{ color: colors.text, flex: 1, fontSize: font.small, lineHeight: 18 }}>{line}</Text>
+              </View>
+            ))}
+            {!!state.lastOutcome && (
+              <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: spacing.sm, lineHeight: 17 }}>
+                Last decision: {state.lastOutcome}
+              </Text>
+            )}
+          </Card>
+        )}
+
+        {tab === 'desk' && (
+          <View>
+            <SectionTitle title="Your Red Box" hint="Papers needing a decision. Ignored urgent items become scandals." />
+            {redBox.length === 0 && <EmptyState title="Box cleared" body="Nothing awaiting signature. Advance the month to see what lands next." />}
+
+            {redBox.map((d) => (
+              <Pressable key={d.id} onPress={() => dispatch({ type: 'OPEN_DOSSIER', dossierId: d.id })}>
+                <Card tone={dossierTone(d)}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{ color: d.urgent ? colors.danger : colors.accent, fontSize: font.tiny, fontWeight: '800', flex: 1 }} numberOfLines={1}>
+                      {d.department.toUpperCase()}
+                    </Text>
+                    <Text style={{ color: d.urgent ? colors.danger : colors.muted, fontSize: font.tiny, fontWeight: '700' }}>
+                      {d.urgent ? 'URGENT | ' : ''}{d.weeksRemaining}m left
+                    </Text>
+                  </View>
+                  <Text style={{ color: colors.text, fontSize: font.h3, fontWeight: '700', marginTop: 4 }}>{d.title}</Text>
+                  <Text style={{ color: colors.muted, fontSize: font.small, lineHeight: 18, marginTop: 4 }} numberOfLines={2}>
+                    {d.leadParagraph}
+                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
+                    <Text style={{ color: colors.accent, fontSize: font.small, fontWeight: '800' }}>Decide</Text>
+                    <Text style={{ color: colors.muted, fontSize: font.tiny, marginLeft: 8 }}>
+                      {d.choices.length} option{d.choices.length > 1 ? 's' : ''}
+                    </Text>
+                  </View>
+                </Card>
+              </Pressable>
+            ))}
+
+            {!!state.lastOutcome && (
+              <Card tone="success">
+                <Text style={{ color: colors.success, fontSize: font.tiny, fontWeight: '800', letterSpacing: 1 }}>LAST DECISION</Text>
+                <Text style={{ color: colors.text, fontSize: font.small, lineHeight: 19, marginTop: 4 }}>{state.lastOutcome}</Text>
+              </Card>
+            )}
+          </View>
+        )}
+
+        {tab === 'govern' && (
+          <View>
+            <SectionTitle title="Legislative agenda" hint={inPurdah ? 'Purdah: no new bills until after polling day.' : 'Bills take several months to reach a division.'} />
+
+            {state.bills.length > 0 && (
+              <>
+                <Text style={styles.label}>IN PARLIAMENT</Text>
+                {state.bills.map((b: Bill) => (
+                  <Card key={b.id}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Text style={{ color: colors.accent, fontSize: font.tiny, fontWeight: '800', flex: 1 }} numberOfLines={1}>
+                        {b.department.toUpperCase()}
+                      </Text>
+                      {b.whipLevel && (
+                        <View style={{ marginRight: 6 }}>
+                          <Chip
+                            label={b.whipLevel === 'three-line' ? 'Three-Line Whip' : b.whipLevel === 'free-vote' ? 'Free Vote' : 'Standard Whip'}
+                            tone={b.whipLevel === 'three-line' ? 'danger' : b.whipLevel === 'free-vote' ? 'neutral' : 'accent'}
+                          />
+                        </View>
+                      )}
+                      <Chip label={`${b.weeksToPass}m to division`} tone="accent" />
+                    </View>
+                    <Text style={{ color: colors.text, fontSize: font.h3, fontWeight: '700', marginTop: 2 }}>{b.title}</Text>
+                    <Text style={{ color: colors.muted, fontSize: font.small, marginTop: 4 }}>
+                      {b.fiscalCost < 0 ? `Raises ${money(-b.fiscalCost)}/yr` : `Costs ${money(b.fiscalCost)}/yr`} | rebellion risk {b.rebellionRisk}%
+                    </Text>
+                    <View style={{ marginTop: spacing.sm }}>
+                      <Meter value={b.rebellionRisk} color={b.rebellionRisk > 40 ? colors.danger : colors.warning} />
+                    </View>
+                  </Card>
+                ))}
+              </>
+            )}
+
+            <Text style={[styles.label, { marginTop: spacing.lg }]}>PROPOSE NEW LEGISLATION</Text>
+            {proposable.map((b) => (
+              <Card key={b.id}>
+                <Text style={{ color: colors.accent, fontSize: font.tiny, fontWeight: '800' }} numberOfLines={1}>
+                  {b.department.toUpperCase()}
+                </Text>
+                <Text style={{ color: colors.text, fontSize: font.h3, fontWeight: '700', marginTop: 2 }}>{b.title}</Text>
+                <Text style={{ color: colors.muted, fontSize: font.small, lineHeight: 18, marginTop: 4 }}>{b.description}</Text>
+                <EffectChips effects={b.effects} max={5} />
+                <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 4 }}>
+                  {b.fiscalCost < 0 ? `Raises ${money(-b.fiscalCost)}/yr` : `Costs ${money(b.fiscalCost)}/yr`} | rebellion risk {b.rebellionRisk}%
+                </Text>
+                <View style={{ flexDirection: 'row', marginTop: spacing.sm, flexWrap: 'wrap' }}>
+                  <View style={{ marginRight: spacing.sm, marginBottom: 4 }}>
+                    <Button label="Standard Whip" variant="secondary" compact disabled={inPurdah} onPress={() => dispatch({ type: 'PROPOSE_BILL', billId: b.id, whipLevel: 'two-line' })} />
+                  </View>
+                  <View style={{ marginRight: spacing.sm, marginBottom: 4 }}>
+                    <Button label="Three-Line Whip" compact disabled={inPurdah} onPress={() => dispatch({ type: 'PROPOSE_BILL', billId: b.id, whipLevel: 'three-line' })} />
+                  </View>
+                  <View style={{ marginBottom: 4 }}>
+                    <Button label="Free Vote" variant="ghost" compact disabled={inPurdah} onPress={() => dispatch({ type: 'PROPOSE_BILL', billId: b.id, whipLevel: 'free-vote' })} />
+                  </View>
+                </View>
+              </Card>
+            ))}
+
+            {state.passedLaws.length > 0 && (
+              <>
+                <Text style={[styles.label, { marginTop: spacing.lg }]}>ON THE STATUTE BOOK</Text>
+                {state.passedLaws.map((title) => (
+                  <Text key={title} style={{ color: colors.success, fontSize: font.body, marginTop: 6 }}>
+                    {title}
+                  </Text>
+                ))}
+              </>
+            )}
+          </View>
+        )}
+
+        {tab === 'money' && (
+          <View>
+            <SectionTitle title="HM Treasury" hint="Every pound spent or cut moves approval, services and the deficit." />
+            <Segmented
+              options={[
+                { key: 'spending', label: 'Spending' },
+                { key: 'taxes', label: 'Taxes' },
+              ]}
+              value={moneyTab}
+              onChange={setMoneyTab}
+            />
+
+            {!fiscalWindowOpen && (
+              <Card>
+                <Text style={{ color: colors.text, fontSize: font.small, fontWeight: '800' }}>Fiscal lock</Text>
+                <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 4, lineHeight: 17 }}>
+                  Headline taxes and departmental budgets can only be changed at a Budget or Autumn Statement.
+                  {emergencyLevyLeft > 0
+                    ? ` Emergency levy changes left this term: ${emergencyLevyLeft} (Capital Gains, Inheritance) — each unnerves the markets.`
+                    : ' No emergency levy changes remain this term.'}
+                </Text>
+              </Card>
+            )}
+
+            {moneyTab === 'spending' && (
+              <View>
+                <Card tone={envelope.plannedDeficit > 0 ? 'danger' : 'success'}>
+                  <View style={{ flexDirection: 'row' }}>
+                    <StatTile label="Spending" value={money(envelope.spend)} />
+                    <StatTile
+                      label="Borrowing"
+                      value={money(envelope.plannedDeficit)}
+                      tone={envelope.plannedDeficit > 0 ? 'danger' : 'success'}
+                    />
+                    <StatTile label="Funded envelope" value={money(envelope.envelope)} />
+                  </View>
+                  <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: spacing.sm, lineHeight: 17 }}>
+                    Departments are funded by taxes plus this borrowing. Every step you add widens the deficit the
+                    moment you take it.
+                  </Text>
+                </Card>
+
+                <Card>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <View style={{ flex: 1, marginRight: spacing.sm }}>
+                      <Text style={{ color: colors.text, fontSize: font.small, fontWeight: '800' }}>
+                        Spending Review Efficiency Target
+                      </Text>
+                      <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 4, lineHeight: 17 }}>
+                        {(state.efficiencyTargetPct ?? 0) === 0
+                          ? 'No Whitehall efficiency savings mandated. Standard departmental delivery.'
+                          : `Mandatory ${state.efficiencyTargetPct}% annual efficiency target yields £${spendingReviewEfficiencySavings(
+                              (state.efficiencyTargetPct ?? 0) as EfficiencyTargetPct,
+                            )}bn/yr in recurring savings, but squeezes public services and union goodwill.`}
+                      </Text>
+                    </View>
+                    <Chip
+                      label={`${state.efficiencyTargetPct ?? 0}%`}
+                      tone={(state.efficiencyTargetPct ?? 0) > 0 ? 'success' : 'neutral'}
+                    />
+                  </View>
+                  <View style={{ flexDirection: 'row', marginTop: spacing.sm }}>
+                    {([0, 2, 4] as EfficiencyTargetPct[]).map((pct) => (
+                      <View key={pct} style={{ flex: 1, marginRight: pct !== 4 ? 6 : 0 }}>
+                        <Button
+                          label={pct === 0 ? '0% (Standard)' : `${pct}% Target`}
+                          variant={(state.efficiencyTargetPct ?? 0) === pct ? 'secondary' : 'ghost'}
+                          compact
+                          disabled={inPurdah}
+                          onPress={() => dispatch({ type: 'SET_EFFICIENCY_TARGET', targetPct: pct })}
+                        />
+                      </View>
+                    ))}
+                  </View>
+                </Card>
+
+                {state.departments.map((d) => (
+                  <Card key={d.id}>
+                    <Text style={{ color: colors.text, fontSize: font.h3, fontWeight: '700' }}>{d.name}</Text>
+                    <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 2 }}>{d.desc}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.md }}>
+                      <Button label="-" variant="ghost" compact disabled={!fiscalWindowOpen} onPress={() => dispatch({ type: 'ADJUST_SPENDING', deptId: d.id, delta: -d.step })} />
+                      <Text style={{ flex: 1, textAlign: 'center', color: colors.accent, fontSize: font.h2, fontWeight: '800' }}>
+                        {money(d.budget)}
+                      </Text>
+                      <Button label="+" variant="ghost" compact disabled={!fiscalWindowOpen} onPress={() => dispatch({ type: 'ADJUST_SPENDING', deptId: d.id, delta: d.step })} />
+                    </View>
+                    <View style={{ marginTop: spacing.sm }}>
+                      <Meter value={d.budget - d.min} max={Math.max(1, d.max - d.min)} />
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 3 }}>
+                        <Text style={{ color: colors.muted, fontSize: font.tiny }}>{money(d.min)}</Text>
+                        <Text style={{ color: colors.muted, fontSize: font.tiny }}>
+                          each step moves the deficit by {money(d.step)}
+                        </Text>
+                        <Text style={{ color: colors.muted, fontSize: font.tiny }}>{money(d.max)}</Text>
+                      </View>
+                    </View>
+                    <EffectChips effects={d.benefit} max={4} />
+                  </Card>
+                ))}
+              </View>
+            )}
+
+            {moneyTab === 'taxes' && (
+              <View>
+                <Text style={[styles.hint, { marginTop: spacing.md }]}>
+                  Raising a rate improves the public finances but costs you popularity.
+                </Text>
+                {state.taxes.map((t) => {
+                  const anger = angerLabel(t.popularityWeight);
+                  const yieldPerPoint = TAX_YIELD_PER_POINT[t.id] ?? 0;
+                  return (
+                    <Card key={t.id}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Text style={{ color: colors.text, fontSize: font.h3, fontWeight: '700', flex: 1 }}>{t.name}</Text>
+                        <Chip label={anger.text} tone={anger.tone} />
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.md }}>
+                        <Button label="-" variant="ghost" compact disabled={!fiscalWindowOpen && !(t.emergency && emergencyLevyLeft > 0)} onPress={() => dispatch({ type: 'ADJUST_TAX', taxId: t.id, delta: -t.step })} />
+                        <Text style={{ flex: 1, textAlign: 'center', color: colors.accent, fontSize: font.h2, fontWeight: '800' }}>{t.rate}%</Text>
+                        <Button label="+" variant="ghost" compact disabled={!fiscalWindowOpen && !(t.emergency && emergencyLevyLeft > 0)} onPress={() => dispatch({ type: 'ADJUST_TAX', taxId: t.id, delta: t.step })} />
+                      </View>
+                      <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 4 }}>
+                        Range {t.min}-{t.max}% | 1pt is about {money(yieldPerPoint)}/yr for the Exchequer
+                      </Text>
+                    </Card>
+                  );
+                })}
+
+                <Card>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <View style={{ flex: 1, marginRight: spacing.sm }}>
+                      <Text style={{ color: colors.text, fontSize: font.small, fontWeight: '800' }}>Fiscal drag</Text>
+                      <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 4, lineHeight: 17 }}>
+                        {state.thresholdsFrozen !== false
+                          ? `Frozen thresholds quietly raise ${money(state.fiscalDragRevenue ?? 0)}/yr as inflation pushes pay into higher bands.`
+                          : 'Thresholds indexed to inflation: stealth bracket creep is paused.'}
+                        {' '}Intensity: {state.fiscalDragIntensity ?? 'low'} | frozen for {state.thresholdFrozenTurns ?? 0} month(s).
+                      </Text>
+                    </View>
+                    <Button
+                      label={state.thresholdsFrozen !== false ? 'Index Bands' : 'Freeze Bands'}
+                      variant={state.thresholdsFrozen !== false ? 'ghost' : 'secondary'}
+                      compact
+                      disabled={inPurdah}
+                      onPress={() => dispatch({ type: 'TOGGLE_THRESHOLD_FREEZE' })}
+                    />
+                  </View>
+                </Card>
+
+                <Card>
+                  <Text style={{ color: colors.text, fontSize: font.small, fontWeight: '800' }}>Personal Tax-Free Allowance</Text>
+                  <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 4, lineHeight: 17 }}>
+                    Currently £{(state.personalAllowance ?? 12570).toLocaleString()}/yr tax-free.{' '}
+                    {(state.personalAllowanceFreezeYears ?? 0) > 0
+                      ? `Frozen for ${state.personalAllowanceFreezeYears} more annual Budget${
+                          state.personalAllowanceFreezeYears === 1 ? '' : 's'
+                        } before CPI-like uprating resumes.`
+                      : 'Uprated at each annual Budget by the CPI-like inflation proxy.'}
+                  </Text>
+                  <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 4, lineHeight: 17 }}>
+                    {allowanceRecurringBn >= 0
+                      ? `Current position: against the £12,570 baseline this adds about £${allowanceRecurringBn.toFixed(1)}bn/yr to the recurring fiscal estimate.`
+                      : `Current position: against the £12,570 baseline this costs about £${(-allowanceRecurringBn).toFixed(1)}bn/yr in the recurring fiscal estimate.`}
+                    {' '}The Budget preview shows the proposed position. Simplified in-game estimate, not an OBR forecast.
+                  </Text>
+                </Card>
+
+                <Card>
+                  <Text style={{ color: colors.text, fontSize: font.small, fontWeight: '800' }}>Fuel Duty</Text>
+                  <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 4, lineHeight: 17 }}>
+                    {state.fuelDutyFrozen !== false
+                      ? `Temporary 5p cut frozen (costs £${FUEL_DUTY_FREEZE_COST}bn/yr to protect motorists).`
+                      : `5p escalator restored (+£${FUEL_DUTY_FREEZE_COST}bn revenue).` }
+                  </Text>
+                </Card>
+
+                <Card>
+                  <Text style={{ color: colors.text, fontSize: font.small, fontWeight: '800' }}>Stamp Duty (SDLT)</Text>
+                  <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 4, lineHeight: 17 }}>
+                    {state.stampDutyRelief === true
+                      ? `Nil-rate bands raised to stimulate the housing market (costs £${STAMP_DUTY_RELIEF_COST}bn/yr).`
+                      : `Standard SDLT thresholds maintained (no £${STAMP_DUTY_RELIEF_COST}bn/yr relief cost).`}
+                  </Text>
+                </Card>
+
+                <Card>
+                  <Text style={{ color: colors.text, fontSize: font.small, fontWeight: '800' }}>State Pension Triple Lock</Text>
+                  <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 4, lineHeight: 17 }}>
+                    {state.tripleLock !== false
+                      ? `Protected in full — rises with highest of inflation, wages, or 2.5% (costs £${TRIPLE_LOCK_COST}bn/yr).`
+                      : `Indexed to average earnings only (saves £${TRIPLE_LOCK_COST}bn/yr recurring cost).`}
+                  </Text>
+                </Card>
+
+                <Card>
+                  <Text style={{ color: colors.text, fontSize: font.small, fontWeight: '800' }}>Public Sector Pay Awards</Text>
+                  <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 4, lineHeight: 17 }}>
+                    {(state.publicSectorPay ?? 'full') === 'full'
+                      ? `Pay Review Body awards funded in full (costs £${PUBLIC_SECTOR_PAY_COST}bn/yr; averts strike ballots).`
+                      : `Capped at 2.5% (saves £${PUBLIC_SECTOR_PAY_COST}bn/yr recurring cost; risks union unrest).`}
+                  </Text>
+                </Card>
+              </View>
+            )}
+          </View>
+        )}
+
+        {tab === 'politics' && (
+          <View>
+            <SectionTitle title="Westminster" hint="Keep your MPs and the press onside or you will not survive the year." />
+
+            {/* Confidence watch: the 1922 letters count and any motion, in one place. */}
+            <Card>
+              <Text style={{ color: colors.text, fontSize: font.small, fontWeight: '800' }}>Confidence watch</Text>
+              <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 4, lineHeight: 17 }}>
+                1922 Committee: {letters} of {threshold} letters ({revoltPct}% of the way to a ballot).
+                {state.committeeMood
+                  ? ` Backbench loyalty ${state.committeeMood.averageLoyalty}, ${state.committeeMood.consideringDefection} considering defection.`
+                  : ''}
+              </Text>
+              {state.oppositionMotion ? (
+                <Text style={{ color: colors.danger, fontSize: font.tiny, marginTop: 4, fontWeight: '700' }}>
+                  Opposition motion tabled: division in {Math.max(0, state.oppositionMotion.scheduledWeek - state.week)} month(s).
+                </Text>
+              ) : (
+                <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 4 }}>
+                  No opposition motion tabled.
+                </Text>
+              )}
+            </Card>
+            <Segmented
+              options={[
+                { key: 'cabinet', label: 'Cabinet' },
+                { key: 'westminster', label: 'Commons' },
+                { key: 'press', label: 'Press' },
+              ]}
+              value={politicsTab}
+              onChange={setPoliticsTab}
+            />
+
+            {politicsTab === 'cabinet' && (
+              <View>
+                {state.reshuffleDisciplineBonus !== undefined && state.lastReshuffleWeek !== undefined && (
+                  <Card tone="success">
+                    <Text style={{ color: colors.success, fontSize: font.tiny, fontWeight: '800', letterSpacing: 1 }}>
+                      CABINET HONEYMOON ACTIVE
+                    </Text>
+                    <Text style={{ color: colors.text, fontSize: font.small, marginTop: 4 }}>
+                      +{state.reshuffleDisciplineBonus}% party unity discipline bonus (
+                      {Math.max(1, (state.lastReshuffleWeek + 4) - state.week + 1)} month(s) remaining)
+                    </Text>
+                  </Card>
+                )}
+                <Text style={[styles.hint, { marginTop: spacing.md }]}>Faction unrest {state.factionUnrest}%</Text>
+                {state.cabinet.map((m) => (
+                  <Card key={m.name}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <Text style={{ color: colors.text, fontSize: font.h3, fontWeight: '700' }}>{m.name}</Text>
+                          {m.post === 'Chancellor of the Exchequer' && m.loyalty < CHANCELLOR_LEAK_LOYALTY_THRESHOLD && (
+                            <View style={{ marginLeft: 8 }}>
+                              <Chip label="LEAK RISK" tone="danger" />
+                            </View>
+                          )}
+                        </View>
+                        <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 2 }}>
+                          {m.post} | {m.faction}{m.coalition ? ' | coalition' : ''}
+                          {m.coalition && m.loyalty < 45 ? ' | restive' : ''}
+                          {m.post === 'Chancellor of the Exchequer' && m.loyalty < CHANCELLOR_LEAK_LOYALTY_THRESHOLD ? ' | budget leak risk' : ''}
+                        </Text>
+                      </View>
+                      <Pressable onPress={() => setConfirmSack(m.name)} hitSlop={8}>
+                        <Text style={{ color: colors.muted, fontSize: font.small, fontWeight: '700' }}>Sack</Text>
+                      </Pressable>
+                    </View>
+                    {confirmSack === m.name && (
+                      <View style={{ marginTop: 6 }}>
+                        <Text style={{ color: colors.danger, fontSize: font.tiny, lineHeight: 17 }}>
+                          {m.coalition ? 'Sacking a coalition minister ends the agreement and your majority.' : 'This is final. You cannot re-appoint them this term.'}
+                        </Text>
+                        <View style={{ flexDirection: 'row', marginTop: 6 }}>
+                          <Pressable
+                            onPress={() => {
+                              dispatch({ type: 'SACK_MINISTER', name: m.name });
+                              setConfirmSack(null);
+                            }}
+                            hitSlop={8}
+                            style={{ marginRight: 16 }}
+                          >
+                            <Text style={{ color: colors.danger, fontSize: font.small, fontWeight: '800' }}>Confirm sack</Text>
+                          </Pressable>
+                          <Pressable onPress={() => setConfirmSack(null)} hitSlop={8}>
+                            <Text style={{ color: colors.muted, fontSize: font.small, fontWeight: '700' }}>Cancel</Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    )}
+                    <View style={{ marginTop: spacing.sm }}>
+                      <Text style={{ color: colors.muted, fontSize: font.tiny }}>Loyalty {m.loyalty}</Text>
+                      <Meter value={m.loyalty} color={m.loyalty > 60 ? colors.success : colors.warning} />
+                      <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 6 }}>Competence {m.competence}</Text>
+                      <Meter value={m.competence} />
+                    </View>
+                  </Card>
+                ))}
+
+                {state.backbenchers.length > 0 && (
+                  <>
+                    <Text style={[styles.label, { marginTop: spacing.lg }]}>BACKBENCHERS TO PROMOTE</Text>
+                    {state.backbenchers.map((b) => (
+                      <Card key={b.name}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ color: colors.text, fontSize: font.h3, fontWeight: '700' }}>{b.name}</Text>
+                            <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 2 }}>
+                              {b.faction} | loyalty {b.loyalty} | competence {b.competence}
+                            </Text>
+                          </View>
+                          <Button label="Promote" variant="secondary" compact onPress={() => dispatch({ type: 'PICK_MINISTER', name: b.name })} />
+                        </View>
+                      </Card>
+                    ))}
+                  </>
+                )}
+              </View>
+            )}
+
+            {politicsTab === 'westminster' && (
+              <View>
+                {!!state.oppositionMotion && (
+                  <Card tone="danger">
+                    <Text style={{ color: colors.danger, fontSize: font.tiny, fontWeight: '800', letterSpacing: 1 }}>
+                      MOTION OF NO CONFIDENCE
+                    </Text>
+                    <Text style={{ color: colors.text, fontSize: font.small, marginTop: 4, lineHeight: 18 }}>
+                      Tabled by {state.parties.find((p) => p.id === state.oppositionMotion?.sponsorPartyId)?.name ?? 'the opposition'}.
+                      Division in {Math.max(0, state.oppositionMotion.scheduledWeek - state.week)} month(s).
+                    </Text>
+                  </Card>
+                )}
+                <Card tone={revoltPct >= 65 ? 'danger' : 'default'}>
+                  <Text style={{ color: colors.text, fontSize: font.h3, fontWeight: '800' }}>1922 Committee</Text>
+                  <Text style={{ color: colors.muted, fontSize: font.small, marginTop: 4 }}>
+                    Letters of no confidence {letters} / {threshold} | {revoltPct}% of the way to a challenge
+                  </Text>
+                  <View style={{ marginTop: spacing.sm }}>
+                    <Meter value={revoltPct} color={revoltPct >= 65 ? colors.danger : colors.accent} height={8} />
+                  </View>
+                  <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 6 }}>
+                    Hit the threshold and your own MPs will force a confidence vote.
+                  </Text>
+                  {!!state.committeeMood && (
+                    <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 6 }}>
+                      Backbench loyalty {state.committeeMood.averageLoyalty} | defection risk {state.committeeMood.consideringDefection} | would challenge {state.committeeMood.readyToChallenge}
+                    </Text>
+                  )}
+                  {!!state.lastVote && (
+                    <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 6 }}>
+                      Last confidence ballot: {state.lastVote.votesFor} for, {state.lastVote.votesAgainst} against
+                      {state.lastVote.resignedWithoutBallot ? ' (resigned without a ballot)' : ''}
+                    </Text>
+                  )}
+                </Card>
+
+                {ownSeats < 326 && (
+                  <>
+                    <Text style={[styles.label, { marginTop: spacing.lg }]}>CONFIDENCE AND SUPPLY</Text>
+                    <Card tone="danger">
+                      <Text style={{ color: colors.text, fontSize: font.small, fontWeight: '800' }}>
+                        You are {326 - ownSeats} seats short of a majority
+                      </Text>
+                      <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 4, lineHeight: 17 }}>
+                        Without a deal the opposition can move a confidence motion at any time. A partner
+                        votes with you on money and confidence, at a price.
+                      </Text>
+                    </Card>
+                    {!state.supplyPartnerId &&
+                      state.parties
+                        .filter((p) => p.id !== player?.partyId)
+                        .sort((a, b) => b.seats - a.seats)
+                        .map((p) => {
+                          const rel = state.relations.find((r) => r.from === player?.partyId && r.to === p.id)?.score ?? -50;
+                          const willing = Math.min(100, Math.max(0, 50 + rel / 2));
+                          const rate = willing < 40 ? 0.04 : 0.02;
+                          const cost = Math.min(12, Math.round(p.seats * rate * 10) / 10);
+                          const canGovern = ownSeats + p.seats >= 326;
+                          return (
+                            <Card key={p.id}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: p.color, marginRight: 8 }} />
+                                <Text style={{ color: colors.text, flex: 1, fontSize: font.body, fontWeight: '700' }}>{p.name}</Text>
+                                <Text style={{ color: colors.muted, fontSize: font.tiny }}>{p.seats} seats</Text>
+                              </View>
+                              <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 4 }}>
+                                Wants £{cost}bn a year | willingness {Math.round(willing)}
+                                {canGovern ? '' : ' | still short of a majority'}
+                              </Text>
+                              <Button
+                                label="Negotiate confidence and supply"
+                                variant="secondary"
+                                compact
+                                disabled={!canGovern || willing < 40}
+                                onPress={() => dispatch({ type: 'NEGOTIATE_SUPPLY', partyId: p.id })}
+                              />
+                              {p.seats >= 40 && (
+                                <Button
+                                  label="Invite into coalition"
+                                  variant="primary"
+                                  compact
+                                  disabled={!canGovern}
+                                  onPress={() => dispatch({ type: 'FORM_COALITION', partyId: p.id })}
+                                />
+                              )}
+                            </Card>
+                          );
+                        })}
+                  </>
+                )}
+
+                <Text style={[styles.label, { marginTop: spacing.lg }]}>VOTER BLOCS</Text>
+                {(state.blocs ?? []).map((b) => (
+                  <View
+                    key={b.id}
+                    style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: colors.cardBorder }}
+                  >
+                    <Text style={{ color: colors.text, flex: 1, fontSize: font.small }}>{b.name}</Text>
+                    <Text style={{ color: colors.muted, fontSize: font.tiny, marginRight: 8 }}>
+                      {b.seats} seats | {Math.round(b.weight * 100)}%
+                    </Text>
+                    <Text style={{ color: b.support >= 45 ? colors.success : colors.danger, fontSize: font.body, fontWeight: '700' }}>
+                      {b.support}
+                    </Text>
+                  </View>
+                ))}
+
+                <Text style={[styles.label, { marginTop: spacing.lg }]}>HOUSE OF COMMONS | 650 SEATS</Text>
+                {rankedParties.map((p) => (
+                  <View key={p.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: colors.cardBorder }}>
+                    <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: p.color, marginRight: 10 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: colors.text, fontSize: font.body }} numberOfLines={1}>{p.name}</Text>
+                      {p.leaderPersona && (
+                        <Text style={{ color: colors.muted, fontSize: font.tiny }}>{p.leader} • {p.leaderPersona}</Text>
+                      )}
+                    </View>
+                    <Text style={{ color: colors.muted, fontSize: font.small, marginRight: 12 }}>{p.currentSupport}%</Text>
+                    <Text style={{ color: colors.text, fontSize: font.body, fontWeight: '700' }}>{p.seats}</Text>
+                  </View>
+                ))}
+
+                <Text style={[styles.label, { marginTop: spacing.lg }]}>REGIONAL ELECTORAL MAP</Text>
+                <ElectionMap
+                  regionSeats={state.regionSeats ?? {}}
+                  parties={state.parties}
+                  playerPartyId={state.player?.partyId}
+                  defaultFilter="england"
+                />
+
+                <Text style={[styles.label, { marginTop: spacing.lg }]}>DISSOLUTION OF PARLIAMENT</Text>
+                <Card>
+                  <Text style={{ color: colors.text, fontSize: font.small, fontWeight: '800' }}>
+                    Call Snap General Election
+                  </Text>
+                  <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 4, lineHeight: 17 }}>
+                    Under the Dissolution and Calling of Parliament Act 2022, the Prime Minister may dissolve Parliament early to seek a fresh mandate or secure a working majority.
+                  </Text>
+                  <View style={{ marginTop: spacing.sm }}>
+                    <Button
+                      label="Dissolve Parliament & Call Election"
+                      variant="secondary"
+                      compact
+                      disabled={state.week < 6 || inPurdah || !!state.gameOver || state.isElection}
+                      onPress={() => dispatch({ type: 'CALL_EARLY_ELECTION' })}
+                    />
+                    {state.week < 6 && (
+                      <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 4 }}>
+                        Available after 6 months in office.
+                      </Text>
+                    )}
+                    {inPurdah && (
+                      <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 4 }}>
+                        Purdah in force: scheduled election is already imminent.
+                      </Text>
+                    )}
+                  </View>
+                </Card>
+              </View>
+            )}
+
+            {politicsTab === 'press' && (
+              <View>
+                <Text style={[styles.label, { marginTop: spacing.md }]}>MANIFESTO PLEDGES</Text>
+                {(state.pledges ?? []).length === 0 ? (
+                  <Text style={[styles.hint, { marginTop: 4 }]}>No promises on the record yet.</Text>
+                ) : (
+                  evaluatePledges(state, state.pledges ?? []).map((r) => (
+                    <View key={r.pledge.id} style={{ marginTop: 6 }}>
+                      <Text style={{ color: r.kept ? colors.success : colors.text, fontSize: font.small, fontWeight: '700' }}>
+                        {r.kept ? 'KEPT' : 'ON TRACK?'} - {r.pledge.text}
+                      </Text>
+                      <Text style={{ color: colors.muted, fontSize: font.tiny }}>
+                        now {r.current}, from {r.pledge.baseline}, target {r.pledge.target}
+                      </Text>
+                    </View>
+                  ))
+                )}
+
+                <Text style={[styles.label, { marginTop: spacing.md }]}>FLEET STREET</Text>
+                {state.headlines.map((h, i) => (
+                  <Card key={`${h.paper}-${i}`}>
+                    <Text style={{ color: colors.accent, fontSize: font.tiny, fontWeight: '800', letterSpacing: 0.8 }}>{h.paper.toUpperCase()}</Text>
+                    <Text style={{ color: colors.text, fontSize: font.h3, fontWeight: '800', marginTop: 4, lineHeight: 22 }}>{h.title}</Text>
+                  </Card>
+                ))}
+
+                <Text style={[styles.label, { marginTop: spacing.lg }]}>WEEK IN REVIEW</Text>
+                {state.log.slice(0, 10).map((line, i) => (
+                  <Text key={`log-${i}`} style={{ color: colors.muted, fontSize: font.small, lineHeight: 20, marginTop: 2 }}>
+                    - {line}
+                  </Text>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
+        {tab === 'world' && (
+          <View>
+            <SectionTitle title="Abroad and the economy" hint="Summits, trade and the numbers that decide elections." />
+
+            {state.foreignIssues.length === 0 ? (
+              <Card>
+                <Text style={{ color: colors.muted, fontSize: font.small }}>No outstanding summits or calls.</Text>
+              </Card>
+            ) : (
+              state.foreignIssues.map((f) => (
+                <Card key={f.id}>
+                  <Text style={{ color: colors.accent, fontSize: font.tiny, fontWeight: '800' }}>
+                    {f.country.toUpperCase()} | {f.leader}
+                  </Text>
+                  <Text style={{ color: colors.text, fontSize: font.h3, fontWeight: '700', marginTop: 4 }}>{f.topic}</Text>
+                  {f.options.map((o) => (
+                    <Pressable
+                      key={o.id}
+                      onPress={() => dispatch({ type: 'RESOLVE_FOREIGN', issueId: f.id, optionId: o.id })}
+                      style={{ borderWidth: 1, borderColor: colors.cardBorder, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.sm }}
+                    >
+                      <Text style={{ color: colors.text, fontSize: font.body, fontWeight: '700' }}>{o.label}</Text>
+                      <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 2 }}>{o.summary}</Text>
+                      <EffectChips effects={o.effects} max={4} />
+                    </Pressable>
+                  ))}
+                </Card>
+              ))
+            )}
+
+            <Text style={[styles.label, { marginTop: spacing.lg }]}>THE NUMBERS</Text>
+            <View style={{ flexDirection: 'row', marginTop: spacing.sm }}>
+              <StatTile label="GDP growth" value={`${state.stats.gdpGrowth}%`} tone={state.stats.gdpGrowth >= 1 ? 'success' : 'danger'} hint="annual %" />
+              <StatTile label="Inflation" value={`${state.stats.cpiInflation}%`} tone={state.stats.cpiInflation <= 3 ? 'success' : 'danger'} hint="CPI, %/yr" />
+              <StatTile label="10y gilts" value={`${state.stats.giltYield}%`} tone={state.stats.giltYield <= 4.5 ? 'success' : 'danger'} hint="cost of borrowing" />
+            </View>
+            <View style={{ flexDirection: 'row', marginTop: spacing.sm }}>
+              <StatTile label="Debt / GDP" value={`${state.stats.debtToGdp}%`} hint="share of GDP" />
+              <StatTile label="Unemployment" value={`${state.stats.unemployment}%`} hint="% of workforce" />
+              <StatTile label="Security" value={Math.round(state.metrics.security)} hint="0-100 scale" />
+            </View>
+            <View style={{ flexDirection: 'row', marginTop: spacing.sm }}>
+              <StatTile label="NHS waiting" value={`${state.stats.nhsWaitingList}m`} hint="millions" />
+              <StatTile
+                label="NHS perf"
+                value={Math.round(state.nhsPerformance ?? 0)}
+                tone={(state.nhsPerformance ?? 0) >= 55 ? 'success' : 'danger'}
+                hint="0-100 scale"
+              />
+              <StatTile label="Services" value={Math.round(state.metrics.publicServices)} hint="0-100 scale" />
+            </View>
+            <View style={{ flexDirection: 'row', marginTop: spacing.sm }}>
+              <StatTile label="Migration" value={`${state.stats.netMigration}k`} hint="net, thousands" />
+              <StatTile label="Trade effect" value={`${state.tradeGdpImpact ?? 0}%`} hint="% of GDP" />
+              <StatTile label="Fiscal drag" value={`£${state.fiscalDragRevenue ?? 0}bn`} hint="from frozen bands" />
+            </View>
+
+            <Card>
+              <Text style={{ color: colors.text, fontSize: font.small, fontWeight: '800' }}>NHS Operational Dashboard</Text>
+              <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 2 }}>
+                Key clinical and operational performance indicators derived each week from the waiting list.
+              </Text>
+              <View style={{ flexDirection: 'row', marginTop: spacing.sm }}>
+                <StatTile
+                  label="A&E >4h wait"
+                  value={`${Math.round(state.nhsMetrics?.aeWaitingTime ?? 0)}%`}
+                  tone={(state.nhsMetrics?.aeWaitingTime ?? 0) <= 15 ? 'success' : 'danger'}
+                  hint="target <10%"
+                />
+                <StatTile
+                  label="Cancer wait"
+                  value={`${Math.round(state.nhsMetrics?.cancerWaitTime ?? 0)}d`}
+                  tone={(state.nhsMetrics?.cancerWaitTime ?? 0) <= 62 ? 'success' : 'danger'}
+                  hint="target 62d"
+                />
+                <StatTile
+                  label="Bed occupancy"
+                  value={`${Math.round(state.nhsMetrics?.bedOccupancy ?? 0)}%`}
+                  tone={(state.nhsMetrics?.bedOccupancy ?? 0) <= 92 ? 'success' : 'warning'}
+                  hint="safe <92%"
+                />
+              </View>
+              <View style={{ flexDirection: 'row', marginTop: spacing.xs }}>
+                <StatTile
+                  label="Ambulance"
+                  value={`${Math.round(state.nhsMetrics?.ambulanceResponse ?? 0)}%`}
+                  tone={(state.nhsMetrics?.ambulanceResponse ?? 0) >= 80 ? 'success' : 'danger'}
+                  hint="target >85%"
+                />
+                <StatTile
+                  label="Staff vacancies"
+                  value={`${Math.round(state.nhsMetrics?.staffVacancies ?? 0)}%`}
+                  tone={(state.nhsMetrics?.staffVacancies ?? 0) <= 5 ? 'success' : 'danger'}
+                  hint="target <3%"
+                />
+                <StatTile
+                  label="Patient satisf"
+                  value={`${Math.round(state.nhsMetrics?.patientSatisfaction ?? 0)}%`}
+                  tone={(state.nhsMetrics?.patientSatisfaction ?? 0) >= 60 ? 'success' : 'default'}
+                  hint="0-100 scale"
+                />
+              </View>
+            </Card>
+
+            <Card>
+              <Text style={{ color: colors.text, fontSize: font.small, fontWeight: '800' }}>Trade relationships</Text>
+              <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 2 }}>
+                Advance or suspend bilateral trade agreements. Active deals boost GDP growth and export revenue.
+              </Text>
+              {TRADE_ROWS.map((row) => {
+                const raw = state.tradeDealStatus ? state.tradeDealStatus[row.key] : undefined;
+                const status = raw ? raw.status : 'none';
+                const progress = raw && raw.status === 'negotiating' && typeof raw.progress === 'number' ? ` (${raw.progress}%)` : '';
+                const tone: 'success' | 'accent' | 'warning' | 'neutral' =
+                  status === 'ratified' ? 'success' : status === 'signed' ? 'accent' : status === 'negotiating' ? 'warning' : 'neutral';
+                const canAdvance = status !== 'ratified';
+                const canSuspend = raw !== null && raw !== undefined && status !== 'withdrawn';
+                return (
+                  <View key={row.key} style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+                    <Text style={{ color: colors.text, flex: 1, fontSize: font.small }} numberOfLines={1}>{row.label}</Text>
+                    <Chip label={`${status}${progress}`} tone={tone} />
+                    {canAdvance && (
+                      <View style={{ marginLeft: 6 }}>
+                        <Button
+                          label={status === 'signed' || status === 'negotiating' ? 'Ratify' : 'Pursue'}
+                          variant="secondary"
+                          compact
+                          disabled={inPurdah}
+                          onPress={() => dispatch({ type: 'PURSUE_TRADE_DEAL', partner: row.partner, action: 'pursue' })}
+                        />
+                      </View>
+                    )}
+                    {canSuspend && (
+                      <View style={{ marginLeft: 6 }}>
+                        <Button
+                          label="Suspend"
+                          variant="ghost"
+                          compact
+                          disabled={inPurdah}
+                          onPress={() => dispatch({ type: 'PURSUE_TRADE_DEAL', partner: row.partner, action: 'suspend' })}
+                        />
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </Card>
+
+            <Card>
+              <Text style={{ color: colors.text, fontSize: font.small, fontWeight: '800' }}>Diplomatic relations</Text>
+              {player && state.relations.filter((r) => r.from === player.partyId).map((r) => {
+                const band = relationBand(r.score);
+                const partnerName = state.parties.find((p) => p.id === r.to)?.name ?? r.to;
+                return (
+                  <View key={r.to} style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+                    <Text style={{ color: colors.text, flex: 1, fontSize: font.small }} numberOfLines={1}>{partnerName}</Text>
+                    <Text style={{ color: colors.muted, fontSize: font.tiny, marginRight: 8 }}>{r.score}</Text>
+                    <Chip label={band} tone={BAND_TONE[band]} />
+                  </View>
+                );
+              })}
+            </Card>
+
+            <Card>
+              <Text style={{ color: colors.text, fontSize: font.small, fontWeight: '800' }}>Legacy</Text>
+              <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 4 }}>
+                Score {state.legacyScore} | terms won {state.termsWon}
+              </Text>
+            </Card>
+          </View>
+        )}
+      </ScrollView>
+
+      {/* ================= BOTTOM NAV ================= */}
+      <View
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 10,
+          elevation: 10,
+          flexDirection: 'row',
+          backgroundColor: colors.bgElevated,
+          borderTopWidth: 1,
+          borderTopColor: colors.cardBorder,
+          paddingBottom: Math.max(insets.bottom, 8),
+          paddingTop: 8,
+        }}
+      >
+        {TABS.map((t) => {
+          const active = t.key === tab;
+          const badge = t.key === 'desk' ? urgentCount : 0;
+          return (
+            <Pressable
+              key={t.key}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active }}
+              accessibilityLabel={t.label}
+              onPress={() => setTab(t.key)}
+              style={{ flex: 1, alignItems: 'center' }}
+            >
+              <View
+                style={{
+                  width: 26,
+                  height: 26,
+                  borderRadius: 13,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: active ? colors.accentSoft : 'transparent',
+                }}
+              >
+                <Ionicons name={t.icon} size={19} color={active ? colors.accent : colors.muted} />
+                {badge > 0 && (
+                  <View style={{ position: 'absolute', right: -4, top: -4, backgroundColor: colors.danger, borderRadius: 8, minWidth: 15, height: 15, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{badge}</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={{ color: active ? colors.text : colors.muted, fontSize: 10, fontWeight: '700', marginTop: 2 }}>{t.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {/* ================= DOSSIER SHEET ================= */}
+      <Sheet
+        visible={!!activeDossier}
+        onClose={() => dispatch({ type: 'CLOSE_DOSSIER' })}
+        eyebrow={activeDossier ? `${activeDossier.department.toUpperCase()} SUBMISSION` : undefined}
+        title={activeDossier ? activeDossier.title : ''}
+      >
+        {activeDossier && (
+          <View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
+              <Chip label={activeDossier.urgent ? 'urgent' : 'routine'} tone={activeDossier.urgent ? 'danger' : 'neutral'} />
+              <Text style={{ color: colors.muted, fontSize: font.tiny, marginLeft: 8 }}>
+                {activeDossier.weeksRemaining} month{activeDossier.weeksRemaining === 1 ? '' : 's'} left | paper {dossierIndex} of {redBox.length}
+              </Text>
+            </View>
+            <Text style={{ color: colors.text, fontSize: font.body, fontWeight: '700', lineHeight: 21 }}>{activeDossier.leadParagraph}</Text>
+            <Text style={{ color: colors.muted, fontSize: font.small, lineHeight: 19, marginTop: spacing.sm }}>{activeDossier.body}</Text>
+            <Text style={[styles.label, { marginTop: spacing.lg }]}>YOUR DECISION</Text>
+            {activeDossier.choices.map((c) => (
+              <Pressable
+                key={c.id}
+                testID={`dossier-choice-${c.id}`}
+                onPress={() => dispatch({ type: 'RESOLVE_DOSSIER', dossierId: activeDossier.id, choiceId: c.id })}
+                style={{ borderWidth: 1, borderColor: colors.cardBorder, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.sm, backgroundColor: colors.card }}
+              >
+                <Text style={{ color: colors.accent, fontSize: font.body, fontWeight: '700' }}>{c.label}</Text>
+                <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 2 }}>{c.summary}</Text>
+                <EffectChips effects={c.effects as Effects} />
+                <Text style={{ color: colors.muted, fontSize: font.tiny, fontStyle: 'italic', marginTop: 6 }}>Adviser: {c.advice}</Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
+      </Sheet>
+
+      {/* ================= PMQ SHEET ================= */}
+      <Sheet
+        visible={!!state.pmq}
+        onClose={() => dispatch({ type: 'DISMISS_PMQ' })}
+        eyebrow={
+          state.pmq?.total
+            ? `PRIME MINISTER'S QUESTIONS | ${state.pmq.asker === 'third' ? 'THIRD PARTY' : 'OPPOSITION LEADER'} | QUESTION ${state.pmq.round ?? 1} OF ${state.pmq.total}`
+            : "PRIME MINISTER'S QUESTIONS"
+        }
+        title={state.pmq ? state.pmq.from : ''}
+      >
+        {state.pmq && (
+          <View>
+            <Text style={{ color: colors.text, fontSize: font.body, lineHeight: 22 }}>{state.pmq.question}</Text>
+            <Text style={[styles.label, { marginTop: spacing.lg }]}>YOUR ANSWER</Text>
+            {state.pmq.options.map((o) => (
+              <Pressable
+                key={o.id}
+                testID={`pmq-option-${o.id}`}
+                onPress={() => dispatch({ type: 'ANSWER_PMQ', optionId: o.id })}
+                style={{ borderWidth: 1, borderColor: colors.cardBorder, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.sm, backgroundColor: colors.card }}
+              >
+                <Text style={{ color: colors.accent, fontSize: font.body, fontWeight: '700' }}>{o.label}</Text>
+                <EffectChips effects={o.effects as Effects} max={4} />
+              </Pressable>
+            ))}
+            <Button label="Skip this session" variant="ghost" onPress={() => dispatch({ type: 'DISMISS_PMQ' })} />
+          </View>
+        )}
+      </Sheet>
+
+      {/* ================= BUDGET SHEET ================= */}
+      <Sheet
+        visible={state.budgetDue}
+        onClose={() => dispatch({ type: 'SKIP_BUDGET' })}
+        eyebrow={state.fiscalEventKind === 'autumn' ? 'HM TREASURY | AUTUMN STATEMENT' : 'HM TREASURY | THE ANNUAL BUDGET'}
+        title={state.fiscalEventKind === 'autumn' ? 'Lock in your tax plans' : 'The Chancellor’s Dispatch Box Budget'}
+      >
+        {state.fiscalEventKind === 'autumn' ? (
+          <View>
+            <Text style={{ color: colors.muted, fontSize: font.small, lineHeight: 19 }}>
+              The Autumn Statement allows mid-cycle calibration of non-DEL tax toggles and locks in your tax levers until the Spring Budget.
+            </Text>
+
+            <View style={{ marginTop: spacing.md }}>
+              <Card>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View style={{ flex: 1, marginRight: spacing.sm }}>
+                    <Text style={{ color: colors.text, fontSize: font.body, fontWeight: '700' }}>Fuel Duty (52.95p/l)</Text>
+                    <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 2 }}>
+                      {state.fuelDutyFrozen !== false
+                        ? `5p freeze active (costs £${FUEL_DUTY_FREEZE_COST}bn/yr).`
+                        : `Escalator restored (+£${FUEL_DUTY_FREEZE_COST}bn revenue).`}
+                    </Text>
+                  </View>
+                  <Button
+                    label={state.fuelDutyFrozen !== false ? 'Restore Duty' : 'Freeze 5p'}
+                    variant="ghost"
+                    compact
+                    onPress={() =>
+                      dispatch({
+                        type: 'DELIVER_CUSTOM_BUDGET',
+                        plan: {
+                          title: 'Autumn Statement (Fuel Duty Adjustment)',
+                          departmentBudgets: {},
+                          taxRates: {},
+                          personalAllowance: state.personalAllowance ?? 12570,
+                          personalAllowanceFreezeYears: state.personalAllowanceFreezeYears ?? 0,
+                          fuelDutyFrozen: !(state.fuelDutyFrozen !== false),
+                          stampDutyRelief: state.stampDutyRelief ?? false,
+                          tripleLock: state.tripleLock !== false,
+                          publicSectorPay: state.publicSectorPay ?? 'full',
+                          thresholdsFrozen: state.thresholdsFrozen !== false,
+                        },
+                      })
+                    }
+                  />
+                </View>
+              </Card>
+
+              <Card style={{ marginTop: spacing.xs }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View style={{ flex: 1, marginRight: spacing.sm }}>
+                    <Text style={{ color: colors.text, fontSize: font.body, fontWeight: '700' }}>Stamp Duty (SDLT)</Text>
+                    <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 2 }}>
+                      {state.stampDutyRelief === true
+                        ? `Nil-rate relief active (costs £${STAMP_DUTY_RELIEF_COST}bn/yr).`
+                        : `Standard SDLT rates (saves £${STAMP_DUTY_RELIEF_COST}bn/yr).`}
+                    </Text>
+                  </View>
+                  <Button
+                    label={state.stampDutyRelief === true ? 'End Relief' : 'Raise Bands'}
+                    variant="ghost"
+                    compact
+                    onPress={() =>
+                      dispatch({
+                        type: 'DELIVER_CUSTOM_BUDGET',
+                        plan: {
+                          title: 'Autumn Statement (SDLT Adjustment)',
+                          departmentBudgets: {},
+                          taxRates: {},
+                          personalAllowance: state.personalAllowance ?? 12570,
+                          personalAllowanceFreezeYears: state.personalAllowanceFreezeYears ?? 0,
+                          fuelDutyFrozen: state.fuelDutyFrozen !== false,
+                          stampDutyRelief: !(state.stampDutyRelief === true),
+                          tripleLock: state.tripleLock !== false,
+                          publicSectorPay: state.publicSectorPay ?? 'full',
+                          thresholdsFrozen: state.thresholdsFrozen !== false,
+                        },
+                      })
+                    }
+                  />
+                </View>
+              </Card>
+            </View>
+
+            <View style={{ marginTop: spacing.lg }}>
+              <Button label="Deliver Autumn Statement" onPress={() => dispatch({ type: 'SET_AUTUMN_TAXES' })} />
+            </View>
+            <View style={{ marginTop: spacing.xs }}>
+              <Button label="Defer" variant="ghost" onPress={() => dispatch({ type: 'SKIP_BUDGET' })} />
+            </View>
+          </View>
+        ) : (
+          <BudgetWorkbench
+            state={state}
+            onDeliver={(plan) => dispatch({ type: 'DELIVER_CUSTOM_BUDGET', plan })}
+            onDefer={() => dispatch({ type: 'SKIP_BUDGET' })}
+          />
+        )}
+      </Sheet>
+
+      {/* weekly briefing is now a non-blocking banner at the top of the desk */}
+
+      {/* ================= HELP ================= */}
+      <Sheet visible={helpOpen} onClose={() => setHelpOpen(false)} eyebrow="HOW TO PLAY" title="Running the country">
+        <View>
+          {HELP_ROWS.map((row) => (
+            <View key={row.title} style={{ marginTop: spacing.md }}>
+              <Text style={{ color: colors.text, fontSize: font.body, fontWeight: '800' }}>{row.title}</Text>
+              <Text style={{ color: colors.muted, fontSize: font.small, lineHeight: 19, marginTop: 2 }}>{row.body}</Text>
+            </View>
+          ))}
+          <Button label="Got it" onPress={() => setHelpOpen(false)} />
+        </View>
+      </Sheet>
+
+      {/* ================= MINISTER PICKER ================= */}
+      <Sheet visible={!!state.ministerPicker} onClose={() => dispatch({ type: 'CANCEL_APPOINT' })} eyebrow="CABINET PROMOTION" title={state.ministerPicker ? state.ministerPicker : ''}>
+        <View>
+          <Text style={{ color: colors.muted, fontSize: font.small }}>Choose the post for this appointment.</Text>
+          {MINISTER_POSTS.map((post) => (
+            <Pressable
+              key={post}
+              onPress={() => dispatch({ type: 'CONFIRM_APPOINT', post })}
+              style={{ borderWidth: 1, borderColor: colors.cardBorder, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.sm, backgroundColor: colors.card }}
+            >
+              <Text style={{ color: colors.text, fontSize: font.body, fontWeight: '700' }}>{post}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </Sheet>
+
+      {/* ================= ELECTION ================= */}
+      <Modal visible={state.isElection && !state.gameOver} transparent animationType="fade">
+        <View style={styles.centerBackdrop}>
+          <View style={[styles.centerCard, { maxHeight: '90%', width: '92%' }]}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={{ color: colors.accent, fontSize: font.h2, fontWeight: '800', textAlign: 'center' }}>GENERAL ELECTION</Text>
+              <Text style={{ color: colors.muted, fontSize: font.small, textAlign: 'center', marginTop: 4 }}>
+                Terms won {state.termsWon} | legacy {state.legacyScore}
+              </Text>
+              {(() => {
+                const mySeats = state.parties.find((p) => p.id === state.player?.partyId)?.seats ?? 0;
+                const hasMajority = mySeats >= 326;
+                return (
+                  <View style={{ marginTop: spacing.sm, padding: spacing.sm, backgroundColor: colors.bgElevated, borderRadius: radius.md }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <Text style={{ color: colors.text, fontSize: font.tiny, fontWeight: '800' }}>
+                        {hasMajority ? `Working Majority (+${mySeats - 326})` : `Hung Parliament (${326 - mySeats} short of 326)`}
+                      </Text>
+                      <Text style={{ color: hasMajority ? colors.success : colors.warning, fontSize: font.tiny, fontWeight: '800' }}>
+                        {mySeats} / 650
+                      </Text>
+                    </View>
+                    <Meter value={Math.round((mySeats / 650) * 100)} height={10} color={hasMajority ? colors.success : colors.warning} />
+                  </View>
+                );
+              })()}
+
+              <View style={{ flexDirection: 'row', marginTop: spacing.md, backgroundColor: colors.bg, borderRadius: radius.md, padding: 3, borderWidth: 1, borderColor: colors.cardBorder }}>
+                <Pressable
+                  onPress={() => setElectionViewTab('summary')}
+                  style={{ flex: 1, paddingVertical: 6, alignItems: 'center', borderRadius: radius.sm, backgroundColor: electionViewTab === 'summary' ? colors.accentSoft : 'transparent' }}
+                >
+                  <Text style={{ color: electionViewTab === 'summary' ? colors.text : colors.muted, fontSize: font.tiny, fontWeight: '700' }}>National Seats</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setElectionViewTab('map')}
+                  style={{ flex: 1, paddingVertical: 6, alignItems: 'center', borderRadius: radius.sm, backgroundColor: electionViewTab === 'map' ? colors.accentSoft : 'transparent' }}
+                >
+                  <Text style={{ color: electionViewTab === 'map' ? colors.text : colors.muted, fontSize: font.tiny, fontWeight: '700' }}>Regional Map & Councils</Text>
+                </Pressable>
+              </View>
+
+              {electionViewTab === 'summary' ? (
+                <View style={{ marginTop: spacing.md }}>
+                  {rankedParties.map((p) => (
+                    <View key={p.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 6 }}>
+                      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: p.color, marginRight: 10 }} />
+                      <Text style={{ color: colors.text, flex: 1, fontSize: font.body }}>{p.name}</Text>
+                      <Text style={{ color: colors.text, fontSize: font.body, fontWeight: '700' }}>{p.seats}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <ElectionMap
+                  regionSeats={state.regionSeats ?? {}}
+                  parties={state.parties}
+                  playerPartyId={state.player?.partyId}
+                  defaultFilter="england"
+                />
+              )}
+
+              <View style={{ marginTop: spacing.md }}>
+                <Button label="Continue governing" onPress={() => dispatch({ type: 'DISMISS_ELECTION' })} />
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ================= GAME OVER ================= */}
+      <Modal visible={!!state.gameOver} transparent animationType="fade">
+        <View style={styles.centerBackdrop}>
+          <View style={[styles.centerCard, { borderColor: colors.danger, borderWidth: 1 }]}>
+            <Text style={{ color: colors.danger, fontSize: font.h2, fontWeight: '800', textAlign: 'center' }}>PREMIERSHIP OVER</Text>
+            <Text style={{ color: colors.text, fontSize: font.body, textAlign: 'center', marginTop: spacing.md, lineHeight: 21 }}>
+              {state.gameOver}
+            </Text>
+            <Text style={{ color: colors.muted, fontSize: font.small, textAlign: 'center', marginTop: spacing.sm }}>
+              {state.week} months in office | {state.passedLaws.length} laws passed | pledges kept{' '}
+              {evaluatePledges(state, state.pledges ?? []).filter((r) => r.kept).length} of {(state.pledges ?? []).length}
+            </Text>
+            <Text style={{ color: colors.muted, fontSize: font.small, textAlign: 'center', marginTop: 4 }}>
+              By-elections: {(state.byElections ?? []).filter((b) => !b.held).length} lost of {(state.byElections ?? []).length}
+            </Text>
+            <Text style={{ color: colors.muted, fontSize: font.small, textAlign: 'center', marginTop: 4 }}>
+              Final legacy score {state.legacyScore}.
+            </Text>
+            <Button label="Return to main menu" onPress={restart} />
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+const TRADE_ROWS: { key: Exclude<keyof UKTradeDealStatus, 'wtoBaseline'>; partner: TradePartner; label: string }[] = [
+  { key: 'euTradeDeal', partner: 'eu', label: 'European Union' },
+  { key: 'usaTradeDeal', partner: 'usa', label: 'United States' },
+  { key: 'chinaTradeDeal', partner: 'china', label: 'China' },
+  { key: 'indiaTradeDeal', partner: 'india', label: 'India' },
+  { key: 'cpTradeDeal', partner: 'commonwealth', label: 'Commonwealth' },
+];
+
+const MINISTER_POSTS = [
+  'Chancellor of the Exchequer',
+  'Home Secretary',
+  'Health Secretary',
+  'Foreign Secretary',
+  'Defence Secretary',
+  'Education Secretary',
+  'Minister of State',
+];
+
+const HELP_ROWS: { title: string; body: string }[] = [
+  { title: 'Advance', body: 'Moves one month. Anything urgent left undecided becomes a scandal and costs you approval.' },
+  { title: 'Red Box', body: 'Your inbox. Tap a paper to see each option and its likely effect before you decide.' },
+  { title: 'Laws', body: 'Introduce bills. They take months to reach a division, and high rebellion risk means your own MPs may sink them.' },
+  { title: 'Money', body: 'Set department budgets and tax rates. Spending buys services and approval but widens the deficit.' },
+  { title: 'Politics', body: 'Watch the 1922 letters meter. Reach the threshold and you face a confidence vote among your own MPs.' },
+  { title: 'World', body: 'Handle summits and keep an eye on growth, inflation, gilts and debt.' },
+  { title: 'Elections', body: 'Every term ends in a general election. Seats come from regional support, not national polls alone.' },
+];
+
+const styles = {
+  label: { color: colors.muted, fontSize: font.tiny, fontWeight: '800' as const, letterSpacing: 1 },
+  hint: { color: colors.muted, fontSize: font.small, lineHeight: 19 },
+  centerBackdrop: {
+    flex: 1,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    backgroundColor: 'rgba(2,6,16,0.88)',
+    padding: spacing.xl,
+  },
+  centerCard: {
+    backgroundColor: colors.bgElevated,
+    borderRadius: radius.lg,
+    borderColor: colors.cardBorder,
+    borderWidth: 1,
+    padding: spacing.xl,
+    width: '100%' as const,
+  },
+};
