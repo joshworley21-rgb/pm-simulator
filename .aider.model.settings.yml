@@ -1,0 +1,12 @@
+- name: openrouter/openai/gpt-6-luna
+  edit_format: diff
+  use_repo_map: true
+  extra_params:
+    extra_body:
+      reasoning:
+        effort: high
+      provider:
+        order:
+          - OpenAI
+          - Azure
+        allow_fallbacks: true
