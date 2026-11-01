@@ -21,6 +21,9 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Run slice harnesses
+        run: npm run test:slices
+
       - name: Run E2E integration fuzzer
         run: npx --yes tsx scripts/e2e-integration-fuzzer.ts
         env:

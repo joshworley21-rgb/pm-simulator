@@ -11,7 +11,8 @@
     "test:engine": "tsc scripts/engine-test.ts scripts/personal-allowance-revenue-test.ts scripts/fiscal-drag-model-guard-test.ts --ignoreConfig --outDir .engine-test --module commonjs --target es2019 --skipLibCheck --esModuleInterop --ignoreDeprecations 6.0 && node -e \"require('node:fs').writeFileSync('.engine-test/package.json', JSON.stringify({ type: 'commonjs' }))\" && node .engine-test/scripts/engine-test.js && node .engine-test/scripts/personal-allowance-revenue-test.js && node .engine-test/scripts/fiscal-drag-model-guard-test.js",
     "test:fuzzers": "npx --yes tsx scripts/political-fuzzer.ts && npx --yes tsx scripts/political-fuzzer-mild.ts && npx --yes tsx scripts/economy-fuzzer.ts && npx --yes tsx scripts/redbox-crawler.ts && npx --yes tsx scripts/fiscal-drag-model-guard-test.ts && npx --yes tsx scripts/personal-allowance-revenue-test.ts && npx --yes tsx scripts/e2e-integration-fuzzer.ts",
     "report": "npx --yes tsx scripts/generate-report.ts",
-    "test": "npm run typecheck && npm run test:engine"
+    "test:slices": "npx --yes tsx scripts/run-slice-tests.ts",
+  "test": "npm run typecheck && npm run test:engine && npm run test:slices"
   },
   "dependencies": {
     "@expo/metro-runtime": "~58.0.15",
