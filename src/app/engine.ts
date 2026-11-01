@@ -41,6 +41,7 @@ import type { EfficiencyTargetPct } from './spendingReview';
 import { calculate1922Mood, calculateBlindsideRisk } from './leadershipChallenge';
 import { advanceCabinet, createDefaultCabinetState } from './cabinet';
 import { advanceMedia, createDefaultMediaState } from './media';
+import { advanceImmigration, createDefaultImmigrationState } from './immigration';
 import { advanceDevolution, createDefaultDevolutionState } from './devolution';
 import { DOSSIER_POOL_2 } from './dossiers2';
 import { DOSSIER_POOL_3 } from './dossiers3';
@@ -228,6 +229,7 @@ export function createInitialState(): GameState {
     ethics: createDefaultEthics(),
     cabinetState: createDefaultCabinetState(),
     mediaState: createDefaultMediaState(),
+    immigrationState: createDefaultImmigrationState(),
     devolutionState: createDefaultDevolutionState(),
   };
   const initial = { ...s, billResolutions: {} };
@@ -1595,6 +1597,22 @@ export function advanceWeek(s: GameState): GameState {
     next = { ...next, log: [...devolutionResult.log, ...next.log].slice(0, 50) };
   }
 
+  // Immigration & asylum: backlog, arrivals and removals. Logic lives in ./immigration.
+  const immigrationResult = advanceImmigration({
+    state: next.immigrationState ?? createDefaultImmigrationState(),
+    approval: next.metrics.approval,
+    security: next.metrics.security,
+    week: next.week,
+    seed: next.seed,
+  });
+  next = { ...next, immigrationState: immigrationResult.state };
+  if (Object.keys(immigrationResult.effects).length > 0) {
+    next = applyEffects(next, immigrationResult.effects);
+  }
+  if (immigrationResult.log.length > 0) {
+    next = { ...next, log: [...immigrationResult.log, ...next.log].slice(0, 50) };
+  }
+
   // 7. Draw fresh dossier.
   const activeIds = new Set(remaining.map((d) => d.id));
   const escalatedIds = new Set(next.escalatedDossierIds ?? []);
@@ -1891,6 +1909,7 @@ export function migrateState(saved: Partial<GameState> | null | undefined): Game
     publicSectorPay: saved.publicSectorPay === 'capped' ? 'capped' : 'full',
     cabinetState: { ...createDefaultCabinetState(), ...(saved.cabinetState ?? {}) },
     mediaState: { ...createDefaultMediaState(), ...(saved.mediaState ?? {}) },
+    immigrationState: { ...createDefaultImmigrationState(), ...(saved.immigrationState ?? {}) },
     devolutionState: { ...createDefaultDevolutionState(), ...(saved.devolutionState ?? {}) },
     whips: { ...createDefaultWhips(), ...(saved.whips ?? {}) },
     ethics: {
