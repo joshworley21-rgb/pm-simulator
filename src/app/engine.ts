@@ -39,7 +39,13 @@ import {
 } from './spendingReview';
 import type { EfficiencyTargetPct } from './spendingReview';
 import { calculate1922Mood, calculateBlindsideRisk } from './leadershipChallenge';
-import { advanceCabinet, createDefaultCabinetState } from './cabinet';
+import {
+  advanceCabinet,
+  createDefaultCabinetState,
+  applyPromotion,
+  applyRemoval,
+  CABINET_COHESION_FLOOR,
+} from './cabinet';
 import {
   advanceMedia,
   createDefaultMediaState,
@@ -60,8 +66,15 @@ import {
   startBill,
   markLordsDelay,
   LORDS_STAGE_WEEKS,
+  commonsRebelLoss,
+  runCommonsDivision,
 } from './parliament';
-import { advanceLobbying, createDefaultLobbyingState, committeeDelayWeeks } from './lobbying';
+import {
+  advanceLobbying,
+  createDefaultLobbyingState,
+  committeeDelayWeeks,
+  hostileCommittees,
+} from './lobbying';
 import {
   advanceBlackSwans,
   createDefaultBlackSwanState,
@@ -97,7 +110,7 @@ import {
 } from './cabinetEffects';
 import { computeBlocs, blocAverage } from './voterBlocs';
 import { projectSeats } from './electionProjection';
-import { advanceWhips, createDefaultWhips, divisionDisciplineModifier } from './modules/whips';
+import { advanceWhips, createDefaultWhips, divisionDisciplineModifier, patronageEffect } from './modules/whips';
 import { advanceEthics, createDefaultEthics } from './modules/ethics';
 
 /** Placeholder partner ministers; enough variety to staff a coalition. */
@@ -771,10 +784,42 @@ function resolveBill(s: GameState, bill: Bill, rng: () => number): GameState {
   const whip = bill.whipLevel ?? 'two-line';
   const modifier = divisionDisciplineModifier(s.whips ?? createDefaultWhips(), whip);
   const adjustedRebellionRisk = Math.max(0, bill.rebellionRisk + modifier.rebellionRiskDelta);
-  const adjustedDivisionSeats = seats + modifier.voteSwing;
+  // A TRUE COMMONS DIVISION: backbench rebels are deducted from the government's lobby.
+  // commonsRebelLoss() is exactly 0 for a bill with no rebellion risk, so the golden bill
+  // checks -- and therefore the Idle archetype -- stay arithmetically untouched.
+  const rebelLossFromBackbenches = commonsRebelLoss({
+    rebellionRisk: adjustedRebellionRisk,
+    ownSeats,
+    whipLevel: whip,
+    rebelPressure: (s.whips ?? createDefaultWhips()).rebelPressure,
+    whipStrength: (s.whips ?? createDefaultWhips()).whipStrength,
+    cohesion: (s.cabinetState ?? createDefaultCabinetState()).cohesion,
+  });
+  const adjustedDivisionSeats = seats + modifier.voteSwing - rebelLossFromBackbenches;
 
+  // ===== True Commons division =====
+  // The tally below runs ONLY once a party signal is live: cabinet cohesion below its
+  // floor, whips above their starting rebelPressure, or a hostile select committee. At
+  // default state every one of those terms is exactly zero, so the legacy threshold table
+  // runs verbatim and the golden division checks (including their exact letter counts)
+  // stay byte-identical.
+  const cohesionExcess = Math.max(0, CABINET_COHESION_FLOOR - (s.cabinetState?.cohesion ?? CABINET_COHESION_FLOOR));
+  const whipExcess = Math.max(0, (s.whips?.rebelPressure ?? 10) - 10);
+  const committeeHeat = hostileCommittees(s.lobbyingState ?? createDefaultLobbyingState()) > 0 ? 1 : 0;
   let passed: boolean;
-  if (whip === 'three-line') {
+  if (cohesionExcess + whipExcess + committeeHeat > 0) {
+    const division = runCommonsDivision({
+      ownSeats,
+      partnerSeats: partner?.seats ?? 0,
+      totalSeats: s.parties.reduce((sum, p) => sum + p.seats, 0) || 650,
+      whipLevel: whip,
+      rebellionRisk: adjustedRebellionRisk,
+      voteSwing: modifier.voteSwing,
+      cabinetCohesion: s.cabinetState?.cohesion ?? CABINET_COHESION_FLOOR,
+      rebelPressure: s.whips?.rebelPressure ?? 10,
+    });
+    passed = division.passed;
+  } else if (whip === 'three-line') {
     // Three-line whip: maximum attendance and discipline (+15 virtual votes in lobbies)
     const effectiveSeats = adjustedDivisionSeats + 15;
     if (effectiveSeats >= 355) passed = true;
@@ -1431,6 +1476,13 @@ export function advanceWeek(s: GameState): GameState {
       backbenchers: next.backbenchers.slice(1),
       lastReshuffleWeek: next.week,
       reshuffleDisciplineBonus: activeBonus + appliedGrant,
+      // Patronage: the promoted backbencher joins the payroll vote and the whips' office gains.
+      cabinetState: applyPromotion(
+        next.cabinetState ?? createDefaultCabinetState(),
+        incoming.name,
+        next.week,
+      ),
+      whips: patronageEffect(next.whips ?? createDefaultWhips()),
       metrics: { ...next.metrics, partyConfidence: confidenceAfter },
       log: [`RESHUFFLE: ${out.name} leaves the Cabinet and ${incoming.name} takes over as ${out.post}.`, ...next.log].slice(0, 50),
       headlines: [{ paper: 'The National Standard', title: 'PM RESHUFFLES THE CABINET', stance: 'centrist' as const }, ...next.headlines].slice(0, 4),
@@ -1951,6 +2003,8 @@ function resignMinister(s: GameState, name: string): GameState {
   return {
     ...politicallyCosted,
     cabinet,
+    // Patronage lifecycle: a departure forgets tenure, resignation pressure and rivalries.
+    cabinetState: applyRemoval(politicallyCosted.cabinetState ?? createDefaultCabinetState(), name),
     lastReshuffleWeek: cabinet.length === 0 ? s.week : s.lastReshuffleWeek,
     factionUnrest: clamp(s.factionUnrest + cost.factionUnrestIncrease, 0, 100),
     log: [`CABINET: ${m.name} sacked as ${m.post}.`, ...s.log].slice(0, 50),
@@ -2391,6 +2445,9 @@ export function reducer(state: GameState, action: Action): GameState {
         cabinet: [...state.cabinet, minister],
         backbenchers: state.backbenchers.filter((b) => b.name !== candidate.name),
         ministerPicker: null,
+        // Patronage lifecycle: a promotion resets tenure, and the payroll vote buys loyalty.
+        cabinetState: applyPromotion(state.cabinetState ?? createDefaultCabinetState(), candidate.name, state.week),
+        whips: patronageEffect(state.whips ?? createDefaultWhips()),
         log: [`CABINET: ${candidate.name} appointed ${post}.`, ...state.log].slice(0, 50),
       };
     }

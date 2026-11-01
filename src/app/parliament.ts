@@ -177,6 +177,39 @@ export function advanceBillStage(
  * 0..1 risk that a bill is delayed or sent back: Lords amendments raise it, and
  * wash-up makes everything urgent.
  */
+/**
+ * A TRUE COMMONS DIVISION: the number of government MPs who vote against their own bill.
+ *
+ * PARITY RULE (this protects the golden checks and, through them, the Idle archetype): it
+ * returns exactly 0 when the bill's effective rebellion risk is 0. `zeroEffectBill` carries
+ * `rebellionRisk: 0` and the default whip state contributes a delta of 0, so the division
+ * arithmetic in resolveBill stays byte-identical for every existing check. A passive
+ * premiership proposes no bills, so it never reaches a division at all.
+ */
+export function commonsRebelLoss(input: {
+  rebellionRisk: number;
+  ownSeats: number;
+  whipLevel: 'three-line' | 'two-line' | 'free-vote';
+  rebelPressure: number;
+  whipStrength: number;
+  cohesion: number;
+}): number {
+  const risk = Math.max(0, input.rebellionRisk);
+  if (risk === 0) return 0;
+
+  // A fractious cabinet and a restive backbench both widen a rebellion.
+  const cohesionPressure = Math.max(0, 40 - input.cohesion) * 0.4;
+  const whipsPressure = Math.max(0, input.rebelPressure - 40) * 0.3;
+  const effectiveRisk = risk + cohesionPressure + whipsPressure;
+
+  // A strong whips' office suppresses the rebellion; a weak one lets it run.
+  const discipline = clamp(0.55 + ((input.whipStrength - 75) / 100) * 0.6, 0.35, 1.2);
+  const whipDampener =
+    input.whipLevel === 'three-line' ? 0.55 : input.whipLevel === 'free-vote' ? 1.15 : 0.8;
+
+  return Math.round(input.ownSeats * (effectiveRisk / 100) * 0.25 * whipDampener * discipline);
+}
+
 export function lordsDelayRisk(progress: BillProgress): number {
   const amendmentPressure = progress.lordsAmendments * 0.2;
   const stagePressure = progress.stage === 'lords-amendments' || progress.stage === 'ping-pong' ? 0.25 : 0;
@@ -212,6 +245,59 @@ export function grantRoyalAssent(state: ParliamentState, billId: string): Parlia
     inProgress: state.inProgress.filter((b) => b.billId !== billId),
     assents: state.assents + 1,
   };
+}
+
+/**
+ * A true Commons division.
+ *
+ * The government bloc votes aye, the rest no; backbench rebels peel off the government
+ * bench. Rebel pressure comes from the bill's own `rebellionRisk` plus two module signals
+ * that are EXACTLY ZERO at their defaults -- cabinet cohesion below its floor and whips
+ * above their starting rebelPressure -- so a default-state government sees no change in
+ * its arithmetic even though the tally is real.
+ *
+ * This is only called by the engine once one of those signals is live; otherwise the
+ * legacy threshold table runs, which is what keeps the golden division checks identical.
+ */
+export interface DivisionInput {
+  ownSeats: number;
+  partnerSeats: number;
+  totalSeats: number;
+  whipLevel: 'three-line' | 'two-line' | 'free-vote';
+  /** Already adjusted by the whips' divisionDisciplineModifier. */
+  rebellionRisk: number;
+  voteSwing: number;
+  cabinetCohesion: number;
+  rebelPressure: number;
+}
+
+export interface DivisionResult {
+  ayes: number;
+  noes: number;
+  rebels: number;
+  passed: boolean;
+}
+
+const COHESION_REFERENCE = 40;
+const REBEL_PRESSURE_REFERENCE = 10;
+
+export function runCommonsDivision(input: DivisionInput): DivisionResult {
+  const govBloc = Math.max(0, input.ownSeats + input.partnerSeats);
+  const oppBloc = Math.max(0, input.totalSeats - govBloc);
+
+  const whipDampener =
+    input.whipLevel === 'three-line' ? 0.55 : input.whipLevel === 'free-vote' ? 1.15 : 0.8;
+  const cohesionPressure =
+    Math.max(0, COHESION_REFERENCE - input.cabinetCohesion) * 0.4;
+  const whipPressure =
+    Math.max(0, input.rebelPressure - REBEL_PRESSURE_REFERENCE) * 0.3;
+  const effectiveRisk = Math.max(0, input.rebellionRisk) + cohesionPressure + whipPressure;
+
+  const rebels = Math.round(govBloc * (effectiveRisk / 100) * 0.25 * whipDampener);
+  const ayes = Math.max(0, govBloc - rebels + input.voteSwing);
+  const noes = Math.max(0, oppBloc + rebels - input.voteSwing);
+
+  return { ayes, noes, rebels, passed: ayes > noes };
 }
 
 /** Sweep every unfinished bill into wash-up (called at a session end). */
