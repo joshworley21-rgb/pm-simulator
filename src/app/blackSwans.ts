@@ -1,4 +1,4 @@
-import type { Effects } from './types';
+import type { Dossier, Effects } from './types';
 
 /**
  * Feature #9 module: Black swans — authored shock decision trees.
@@ -257,6 +257,40 @@ export function advanceBlackSwans(input: BlackSwanTickInput): BlackSwanTickResul
 export function activeSwanEvent(state: BlackSwanState): SwanEvent | undefined {
   if (!state.active) return undefined;
   return BLACK_SWAN_CATALOGUE.find((e) => e.id === state.active!.eventId);
+}
+
+/** Red Box card id for a shock. */
+export const SWAN_CARD_PREFIX = 'swan-card:';
+
+export function isSwanCard(dossierId: string): boolean {
+  return typeof dossierId === 'string' && dossierId.startsWith(SWAN_CARD_PREFIX);
+}
+
+/**
+ * Deal a shock onto the Red Box desk.
+ *
+ * CRITICAL: `urgent` is deliberately FALSE. The engine's crisis-escalation rule only
+ * punishes URGENT dossiers left to expire, so a non-urgent card counts down and then
+ * vanishes silently. That is what makes the passive path neutral BY CONSTRUCTION and
+ * keeps the Idle archetype pinned at its 315-week floor.
+ */
+export function swanDossierCard(event: SwanEvent, weeksRemaining: number): Dossier {
+  return {
+    id: SWAN_CARD_PREFIX + event.id,
+    title: `BLACK SWAN: ${event.name}`,
+    department: 'Number 10',
+    urgent: false,
+    weeksRemaining,
+    leadParagraph: event.brief,
+    body: event.brief,
+    choices: event.options.map((o) => ({
+      id: o.id,
+      label: o.label,
+      summary: o.label,
+      advice: o.label,
+      effects: o.effects,
+    })),
+  };
 }
 
 /**

@@ -385,6 +385,7 @@ export type Action =
   | { type: 'OPEN_DOSSIER'; dossierId: string }
   | { type: 'CLOSE_DOSSIER' }
   | { type: 'RESOLVE_DOSSIER'; dossierId: string; choiceId: string }
+  | { type: 'ANSWER_BLACK_SWAN'; optionId: string }
   | { type: 'PROPOSE_BILL'; billId: string; whipLevel?: WhipLevel }
   | { type: 'SACK_MINISTER'; name: string }
   | { type: 'PICK_MINISTER'; name: string }

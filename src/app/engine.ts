@@ -52,7 +52,15 @@ import {
   LORDS_STAGE_WEEKS,
 } from './parliament';
 import { advanceLobbying, createDefaultLobbyingState, committeeDelayWeeks } from './lobbying';
-import { advanceBlackSwans, createDefaultBlackSwanState } from './blackSwans';
+import {
+  advanceBlackSwans,
+  createDefaultBlackSwanState,
+  activeSwanEvent,
+  isSwanCard,
+  resolveBlackSwan,
+  swanDossierCard,
+  SWAN_WINDOW_WEEKS,
+} from './blackSwans';
 import { advanceDevolution, createDefaultDevolutionState } from './devolution';
 import { DOSSIER_POOL_2 } from './dossiers2';
 import { DOSSIER_POOL_3 } from './dossiers3';
@@ -1722,8 +1730,9 @@ export function advanceWeek(s: GameState): GameState {
   // Black swans: authored shock decision trees. Logic lives in ./blackSwans; the tick is
   // strictly inert and an unanswered shock expires neutrally, so a passive premiership is
   // never dragged below the 315-week Idle floor. Effects fire only on a chosen response.
+  const prevBlackSwan = next.blackSwanState ?? createDefaultBlackSwanState();
   const blackSwanResult = advanceBlackSwans({
-    state: next.blackSwanState ?? createDefaultBlackSwanState(),
+    state: prevBlackSwan,
     week: next.week,
     seed: next.seed,
   });
@@ -1757,6 +1766,12 @@ export function advanceWeek(s: GameState): GameState {
       ].slice(0, 50),
     };
   }
+
+  // NB: the live shock is deliberately NOT dealt into the Red Box. A card would occupy a
+  // slot, displace a normal dossier draw and shift the RNG stream, which moved the Idle
+  // archetype 315 -> 305. It is surfaced through `blackSwanState.active` instead, so a
+  // passive premiership is provably untouched. swanDossierCard() stays exported for the
+  // UI layer to render as its own panel.
 
   // 7c. Add the supply ultimatum dossier if triggered this turn.
   if (supplyUltimatumDue && next.supplyPartnerId) {
@@ -2099,6 +2114,16 @@ export function reducer(state: GameState, action: Action): GameState {
     case 'START_TURN':
       return advanceWeek(state);
 
+    case 'ANSWER_BLACK_SWAN': {
+      const resolution = resolveBlackSwan(
+        state.blackSwanState ?? createDefaultBlackSwanState(),
+        action.optionId,
+      );
+      // Nothing live, or an unknown option: a harmless no-op.
+      if (Object.keys(resolution.effects).length === 0) return state;
+      return applyEffects({ ...state, blackSwanState: resolution.state }, resolution.effects);
+    }
+
     case 'OPEN_DOSSIER':
       return { ...state, selectedDossierId: action.dossierId };
 
@@ -2111,6 +2136,18 @@ export function reducer(state: GameState, action: Action): GameState {
       const choice = dossier.choices.find((c) => c.id === action.choiceId);
       if (!choice) return state;
       let next = applyEffects(state, choice.effects);
+
+      // Answering a black-swan card also updates the command reading and clears the live
+      // shock. The card's own choice effects are applied above, so nothing is double-counted.
+      if (isSwanCard(action.dossierId)) {
+        next = {
+          ...next,
+          blackSwanState: resolveBlackSwan(
+            next.blackSwanState ?? createDefaultBlackSwanState(),
+            action.choiceId,
+          ).state,
+        };
+      }
 
       if (action.dossierId === SUPPLY_ULTIMATUM_ID) {
         const partner = next.parties.find((p) => p.id === next.supplyPartnerId);

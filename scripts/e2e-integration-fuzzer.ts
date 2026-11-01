@@ -13,6 +13,7 @@ import { DEFAULT_NOMINAL_GDP, getDefaultCustomPlan } from '../src/app/budget';
 import { TAX_YIELD_PER_POINT } from '../src/app/taxes';
 import { ministerSackingCost } from '../src/app/cabinetEffects';
 import { applyScenario } from '../src/app/scenarios';
+import { BLACK_SWAN_CATALOGUE } from '../src/app/blackSwans';
 
 type FuzzerArchetype = 'Spender' | 'Hawk' | 'Reshuffler' | 'Idle' | 'Random';
 type GovernmentMode = 'majority' | 'hung';
@@ -230,6 +231,22 @@ function availableActions(
           bias: 'spender',
         });
       }
+    }
+  }
+
+  // Black swans are the ONE authored shock the archetypes answer: a real premier responds.
+  // The shock is read from state, NOT the Red Box, so it never displaces a dossier draw.
+  // Responses are biased by cost, so a Spender reaches for the big intervention and a
+  // Hawk for the austere one. 'Idle' returns early and never reaches this code, which is
+  // what keeps the passive path neutral and the Idle archetype pinned at its floor.
+  const activeSwan = state.blackSwanState?.active;
+  if (activeSwan) {
+    const swan = BLACK_SWAN_CATALOGUE.find((e) => e.id === activeSwan.eventId);
+    for (const option of swan?.options ?? []) {
+      actions.push({
+        action: { type: 'ANSWER_BLACK_SWAN', optionId: option.id },
+        bias: Number(option.effects.budgetBalance ?? 0) <= -2 ? 'spender' : 'hawk',
+      });
     }
   }
 
