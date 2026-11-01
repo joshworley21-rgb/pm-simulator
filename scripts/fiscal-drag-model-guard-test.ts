@@ -69,7 +69,9 @@ check('fiscal drag model: calculateFiscalDrag gates revenue on the rate cutoffs'
   };
 
   const frozen = calculateFiscalDrag(baseParams);
-  assert.equal(frozen.additionalRevenue, 7.3, 'engine model value at cpi 4 / growth 1 (frozen cutoffs)');
+  // Re-pinned 7.3 -> 7.4: calculateFiscalDrag now uses the nominal GDP cross-term
+  // (real x inflation / 100), i.e. 5.04% rather than 5% at growth 1 / cpi 4.
+  assert.equal(frozen.additionalRevenue, 7.4, 'engine model value at cpi 4 / growth 1 (frozen cutoffs)');
 
   const indexed = calculateFiscalDrag({
     ...baseParams,
@@ -83,7 +85,7 @@ check('fiscal drag model: previewFiscalDrag and calculateCustomBudget agree acro
   const s = { ...base, thresholdsFrozen: true, stats: { ...base.stats, cpiInflation: 4, gdpGrowth: 1 } };
 
   const expectedFrozen = previewFiscalDrag(s, true).additionalRevenue;
-  assert.equal(expectedFrozen, 7.3, 'previewFiscalDrag yields ~£7.3bn at cpi 4 / growth 1');
+  assert.equal(expectedFrozen, 7.4, 'previewFiscalDrag yields ~£7.4bn at cpi 4 / growth 1');
   assert.equal(previewFiscalDrag(s, false).additionalRevenue, 0, 'previewFiscalDrag yields 0 when indexed');
 
   const keepingFrozen = calculateCustomBudget({ ...getDefaultCustomPlan(s), thresholdsFrozen: true }, s);
