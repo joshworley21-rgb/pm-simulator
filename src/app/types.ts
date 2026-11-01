@@ -4,6 +4,7 @@ import type { WhipsState } from './modules/whips';
 import type { EthicsState } from './modules/ethics';
 import type { CabinetState } from './cabinet';
 import type { MediaState } from './media';
+import type { DevolutionState } from './devolution';
 
 export type RootStackParamList = {
   Menu: undefined;
@@ -362,6 +363,7 @@ export interface GameState {
   ethics?: EthicsState;
   cabinetState?: CabinetState;
   mediaState?: MediaState;
+  devolutionState?: DevolutionState;
 }
 
 export type Action =

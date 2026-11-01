@@ -41,6 +41,7 @@ import type { EfficiencyTargetPct } from './spendingReview';
 import { calculate1922Mood, calculateBlindsideRisk } from './leadershipChallenge';
 import { advanceCabinet, createDefaultCabinetState } from './cabinet';
 import { advanceMedia, createDefaultMediaState } from './media';
+import { advanceDevolution, createDefaultDevolutionState } from './devolution';
 import { DOSSIER_POOL_2 } from './dossiers2';
 import { DOSSIER_POOL_3 } from './dossiers3';
 import { applyScenario } from './scenarios';
@@ -227,6 +228,7 @@ export function createInitialState(): GameState {
     ethics: createDefaultEthics(),
     cabinetState: createDefaultCabinetState(),
     mediaState: createDefaultMediaState(),
+    devolutionState: createDefaultDevolutionState(),
   };
   const initial = { ...s, billResolutions: {} };
   const nhsMetrics = nhsMetricsFromGame(initial);
@@ -1577,6 +1579,22 @@ export function advanceWeek(s: GameState): GameState {
     next = { ...next, log: [...mediaResult.log, ...next.log].slice(0, 50) };
   }
 
+  // Devolution & the Union: satisfaction, pressure and the Sewel grievance. Logic in ./devolution.
+  const devolutionResult = advanceDevolution({
+    state: next.devolutionState ?? createDefaultDevolutionState(),
+    approval: next.metrics.approval,
+    publicServices: next.metrics.publicServices,
+    week: next.week,
+    seed: next.seed,
+  });
+  next = { ...next, devolutionState: devolutionResult.state };
+  if (Object.keys(devolutionResult.effects).length > 0) {
+    next = applyEffects(next, devolutionResult.effects);
+  }
+  if (devolutionResult.log.length > 0) {
+    next = { ...next, log: [...devolutionResult.log, ...next.log].slice(0, 50) };
+  }
+
   // 7. Draw fresh dossier.
   const activeIds = new Set(remaining.map((d) => d.id));
   const escalatedIds = new Set(next.escalatedDossierIds ?? []);
@@ -1873,6 +1891,7 @@ export function migrateState(saved: Partial<GameState> | null | undefined): Game
     publicSectorPay: saved.publicSectorPay === 'capped' ? 'capped' : 'full',
     cabinetState: { ...createDefaultCabinetState(), ...(saved.cabinetState ?? {}) },
     mediaState: { ...createDefaultMediaState(), ...(saved.mediaState ?? {}) },
+    devolutionState: { ...createDefaultDevolutionState(), ...(saved.devolutionState ?? {}) },
     whips: { ...createDefaultWhips(), ...(saved.whips ?? {}) },
     ethics: {
       ...createDefaultEthics(),
