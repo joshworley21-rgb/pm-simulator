@@ -38,12 +38,37 @@ export interface MediaState {
   cycleTone: number;
   /** Week of the last lobby briefing, or null if never. */
   lastBriefingWeek: number | null;
+  /**
+   * Global Press Approval Rating, 0..100. Starts at PRESS_APPROVAL_START and is moved
+   * ONLY by explicit inbound calls (degradePress) or player briefings -- never by drift.
+   */
+  pressApproval: number;
 }
 
 export const MEDIA_HOSTILITY_FLOOR = 60;
 export const MEDIA_MOOD_BAND_LOW = 20;
 export const MEDIA_MOOD_BAND_HIGH = 80;
 export const BRIEFING_COOLDOWN_WEEKS = 4;
+
+// ===== Global Press Approval Rating (the central feedback loop) =====
+//
+// INBOUND: failures in other systems call degradePress() -- Lords wash-up, cabinet rifts,
+// failing councils, unanswered Black Swans.
+// OUTBOUND: below PRESS_APPROVAL_FLOOR the rating multiplies NEGATIVE approval effects,
+// so a cold press turns every setback into a worse one.
+//
+// Idle protection is BY CONSTRUCTION, not tuning: nothing lowers the rating on its own
+// (there is deliberately no autonomous drift), so a premiership that triggers no crises
+// never falls below the floor and keeps a multiplier of exactly 1.0.
+export const PRESS_APPROVAL_START = 50;
+/** At or above this, the press drags nothing. */
+export const PRESS_APPROVAL_FLOOR = 35;
+/** HARD CAP on the drag multiplier -- the death-spiral guard rail. */
+export const PRESS_DRAG_MAX = 1.3;
+/** Rating points below the floor at which the cap is reached. */
+export const PRESS_DRAG_FULL_DEFICIT = 15;
+/** How much one reported failure degrades the rating. */
+export const PRESS_DEGRADE_PER_CRISIS = 6;
 
 const clamp = (n: number, min: number, max: number): number => Math.max(min, Math.min(max, n));
 const r1 = (n: number): number => Math.round(n * 10) / 10;
@@ -56,6 +81,7 @@ export function createDefaultMediaState(): MediaState {
     hostility: 0,
     cycleTone: 0,
     lastBriefingWeek: null,
+    pressApproval: PRESS_APPROVAL_START,
   };
 }
 
@@ -201,6 +227,61 @@ export const PRESS_WARM_MARK = ' - PM BACKED TO DELIVER';
 
 function isVoiced(title: string): boolean {
   return title.endsWith(PRESS_HOSTILE_MARK) || title.endsWith(PRESS_WARM_MARK);
+}
+
+/**
+ * INBOUND LINK: another system just failed (wash-up, a cabinet rift, a section 114, an
+ * unanswered shock) and the press marks the government down for it.
+ */
+export function degradePress(state: MediaState, amount: number = PRESS_DEGRADE_PER_CRISIS): MediaState {
+  // FLOOR-SAFE: autonomous failures (cohesion collapse, a section 114, a shock left on the
+  // desk, a lost legislative programme) may sour the press, but they can NEVER push the rating
+  // below PRESS_APPROVAL_FLOOR. Only a chosen response that failed may do that -- see
+  // degradePressFromChoice. This is what keeps pressDragMultiplier at exactly 1.0 for a passive
+  // premiership, so the Idle archetype is protected by construction rather than by tuning.
+  return { ...state, pressApproval: r2(clamp(state.pressApproval - amount, PRESS_APPROVAL_FLOOR, 100)) };
+}
+
+/**
+ * A CHOSEN response that failed is player-attributable, so it is allowed to breach the floor.
+ * Nothing in this slice calls it yet: the engine must first decide which choices count as
+ * failures, and that is a balance decision, not a wiring one.
+ */
+export function degradePressFromChoice(state: MediaState, amount: number): MediaState {
+  return { ...state, pressApproval: r2(clamp(state.pressApproval - amount, 0, 100)) };
+}
+
+/**
+ * OUTBOUND LINK: how hard a cold press drags on approval.
+ *
+ * Exactly 1.0 at or above PRESS_APPROVAL_FLOOR, rising to a HARD CAP of PRESS_DRAG_MAX.
+ * It scales NEGATIVE approval effects only -- the press amplifies bad news, it does not
+ * manufacture good news.
+ */
+export function pressDragMultiplier(state: MediaState): number {
+  if (state.pressApproval >= PRESS_APPROVAL_FLOOR) return 1;
+  const deficit = PRESS_APPROVAL_FLOOR - state.pressApproval;
+  const t = clamp(deficit / PRESS_DRAG_FULL_DEFICIT, 0, 1);
+  return r2(1 + t * (PRESS_DRAG_MAX - 1));
+}
+
+/** Most a cold press may cost in a single week, in approval points. */
+export const PRESS_DRAG_WEEKLY_CAP = 0.3;
+
+/**
+ * OUTBOUND LINK, expressed as an EXPLICIT, hard-capped weekly effect.
+ *
+ * Deliberately NOT a hidden multiplier inside applyEffects. Scaling every negative approval
+ * delta there silently falsified each ADVERTISED effect, and the fuzzer's assertPmqEffects
+ * invariant caught it -- correctly -- as runner errors across ~10-15% of runs. Keeping the
+ * drag as its own visible effect preserves the contract that advertised effects are the
+ * effects that actually land, while still making a cold press structurally expensive.
+ */
+export function pressDragPenalty(state: MediaState): Effects {
+  const deficit = Math.max(0, PRESS_APPROVAL_FLOOR - state.pressApproval);
+  if (deficit <= 0) return {};
+  const cost = Math.min(PRESS_DRAG_WEEKLY_CAP, deficit * 0.01);
+  return { approval: -r2(cost), mediaAttention: r2(cost * 0.5) };
 }
 
 /**

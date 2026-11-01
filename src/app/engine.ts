@@ -40,7 +40,17 @@ import {
 import type { EfficiencyTargetPct } from './spendingReview';
 import { calculate1922Mood, calculateBlindsideRisk } from './leadershipChallenge';
 import { advanceCabinet, createDefaultCabinetState } from './cabinet';
-import { advanceMedia, createDefaultMediaState, voiceHeadlines } from './media';
+import {
+  advanceMedia,
+  createDefaultMediaState,
+  voiceHeadlines,
+  degradePress,
+  degradePressFromChoice,
+  pressDragPenalty,
+  PRESS_DEGRADE_PER_CRISIS,
+  lobbyBriefing,
+  type PaperId,
+} from './media';
 import { advanceImmigration, createDefaultImmigrationState } from './immigration';
 import { advanceLocalGovernment, createDefaultLocalGovernmentState } from './localGovernment';
 import {
@@ -325,6 +335,10 @@ function applyEffects(s: GameState, fx: Effects): GameState {
     currentSupport: clamp(p.currentSupport + (fx.supportDelta?.[p.id] ?? 0), 1, 60),
     funds: Math.max(0, p.funds + (fx.fundsDelta ?? 0)),
   }));
+  // NB: the press drag is deliberately NOT applied here. Scaling negative approval deltas
+  // inside applyEffects silently falsified every ADVERTISED effect, which the fuzzer's
+  // assertPmqEffects invariant caught as ~10-15% runner errors. The drag is applied as its
+  // own explicit, capped weekly effect instead (see the media block in advanceWeek).
   const metrics = {
     approval: clamp(
       s.metrics.approval +
@@ -836,6 +850,16 @@ function resolveBill(s: GameState, bill: Bill, rng: () => number): GameState {
     if (whip !== 'free-vote') {
       next = applyEffects(next, { approval: -2, partyConfidence: -2 });
       letters += Math.round(bill.rebellionRisk / (whip === 'three-line' ? 10 : 12));
+      // PLAYER-ATTRIBUTABLE FAILURE: a bill the government chose to push has been defeated.
+      // A passive premiership proposes no bills, so it never reaches this line. This uses the
+      // FROM-CHOICE variant: a self-inflicted failure IS allowed to breach the floor.
+      next = {
+        ...next,
+        mediaState: degradePressFromChoice(
+          next.mediaState ?? createDefaultMediaState(),
+          PRESS_DEGRADE_PER_CRISIS,
+        ),
+      };
     } else {
       next = applyEffects(next, { approval: -1 });
     }
@@ -1647,6 +1671,13 @@ export function advanceWeek(s: GameState): GameState {
   if (Object.keys(mediaResult.effects).length > 0) {
     next = applyEffects(next, mediaResult.effects);
   }
+  // OUTBOUND LINK: a cold press is an explicit, hard-capped weekly drag. Applied here
+  // rather than inside applyEffects so advertised effects always remain the effects that land.
+  const pressDrag = pressDragPenalty(mediaResult.state);
+  if (Object.keys(pressDrag).length > 0) {
+    next = applyEffects(next, pressDrag);
+  }
+
   // Re-voice the week's headlines from the press state. Cosmetic only: no effects, so the
   // hostile-press approval penalty is never double-counted, and the tone is APPENDED so
   // existing title-substring assertions keep holding.
@@ -1729,6 +1760,17 @@ export function advanceWeek(s: GameState): GameState {
         ].slice(0, 50),
       };
       next = applyEffects(next, { partyConfidence: -Math.min(2, lost.length) });
+      // INBOUND LINK: a legislative programme lost at wash-up is a press failure.
+      next = {
+        ...next,
+        // A legislative programme lost at wash-up is the government's OWN failure, so it uses
+        // degradePressFromChoice -- the one path permitted below the floor. Everything
+        // autonomous uses degradePress, which stops AT the floor.
+        mediaState: degradePressFromChoice(
+          next.mediaState ?? createDefaultMediaState(),
+          PRESS_DEGRADE_PER_CRISIS,
+        ),
+      };
     }
   }
   if (parliamentResult.log.length > 0) {
@@ -1762,6 +1804,7 @@ export function advanceWeek(s: GameState): GameState {
   if (blackSwanResult.log.length > 0) {
     next = { ...next, log: [...blackSwanResult.log, ...next.log].slice(0, 50) };
   }
+
 
   // 7. Draw fresh dossier.
   const activeIds = new Set(remaining.map((d) => d.id));
@@ -2152,6 +2195,40 @@ export function reducer(state: GameState, action: Action): GameState {
         ),
       };
 
+    case 'BRIEF_PRESS': {
+      const media = state.mediaState ?? createDefaultMediaState();
+      const outletId = action.outletId as PaperId;
+      const moodBefore = media.pressMood[outletId] ?? 50;
+
+      // THE BACKFIRE RULES: boosting an outlet that has already turned hostile, or attacking
+      // one that is still warm, is a botched spin -- you are either too late or picking a
+      // fight you cannot win.
+      const hostile = moodBefore < 35;
+      const warm = moodBefore > 65;
+      const botched = (action.angle === 'boost' && hostile) || (action.angle === 'attack' && warm);
+
+      const briefing = lobbyBriefing(media, outletId, action.angle, state.week);
+      // Inside the cooling-off period the briefing is refused outright.
+      if (briefing.state === media) return state;
+
+      let next: GameState = { ...state, mediaState: briefing.state };
+      if (Object.keys(briefing.effects).length > 0) {
+        next = applyEffects(next, briefing.effects);
+      }
+      if (botched) {
+        // A botched spin is self-inflicted, so it uses the FROM-CHOICE variant and IS allowed
+        // to breach the floor, triggering the sub-floor approval multiplier.
+        next = {
+          ...next,
+          mediaState: degradePressFromChoice(
+            next.mediaState ?? createDefaultMediaState(),
+            PRESS_DEGRADE_PER_CRISIS,
+          ),
+        };
+      }
+      return next;
+    }
+
     case 'ANSWER_BLACK_SWAN': {
       const resolution = resolveBlackSwan(
         state.blackSwanState ?? createDefaultBlackSwanState(),
@@ -2159,7 +2236,23 @@ export function reducer(state: GameState, action: Action): GameState {
       );
       // Nothing live, or an unknown option: a harmless no-op.
       if (Object.keys(resolution.effects).length === 0) return state;
-      return applyEffects({ ...state, blackSwanState: resolution.state }, resolution.effects);
+      const answered = applyEffects(
+        { ...state, blackSwanState: resolution.state },
+        resolution.effects,
+      );
+      // PLAYER-ATTRIBUTABLE FAILURE: a dithering answer is marked down by the press. A
+      // passive premiership never answers, so it never reaches this line.
+      if (resolution.state.commandScore < 50) {
+        return {
+          ...answered,
+          // FROM-CHOICE: dithering in a crisis is self-inflicted, so it may breach the floor.
+          mediaState: degradePressFromChoice(
+            answered.mediaState ?? createDefaultMediaState(),
+            PRESS_DEGRADE_PER_CRISIS,
+          ),
+        };
+      }
+      return answered;
     }
 
     case 'OPEN_DOSSIER':

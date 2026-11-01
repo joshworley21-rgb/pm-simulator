@@ -14,6 +14,7 @@ import { TAX_YIELD_PER_POINT } from '../src/app/taxes';
 import { ministerSackingCost } from '../src/app/cabinetEffects';
 import { applyScenario } from '../src/app/scenarios';
 import { BLACK_SWAN_CATALOGUE } from '../src/app/blackSwans';
+import { BRIEFING_COOLDOWN_WEEKS } from '../src/app/media';
 
 type FuzzerArchetype = 'Spender' | 'Hawk' | 'Reshuffler' | 'Idle' | 'Random';
 type GovernmentMode = 'majority' | 'hung';
@@ -239,6 +240,36 @@ function availableActions(
   // Responses are biased by cost, so a Spender reaches for the big intervention and a
   // Hawk for the austere one. 'Idle' returns early and never reaches this code, which is
   // what keeps the passive path neutral and the Idle archetype pinned at its floor.
+  // Lobby briefings: an active premier spins the press. Each archetype leans on the outlet
+  // that shares its instincts and attacks the one that does not. The chooser's 20% fallback
+  // picks from ALL actions, so botched spins (boost a turned outlet, attack a warm one) happen
+  // on their own rather than being scripted.
+  // Only offer a briefing once the cooling-off period has actually expired. The reducer
+  // REFUSES one inside the window (correctly returning the state unchanged), and the harness
+  // rightly treats a refused action as "Reducer silently ignored" -- that guard is a real bug
+  // signal, so the fix belongs here, not in suppressing it.
+  const lastBriefing = state.mediaState?.lastBriefingWeek ?? null;
+  const briefingReady =
+    lastBriefing === null || state.week - lastBriefing >= BRIEFING_COOLDOWN_WEEKS;
+  if (!inPurdah && briefingReady) {
+    actions.push({
+      action: { type: 'BRIEF_PRESS', outletId: 'clarion', angle: 'boost' },
+      bias: 'spender',
+    });
+    actions.push({
+      action: { type: 'BRIEF_PRESS', outletId: 'courier', angle: 'attack' },
+      bias: 'spender',
+    });
+    actions.push({
+      action: { type: 'BRIEF_PRESS', outletId: 'courier', angle: 'boost' },
+      bias: 'hawk',
+    });
+    actions.push({
+      action: { type: 'BRIEF_PRESS', outletId: 'clarion', angle: 'attack' },
+      bias: 'hawk',
+    });
+  }
+
   const activeSwan = state.blackSwanState?.active;
   if (activeSwan) {
     const swan = BLACK_SWAN_CATALOGUE.find((e) => e.id === activeSwan.eventId);
