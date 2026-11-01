@@ -1,5 +1,5 @@
 import type { BudgetPackage, CustomBudgetPlan, GameState, Effects } from './types';
-import { TURNS_PER_YEAR } from './calendar';
+import { DEFAULT_TERM_LENGTH, TURNS_PER_YEAR } from './calendar';
 import { TAX_YIELD_PER_POINT } from './taxes';
 import {
   FROZEN_THRESHOLDS,
@@ -37,11 +37,11 @@ export const DEFAULT_NOMINAL_GDP = 2_800;
 
 /**
  * Longest Personal Allowance freeze a campaign can contain, in annual Budget
- * cycles (tax years). One annual Budget falls every twelve turns, so a
- * five-year term caps the freeze at five years.
+ * cycles (tax years). `termLength` is measured in turns; one annual Budget
+ * falls every TURNS_PER_YEAR turns.
  */
 export function personalAllowanceFreezeCap(termLength?: number): number {
-  return Math.max(0, Math.floor((termLength || 60) / TURNS_PER_YEAR));
+  return Math.max(0, Math.floor((termLength ?? DEFAULT_TERM_LENGTH) / TURNS_PER_YEAR));
 }
 
 /**
@@ -95,6 +95,11 @@ export function stampDutyRecurringRevenue(relief: boolean): number {
   return relief ? -STAMP_DUTY_RELIEF_COST : 0;
 }
 
+/**
+ * Package-level `debtToGdp` effects are intentional immediate gameplay
+ * shocks. They supplement, rather than replace, the ongoing debt dynamics
+ * driven by the package's `budgetBalance` effect.
+ */
 export const BUDGET_PACKAGES: BudgetPackage[] = [
   {
     id: 'budget-restraint',

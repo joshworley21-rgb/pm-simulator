@@ -1,4 +1,4 @@
-import type { GameState, Action, Party, Effects, Dossier, Bill, Minister, PmqQuestion } from './types';
+import type { GameState, Action, Party, Effects, Dossier, Bill, Minister, PmqQuestion, CustomBudgetPlan } from './types';
 import {
   DEFAULT_TERM_LENGTH,
   FOREIGN_ISSUE_INTERVAL_MONTHS,
@@ -16,7 +16,7 @@ import { INITIAL_PARTIES, INITIAL_RELATIONS, REGIONS, DOSSIER_POOL } from './dat
 import { BILL_POOL } from './bills';
 import { BILL_POOL_2 } from './bills2';
 import { DEFAULT_CABINET, FOREIGN_POOL, PMQ_POOL, PMQ_TEMPLATES, BACKBENCHERS } from './politics';
-import { BUDGET_PACKAGES, calculateCustomBudget, DEFAULT_PERSONAL_ALLOWANCE, DEFAULT_NOMINAL_GDP, personalAllowanceFreezeCap, fuelDutyRecurringRevenue, tripleLockRecurringRevenue, publicSectorPayRecurringRevenue, stampDutyRecurringRevenue } from './budget';
+import { BUDGET_PACKAGES, calculateCustomBudget, DEFAULT_PERSONAL_ALLOWANCE, DEFAULT_NOMINAL_GDP, PERSONAL_ALLOWANCE_MIN, PERSONAL_ALLOWANCE_MAX, personalAllowanceFreezeCap, fuelDutyRecurringRevenue, tripleLockRecurringRevenue, publicSectorPayRecurringRevenue, stampDutyRecurringRevenue } from './budget';
 import { INITIAL_TAXES, TAX_YIELD_PER_POINT } from './taxes';
 import { INITIAL_DEPARTMENTS } from './spending';
 import type { Region } from './data';
@@ -105,12 +105,16 @@ function monthlyChanceToWeekly(monthlyChance: number): number {
 const CPI_INFLATION_MAX = 1000;
 const DEBT_TO_GDP_MAX = 1000;
 const GILT_YIELD_MAX = 50;
+const NOMINAL_GDP_MIN = 1;
+const NOMINAL_GDP_MAX = 1_000_000_000;
 const GDP_GROWTH_MIN = -100;
 const GDP_GROWTH_MAX = 100;
 const NEUTRAL_GILT_YIELD = 4.2;
 const DEBT_YIELD_SENSITIVITY = 0.03;
 const DEBT_YIELD_RISK_PREMIUM_CAP = 1.5;
+/** Intentional gameplay acceleration of the standard debt-ratio identity. */
 const DEBT_DYNAMICS_MULTIPLIER = 1.5;
+const CAPITAL_FLIGHT_TAX_RATE_THRESHOLD = 35;
 const INFLATION_EXPECTATION_YIELD_SENSITIVITY = 0.5;
 const GILT_MEAN_REVERSION_MONTHLY_RATE = 0.2;
 const POTENTIAL_GDP_GROWTH = 1.2;
@@ -496,7 +500,12 @@ export function structuralBalance(s: GameState): number {
 }
 
 /** GDP-exposure-weighted average of the current tax rates. */
-export function effectiveTaxBurden(s: Pick<GameState, 'taxes'>): number {
+/**
+ * Yield-per-point-weighted statutory rate used as a calibrated policy-rate
+ * proxy. This is not a GDP-weighted effective tax burden; its 35% trigger is
+ * calibrated to this proxy for the capital-flight gameplay effect.
+ */
+export function calibratedTaxRateProxy(s: Pick<GameState, 'taxes'>): number {
   let weightedRates = 0;
   let totalWeight = 0;
   for (const tax of s.taxes) {
@@ -507,9 +516,13 @@ export function effectiveTaxBurden(s: Pick<GameState, 'taxes'>): number {
   return totalWeight > 0 ? weightedRates / totalWeight : 0;
 }
 
+/** @deprecated Use calibratedTaxRateProxy; retained for existing callers. */
+export const effectiveTaxBurden = calibratedTaxRateProxy;
+
 function weeklyEconomy(s: GameState): GameState {
   const st = s.stats;
   const structural = structuralBalance(s);
+  const taxRateProxy = calibratedTaxRateProxy(s);
 
   // Published borrowing converges on the structural position at roughly
   // 10% a month, so a one-off bailout fades instead of compounding forever.
@@ -543,9 +556,11 @@ function weeklyEconomy(s: GameState): GameState {
   }
 
   // 3. Capital Flight: punitive average tax rates crush GDP growth (baseline is ~22%)
-  const avgTax = effectiveTaxBurden(s);
-  if (avgTax > 35) {
-    gdp -= (Math.pow((avgTax - 35) / 10, 1.1) * 0.75) / TURNS_PER_MONTH;
+  if (taxRateProxy > CAPITAL_FLIGHT_TAX_RATE_THRESHOLD) {
+    gdp -=
+      (Math.pow((taxRateProxy - CAPITAL_FLIGHT_TAX_RATE_THRESHOLD) / 10, 1.1) *
+        0.75) /
+      TURNS_PER_MONTH;
   }
 
   // 4. Bond Market Panic Shock to Growth: high gilt yields strangle investment
@@ -561,7 +576,7 @@ function weeklyEconomy(s: GameState): GameState {
   // Natural growth mean-reversion towards 1.2% in calm conditions
   if (gdp > 1.2) {
     gdp -= (gdp - 1.2) * monthlyRateToWeekly(0.05);
-  } else if (gdp < 1.2 && structural >= -95 && gilt < 5.0 && avgTax <= 30) {
+  } else if (gdp < 1.2 && structural >= -95 && gilt < 5.0 && taxRateProxy <= 30) {
     gdp += (1.2 - gdp) * monthlyRateToWeekly(0.08);
   }
 
@@ -596,17 +611,18 @@ function weeklyEconomy(s: GameState): GameState {
   const nominalGrowth = nominalGdpGrowthRate(gdp, cpi);
   const currentNominalGdp =
     typeof s.nominalGdp === 'number' && Number.isFinite(s.nominalGdp) && s.nominalGdp > 0
-      ? s.nominalGdp
+      ? clamp(s.nominalGdp, NOMINAL_GDP_MIN, NOMINAL_GDP_MAX)
       : DEFAULT_NOMINAL_GDP;
   const primaryDeficitRatio = (-primaryBalance(s) / currentNominalGdp) * 100;
   debt +=
     ((primaryDeficitRatio + ((gilt - nominalGrowth) / 100) * debt) *
       DEBT_DYNAMICS_MULTIPLIER) /
     TURNS_PER_YEAR;
-  const nextNominalGdp = Math.max(
-    1,
-    currentNominalGdp * (1 + nominalGrowth / (100 * TURNS_PER_YEAR)),
-  );
+  const projectedNominalGdp =
+    currentNominalGdp * (1 + nominalGrowth / (100 * TURNS_PER_YEAR));
+  const nextNominalGdp = Number.isFinite(projectedNominalGdp)
+    ? clamp(projectedNominalGdp, NOMINAL_GDP_MIN, NOMINAL_GDP_MAX)
+    : NOMINAL_GDP_MAX;
 
   // Expensive borrowing drags on the real economy
   if (gilt > 6) economy -= 0.5 / TURNS_PER_MONTH;
@@ -1110,9 +1126,18 @@ export function advanceWeek(s: GameState): GameState {
   // 3e. Voter blocs: recompute who is with you and who has turned.
   const blocs = computeBlocs(next);
   next = { ...next, blocs };
-  next = applyEffects(next, {
-    approval: clamp((blocAverage(blocs) - next.metrics.approval) * 0.005, -0.01, 0.01),
-  });
+  // Quantise the slow bloc-pressure adjustment to the approval metric's
+  // one-decimal resolution; tiny sub-resolution changes would otherwise vanish.
+  const blocApprovalDelta = r1(
+    clamp((blocAverage(blocs) - next.metrics.approval) * 0.01, -0.1, 0.1),
+  );
+  next = {
+    ...next,
+    metrics: {
+      ...next.metrics,
+      approval: clamp(next.metrics.approval + blocApprovalDelta, 0, 100),
+    },
+  };
 
   // 3f. Opposition business: without a majority a confidence motion is tabled
   // on a fixed timetable, not by dice roll.
@@ -1197,9 +1222,11 @@ export function advanceWeek(s: GameState): GameState {
   );
   let letters = next.stats.lettersOfNoConfidence;
   const unity = next.metrics.partyConfidence;
-  if (unity > 70) letters -= 2;
-  else if (unity > 60) letters -= 1;
-  if (mood.consideringDefection >= 2 && next.week % TURNS_PER_MONTH === 0) letters += 1;
+  if (next.week % TURNS_PER_MONTH === 0) {
+    if (unity > 70) letters -= 2;
+    else if (unity > 60) letters -= 1;
+    if (mood.consideringDefection >= 2) letters += 1;
+  }
   if (next.cabinet.length === 0 && next.lastReshuffleWeek !== undefined) {
     letters += CABINET_STRAIN_LETTERS_PER_WEEK;
   }
@@ -1673,21 +1700,54 @@ export function migrateState(saved: Partial<GameState> | null | undefined): Game
 
   return {
     ...merged,
+    metrics: {
+      ...merged.metrics,
+      approval: clamp(safe(merged.metrics.approval, base.metrics.approval), 0, 100),
+      partyConfidence: clamp(safe(merged.metrics.partyConfidence, base.metrics.partyConfidence), 0, 100),
+      economy: clamp(safe(merged.metrics.economy, base.metrics.economy), 0, 100),
+      publicServices: clamp(safe(merged.metrics.publicServices, base.metrics.publicServices), 0, 100),
+      security: clamp(safe(merged.metrics.security, base.metrics.security), 0, 100),
+      mediaAttention: clamp(safe(merged.metrics.mediaAttention, base.metrics.mediaAttention), 0, 100),
+    },
     stats: {
       ...merged.stats,
-      cpiInflation: safe(merged.stats.cpiInflation, base.stats.cpiInflation),
-      gdpGrowth: safe(merged.stats.gdpGrowth, base.stats.gdpGrowth),
-      giltYield: safe(merged.stats.giltYield, base.stats.giltYield),
-      budgetBalance: safe(merged.stats.budgetBalance, base.stats.budgetBalance),
-      lettersOfNoConfidence: safe(merged.stats.lettersOfNoConfidence, 0),
-      lettersThreshold: safe(merged.stats.lettersThreshold, base.stats.lettersThreshold),
+      cpiInflation: clamp(safe(merged.stats.cpiInflation, base.stats.cpiInflation), 0.1, CPI_INFLATION_MAX),
+      gdpGrowth: clamp(safe(merged.stats.gdpGrowth, base.stats.gdpGrowth), GDP_GROWTH_MIN, GDP_GROWTH_MAX),
+      giltYield: clamp(safe(merged.stats.giltYield, base.stats.giltYield), 1, GILT_YIELD_MAX),
+      nhsWaitingList: clamp(safe(merged.stats.nhsWaitingList, base.stats.nhsWaitingList), 2, 1_000_000),
+      netMigration: clamp(safe(merged.stats.netMigration, base.stats.netMigration), 50, 1_000_000_000),
+      budgetBalance: clamp(safe(merged.stats.budgetBalance, base.stats.budgetBalance), -1_000_000, 1_000_000),
+      lettersOfNoConfidence: clamp(safe(merged.stats.lettersOfNoConfidence, 0), 0, 99),
+      lettersThreshold: clamp(safe(merged.stats.lettersThreshold, base.stats.lettersThreshold), 1, 99),
+      taxRate: clamp(safe(merged.stats.taxRate, base.stats.taxRate), 15, 60),
       debtToGdp: clamp(safe(merged.stats.debtToGdp, base.stats.debtToGdp), 30, DEBT_TO_GDP_MAX),
       unemployment: clamp(safe(merged.stats.unemployment, base.stats.unemployment), 0, 20),
     },
-    week: safe(merged.week, 1),
-    nominalGdp: Math.max(1, safe(merged.nominalGdp, DEFAULT_NOMINAL_GDP)),
+    week: Math.max(1, Math.floor(safe(merged.week, 1))),
+    termLength: Math.max(0, Math.floor(safe(merged.termLength, DEFAULT_TERM_LENGTH))),
+    nominalGdp: clamp(
+      safe(merged.nominalGdp, DEFAULT_NOMINAL_GDP),
+      NOMINAL_GDP_MIN,
+      NOMINAL_GDP_MAX,
+    ),
     turnsUntilElection: safe(merged.turnsUntilElection, base.turnsUntilElection),
     seed: safe(merged.seed, base.seed),
+    fiscalDragRevenue: clamp(safe(saved.fiscalDragRevenue, 0), 0, 1_000),
+    fiscalDragIntensity:
+      saved.fiscalDragIntensity === 'medium' ||
+      saved.fiscalDragIntensity === 'high' ||
+      saved.fiscalDragIntensity === 'very_high'
+        ? saved.fiscalDragIntensity
+        : 'low',
+    taxpayersAffectedByDrag: Math.round(
+      clamp(safe(saved.taxpayersAffectedByDrag, 0), 0, 32_000_000),
+    ),
+    thresholdFrozenTurns: Math.max(
+      0,
+      Math.floor(safe(saved.thresholdFrozenTurns, 0)),
+    ),
+    nhsPerformance: clamp(safe(saved.nhsPerformance, base.nhsPerformance ?? 50), 0, 100),
+    tradeGdpImpact: clamp(safe(saved.tradeGdpImpact, base.tradeGdpImpact ?? 0), -100, 100),
     thresholdsFrozen:
       typeof saved.thresholdsFrozen === 'boolean' ? saved.thresholdsFrozen : base.thresholdsFrozen,
     tradeDealStatus: saved.tradeDealStatus
@@ -1705,7 +1765,11 @@ export function migrateState(saved: Partial<GameState> | null | undefined): Game
       : base.escalatedDossierIds,
     pmqSessionAskedIds: Array.isArray(saved.pmqSessionAskedIds) ? saved.pmqSessionAskedIds : undefined,
     pmqRecentIds: Array.isArray(saved.pmqRecentIds) ? saved.pmqRecentIds : undefined,
-    personalAllowance: safe(saved.personalAllowance, DEFAULT_PERSONAL_ALLOWANCE),
+    personalAllowance: clamp(
+      safe(saved.personalAllowance, DEFAULT_PERSONAL_ALLOWANCE),
+      PERSONAL_ALLOWANCE_MIN,
+      PERSONAL_ALLOWANCE_MAX,
+    ),
     // Older saves predate the freeze field: default to "no freeze" so the
     // allowance keeps uprating as it always did.
     personalAllowanceFreezeYears: clamp(safe(saved.personalAllowanceFreezeYears, 0), 0, 99),
@@ -1714,7 +1778,10 @@ export function migrateState(saved: Partial<GameState> | null | undefined): Game
     stampDutyRelief: saved.stampDutyRelief === true,
     tripleLock: typeof saved.tripleLock === 'boolean' ? saved.tripleLock : true,
     publicSectorPay: saved.publicSectorPay === 'capped' ? 'capped' : 'full',
-    obrHeadroom: typeof saved.obrHeadroom === 'number' ? saved.obrHeadroom : undefined,
+    obrHeadroom:
+      typeof saved.obrHeadroom === 'number' && Number.isFinite(saved.obrHeadroom)
+        ? clamp(saved.obrHeadroom, -1_000_000, 1_000_000)
+        : undefined,
     obrAssessment: saved.obrAssessment,
     efficiencyTargetPct:
       saved.efficiencyTargetPct === 2 || saved.efficiencyTargetPct === 4 ? saved.efficiencyTargetPct : 0,
@@ -1728,7 +1795,7 @@ export function reducer(state: GameState, action: Action): GameState {
       return { ...createInitialState(), phase: 'create', seed: Math.floor(Math.random() * 1e9) };
 
     case 'RESTORE':
-      return { ...action.state };
+      return migrateState(action.state);
 
     case 'CREATE_PLAYER': {
       const fullName = `${action.player.firstName} ${action.player.lastName}`;
@@ -1899,8 +1966,12 @@ export function reducer(state: GameState, action: Action): GameState {
       return { ...state, ministerPicker: null };
 
     case 'SET_TERM_LENGTH': {
-      const len = action.months ?? action.weeks ?? DEFAULT_TERM_LENGTH;
-      return { ...state, termLength: len, turnsUntilElection: len };
+      // Store both fields in turns; week inputs already use the canonical unit.
+      const turns =
+        action.months !== undefined
+          ? action.months * TURNS_PER_MONTH
+          : action.weeks ?? DEFAULT_TERM_LENGTH;
+      return { ...state, termLength: turns, turnsUntilElection: turns };
     }
 
     case 'RESOLVE_FOREIGN': {
@@ -1963,8 +2034,42 @@ export function reducer(state: GameState, action: Action): GameState {
     case 'DELIVER_BUDGET': {
       if (inPurdah(state) || !isFiscalWindow(state)) return state;
 
-      const plan = action.type === 'DELIVER_CUSTOM_BUDGET' ? action.plan : action.customPlan;
-      if (plan) {
+      const requestedPlan = action.type === 'DELIVER_CUSTOM_BUDGET' ? action.plan : action.customPlan;
+      if (requestedPlan) {
+        const plan: CustomBudgetPlan = {
+          ...requestedPlan,
+          departmentBudgets: Object.fromEntries(
+            state.departments.map((department) => {
+              const requested = requestedPlan.departmentBudgets?.[department.id];
+              const value =
+                typeof requested === 'number' && Number.isFinite(requested)
+                  ? requested
+                  : department.budget;
+              return [
+                department.id,
+                clamp(value, department.min, department.max),
+              ];
+            }),
+          ),
+          taxRates: Object.fromEntries(
+            state.taxes.map((tax) => {
+              const requested = requestedPlan.taxRates?.[tax.id];
+              const value =
+                typeof requested === 'number' && Number.isFinite(requested)
+                  ? requested
+                  : tax.rate;
+              return [tax.id, clamp(value, tax.min, tax.max)];
+            }),
+          ),
+          personalAllowance: clamp(
+            typeof requestedPlan.personalAllowance === 'number' &&
+              Number.isFinite(requestedPlan.personalAllowance)
+              ? requestedPlan.personalAllowance
+              : state.personalAllowance ?? DEFAULT_PERSONAL_ALLOWANCE,
+            PERSONAL_ALLOWANCE_MIN,
+            PERSONAL_ALLOWANCE_MAX,
+          ),
+        };
         const result = calculateCustomBudget(plan, state);
 
         const departments = state.departments.map((d) => ({
@@ -2032,7 +2137,7 @@ export function reducer(state: GameState, action: Action): GameState {
     }
 
     case 'SKIP_BUDGET':
-      if (!isFiscalWindow(state)) return state;
+      if (inPurdah(state) || !isFiscalWindow(state)) return state;
       return {
         ...state,
         budgetDue: false,
@@ -2085,8 +2190,10 @@ export function reducer(state: GameState, action: Action): GameState {
     }
 
     case 'SET_AUTUMN_TAXES': {
-      // The Autumn Statement delivers the tax changes set since the last Budget.
-      if (!isFiscalWindow(state)) return state;
+      // Only an open Autumn Statement window can deliver these tax changes.
+      if (inPurdah(state) || !isFiscalWindow(state) || state.fiscalEventKind !== 'autumn') {
+        return state;
+      }
       return {
         ...state,
         budgetDue: false,
@@ -2215,11 +2322,11 @@ export function reducer(state: GameState, action: Action): GameState {
     }
 
     case 'TOGGLE_THRESHOLD_FREEZE': {
-      if (inPurdah(state)) return state;
+      if (inPurdah(state) || !isFiscalWindow(state)) return state;
       const nowFrozen = !(state.thresholdsFrozen ?? true);
       if (nowFrozen) {
         const result = previewFiscalDrag(state, true);
-        const next = applyEffects(state, { approval: -1 });
+        const next = state;
         return {
           ...next,
           thresholdsFrozen: true,
@@ -2233,7 +2340,9 @@ export function reducer(state: GameState, action: Action): GameState {
         };
       }
       const lostDrag = state.fiscalDragRevenue ?? 0;
-      const next = applyEffects(state, { approval: 2, budgetBalance: -Math.round((lostDrag / 12) * 100) / 100 });
+      const next = applyEffects(state, {
+        budgetBalance: -Math.round((lostDrag / 12) * 100) / 100,
+      });
       return {
         ...next,
         thresholdsFrozen: false,

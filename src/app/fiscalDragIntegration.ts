@@ -255,9 +255,9 @@ export function previewFiscalDrag(
 export function fiscalDragToEffects(result: FiscalDragResult): Effects {
   if (result.additionalRevenue <= 0) return {};
   return {
-    // A monthly slice of the annual figure, so a 60-month term accumulates
-    // roughly five years of drag.
-    budgetBalance: Math.round((result.additionalRevenue / TURNS_PER_YEAR) * 100) / 100,
+    // Applied monthly by the engine, so each application is one twelfth of
+    // the annual figure.
+    budgetBalance: Math.round((result.additionalRevenue / 12) * 100) / 100,
     // Voters notice stealth taxation, but gently.
     approval: -Math.min(2, result.effectiveTaxRateChange * 1.5),
     partyConfidence: -Math.min(1, result.effectiveTaxRateChange * 0.5),
