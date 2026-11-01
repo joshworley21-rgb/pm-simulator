@@ -43,7 +43,14 @@ import { advanceCabinet, createDefaultCabinetState } from './cabinet';
 import { advanceMedia, createDefaultMediaState } from './media';
 import { advanceImmigration, createDefaultImmigrationState } from './immigration';
 import { advanceLocalGovernment, createDefaultLocalGovernmentState } from './localGovernment';
-import { advanceParliament, createDefaultParliamentState } from './parliament';
+import {
+  advanceParliament,
+  createDefaultParliamentState,
+  sessionWeekFor,
+  startBill,
+  markLordsDelay,
+  LORDS_STAGE_WEEKS,
+} from './parliament';
 import { advanceDevolution, createDefaultDevolutionState } from './devolution';
 import { DOSSIER_POOL_2 } from './dossiers2';
 import { DOSSIER_POOL_3 } from './dossiers3';
@@ -1138,8 +1145,28 @@ export function advanceWeek(s: GameState): GameState {
 
   const stillActive: Bill[] = [];
   for (const bill of uniqueBills.values()) {
-    if (isBillDue(bill)) next = resolveBill(next, bill, rng);
-    else stillActive.push({ ...bill, weeksToPass: bill.weeksToPass - 1 });
+    if (isBillDue(bill)) {
+      next = resolveBill(next, bill, rng);
+      continue;
+    }
+    // Parliament as process: a government bill still travelling picks up the Lords
+    // delay ONCE. Bills never proposed through PROPOSE_BILL are untouched, so the
+    // golden bill checks (which inject bills directly) keep their exact semantics.
+    const pipeline = next.parliamentState ?? createDefaultParliamentState();
+    const progress = pipeline.inProgress.find((p) => p.billId === bill.id);
+    if (progress && !progress.lordsDelayApplied) {
+      stillActive.push({ ...bill, weeksToPass: bill.weeksToPass - 1 + LORDS_STAGE_WEEKS });
+      next = {
+        ...next,
+        parliamentState: markLordsDelay(pipeline, bill.id),
+        log: [
+          `LORDS: ${bill.title} enters the second chamber; expect a two-week delay.`,
+          ...(next.log ?? []),
+        ].slice(0, 50),
+      };
+      continue;
+    }
+    stillActive.push({ ...bill, weeksToPass: bill.weeksToPass - 1 });
   }
   next.bills = stillActive;
 
@@ -1636,12 +1663,31 @@ export function advanceWeek(s: GameState): GameState {
   // Parliament as process: session clock and wash-up bookkeeping. Logic lives in ./parliament.
   // This tick is strictly inert (advanceParliament never returns effects), so it cannot
   // move the Idle archetype; bills enter the pipeline only through explicit calls.
+  const prevParliament = next.parliamentState ?? createDefaultParliamentState();
   const parliamentResult = advanceParliament({
-    state: next.parliamentState ?? createDefaultParliamentState(),
+    state: prevParliament,
     week: next.week,
     seed: next.seed,
   });
+  const sessionRolled =
+    sessionWeekFor(next.week) === 1 && prevParliament.sessionWeek > 1;
   next = { ...next, parliamentState: parliamentResult.state };
+  if (sessionRolled && prevParliament.inProgress.length > 0) {
+    // Wash-up: the government's own unfinished programme falls at the session end.
+    const washedIds = new Set(prevParliament.inProgress.map((b) => b.billId));
+    const lost = next.bills.filter((b) => washedIds.has(b.id));
+    if (lost.length > 0) {
+      next = {
+        ...next,
+        bills: next.bills.filter((b) => !washedIds.has(b.id)),
+        log: [
+          `PARLIAMENT: wash-up claims ${lost.length} bill(s): ${lost.map((b) => b.title).join(', ')}.`,
+          ...(next.log ?? []),
+        ].slice(0, 50),
+      };
+      next = applyEffects(next, { partyConfidence: -Math.min(2, lost.length) });
+    }
+  }
   if (parliamentResult.log.length > 0) {
     next = { ...next, log: [...parliamentResult.log, ...next.log].slice(0, 50) };
   }
@@ -2084,6 +2130,7 @@ export function reducer(state: GameState, action: Action): GameState {
       return {
         ...state,
         bills: [...state.bills, bill],
+        parliamentState: startBill(state.parliamentState ?? createDefaultParliamentState(), bill),
         log: [`BILL INTRODUCED: ${bill.title} ${whipDesc} (will face a division in ${bill.weeksToPass} months)`, ...state.log].slice(0, 50),
       };
     }

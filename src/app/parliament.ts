@@ -44,6 +44,8 @@ export interface BillProgress {
   weeksInStage: number;
   /** Lords amendments carried against the government. */
   lordsAmendments: number;
+  /** True once the two-week Lords delay has been applied to the countdown. */
+  lordsDelayApplied: boolean;
 }
 
 export interface ParliamentState {
@@ -133,7 +135,14 @@ export function startBill(state: ParliamentState, bill: Bill): ParliamentState {
     ...state,
     inProgress: [
       ...state.inProgress,
-      { billId: bill.id, title: bill.title, stage: 'commons-committee', weeksInStage: 0, lordsAmendments: 0 },
+      {
+        billId: bill.id,
+        title: bill.title,
+        stage: 'commons-committee',
+        weeksInStage: 0,
+        lordsAmendments: 0,
+        lordsDelayApplied: false,
+      },
     ],
   };
 }
@@ -206,6 +215,19 @@ export function grantRoyalAssent(state: ParliamentState, billId: string): Parlia
 }
 
 /** Sweep every unfinished bill into wash-up (called at a session end). */
+/**
+ * Record that the Lords delay has been charged against a bill's countdown, so it
+ * is only ever applied once per bill.
+ */
+export function markLordsDelay(state: ParliamentState, billId: string): ParliamentState {
+  return {
+    ...state,
+    inProgress: state.inProgress.map((b) =>
+      b.billId === billId ? { ...b, lordsDelayApplied: true } : b,
+    ),
+  };
+}
+
 export function washUpBills(state: ParliamentState): ParliamentState {
   if (state.inProgress.length === 0) return state;
   return { ...state, washedUp: state.washedUp + state.inProgress.length, inProgress: [] };
