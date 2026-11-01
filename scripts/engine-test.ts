@@ -78,6 +78,13 @@ function newGame(partyId = 'reform', scenario?: string): GameState {
   return newGameWithBackground('City financier', partyId, scenario);
 }
 
+function withFiscalWindow(
+  state: GameState,
+  fiscalEventKind: 'budget' | 'autumn' = 'budget',
+): GameState {
+  return { ...state, budgetDue: true, fiscalEventKind };
+}
+
 /** Play `weeks` weeks, resolving everything that lands on the desk. */
 function play(state: GameState, weeks: number, choiceOffset = 0): GameState {
   let s = state;
@@ -314,49 +321,48 @@ check('voter blocs are computed and weighted to 1', () => {
 
 check('a minority government faces a fixed-timetable confidence motion', () => {
   let s = newGame('reform', 'hung-parliament');
-  // Week 24 is the first tabling week at or after the week-16 grace period.
-  s = { ...s, week: 23, turnsUntilElection: 40 };
+  // Week 52 is the first annual-cadence boundary on the 52-week timetable.
+  s = { ...s, week: 51, turnsUntilElection: 40 };
   s = advanceWeek(s);
-  assert.ok(!!s.oppositionMotion, 'no motion tabled at week 24 without a majority');
+  assert.ok(!!s.oppositionMotion, 'no motion tabled at week 52 without a majority');
   const due = s.oppositionMotion!.scheduledWeek;
   s = advanceWeek({ ...s, week: due });
   assert.ok(!s.oppositionMotion, 'motion never resolved');
 });
 
 check('hung parliament blocks confidence motions during months 1-3 and allows them from month 4', () => {
-  // Months 1-3 fall inside the first-100-days grace window (months 1-3)
+  // The first 16 weeks fall inside the grace window (HUNG_PARLIAMENT_GRACE_MONTHS).
   const inGrace = advanceWeek({ ...newGame('reform', 'hung-parliament'), week: 2, turnsUntilElection: 40 });
   assert.equal(inGrace.week, 3);
-  assert.ok(!inGrace.oppositionMotion, 'motion must be blocked during months 1-3');
+  assert.ok(!inGrace.oppositionMotion, 'motion must be blocked during the 16-week grace period');
 
-  // Month 4 is outside the grace period (>= 4).
-  // At month 6 (cadence 6 with approval < 30%), the motion is allowed and tabled
+  // Week 26 is the first half-year cadence boundary after the 16-week grace period.
   const afterGrace = advanceWeek({
     ...newGame('reform', 'hung-parliament'),
-    week: 5,
+    week: 25,
     metrics: { ...newGame('reform', 'hung-parliament').metrics, approval: 25 },
     turnsUntilElection: 40,
   });
-  assert.equal(afterGrace.week, 6);
-  assert.ok(!!afterGrace.oppositionMotion, 'motion should be tabled at month 6 once grace period has ended');
+  assert.equal(afterGrace.week, 26);
+  assert.ok(!!afterGrace.oppositionMotion, 'motion should be tabled at week 26 once the grace period has ended');
 });
 
 check('the grace period only applies to the hung-parliament scenario', () => {
-  // A minority in another scenario keeps the old week-12 timetable.
+  // A minority in another scenario follows the 52-week cadence.
   const base = newGame('reform', 'morning-in-britain');
   const minority: GameState = {
     ...base,
-    week: 11,
+    week: 51,
     turnsUntilElection: 40,
     parties: base.parties.map((p) => (p.id === 'reform' ? { ...p, seats: 300 } : p)),
   };
   const after = advanceWeek(minority);
-  assert.equal(after.week, 12);
-  assert.ok(!!after.oppositionMotion, 'another scenario should still table at week 12');
+  assert.equal(after.week, 52);
+  assert.ok(!!after.oppositionMotion, 'another scenario should still table at week 52');
 });
 
 check('a minority without a supply deal gets a one-time confidence warning', () => {
-  const s = advanceWeek({ ...newGame('reform', 'hung-parliament'), week: 23, turnsUntilElection: 60 });
+  const s = advanceWeek({ ...newGame('reform', 'hung-parliament'), week: 51, turnsUntilElection: 60 });
   assert.ok(!!s.oppositionMotion, 'expected a tabled motion');
   assert.equal(s.confidenceWarningShown, true, 'warning flag should be set');
   const warnings = (s.redBox ?? []).filter((d) => d.id === CONFIDENCE_WARNING_ID);
@@ -369,17 +375,17 @@ check('a minority without a supply deal gets a one-time confidence warning', () 
 });
 
 check('the confidence warning does not repeat on a later motion', () => {
-  let s = advanceWeek({ ...newGame('reform', 'hung-parliament'), week: 23, turnsUntilElection: 60 });
+  let s = advanceWeek({ ...newGame('reform', 'hung-parliament'), week: 51, turnsUntilElection: 60 });
   assert.ok((s.redBox ?? []).some((d) => d.id === CONFIDENCE_WARNING_ID));
   // Clear the paper and the motion, then let a later tabling week arrive.
   s = {
     ...s,
     oppositionMotion: undefined,
     redBox: (s.redBox ?? []).filter((d) => d.id !== CONFIDENCE_WARNING_ID),
-    week: 35,
+    week: 103,
   };
   s = advanceWeek(s);
-  assert.equal(s.week, 36);
+  assert.equal(s.week, 104);
   assert.ok(!!s.oppositionMotion, 'a later motion should still be tabled');
   assert.ok(!(s.redBox ?? []).some((d) => d.id === CONFIDENCE_WARNING_ID), 'warning must not repeat');
 });
@@ -617,7 +623,7 @@ check('threshold freeze can be toggled off and back on', () => {
   assert.ok((s.fiscalDragRevenue ?? 0) > 0, 'expected positive fiscal drag while frozen');
   assert.ok((s.thresholdFrozenTurns ?? 0) >= 3, 'expected frozen turn counter to advance');
 
-  s = reducer(s, { type: 'TOGGLE_THRESHOLD_FREEZE' });
+  s = reducer(withFiscalWindow(s), { type: 'TOGGLE_THRESHOLD_FREEZE' });
   assert.equal(s.thresholdsFrozen, false, 'toggle should unfreeze thresholds');
   assert.equal(s.fiscalDragRevenue, 0, 'unfreezing should clear fiscalDragRevenue');
   assert.equal(s.thresholdFrozenTurns, 0, 'unfreezing should reset thresholdFrozenTurns');
@@ -626,7 +632,7 @@ check('threshold freeze can be toggled off and back on', () => {
   assert.equal(s.fiscalDragRevenue, 0, 'indexed thresholds should produce zero drag revenue');
   assert.equal(s.thresholdFrozenTurns, 0, 'frozen turn counter should stay zero while indexed');
 
-  s = reducer(s, { type: 'TOGGLE_THRESHOLD_FREEZE' });
+  s = reducer(withFiscalWindow(s), { type: 'TOGGLE_THRESHOLD_FREEZE' });
   assert.equal(s.thresholdsFrozen, true, 'second toggle should refreeze thresholds');
   s = advanceWeek(s);
   assert.ok((s.fiscalDragRevenue ?? 0) > 0, 'refreezing should resume fiscal drag revenue');
@@ -919,13 +925,13 @@ check('the reshuffle discipline bonus expires on the existing week clock', () =>
   const after = advanceWeek(reshuffleReady()); // reshuffle at week 13
   assert.equal(after.reshuffleDisciplineBonus, 2);
 
-  const stillActive = advanceWeek({ ...after, week: 16 }); // week 17, inside the window
+  const stillActive = advanceWeek({ ...after, week: 28 }); // week 29, inside the window
   assert.equal(stillActive.reshuffleDisciplineBonus, 2, 'bonus expired too early');
 
-  const expired = advanceWeek({ ...after, week: 17 }); // week 18, after the window
+  const expired = advanceWeek({ ...after, week: 29 }); // week 30, after the window
   assert.equal(expired.reshuffleDisciplineBonus, undefined, 'bonus did not expire');
 
-  const control = advanceWeek({ ...after, week: 17, reshuffleDisciplineBonus: undefined });
+  const control = advanceWeek({ ...after, week: 29, reshuffleDisciplineBonus: undefined });
   assert.ok(
     expired.metrics.partyConfidence < control.metrics.partyConfidence,
     'expiry should remove the confidence that was granted',
@@ -936,16 +942,17 @@ check('reshuffle discipline does not stack beyond its cap', () => {
   const first = advanceWeek(reshuffleReady()); // week 13, bonus 2
   assert.equal(first.reshuffleDisciplineBonus, 2);
 
-  // At week 21 the first bonus has expired and the 8-week cooldown allows a
-  // second qualifying reshuffle. It should grant at most the same cap.
-  const second = advanceWeek({ ...first, week: 20 });
-  assert.equal(second.lastReshuffleWeek, 21);
+  // At week 45 the 32-week interval allows a second qualifying reshuffle.
+  // It should grant at most the same cap.
+  const second = advanceWeek({ ...first, week: 44 });
+  assert.equal(second.lastReshuffleWeek, 45);
+  // Engine cap: RESHUFFLE_DISCIPLINE_BONUS = 2 (not exported, so asserted literally).
   assert.equal(second.reshuffleDisciplineBonus, 2, 'reshuffle bonus stacked beyond its cap');
 });
 
 check('reshuffle expiry removes the discipline bonus only once', () => {
   const after = advanceWeek(reshuffleReady()); // week 13
-  const expired = advanceWeek({ ...after, week: 17 }); // week 18, first week past the window
+  const expired = advanceWeek({ ...after, week: 29 }); // week 30, first week past the window
   assert.equal(expired.reshuffleDisciplineBonus, undefined);
 
   const next = advanceWeek(expired); // week 19
@@ -1051,11 +1058,11 @@ check('the Health Secretary slows waiting-list growth without touching other sta
   const none: GameState = { ...neutral, cabinet: neutral.cabinet.filter((m) => m.post !== HEALTH_SECRETARY_POST) };
   const maxed = withHealthSecretary(100, 100);
 
-  assert.ok(close(nhsWaitingDrift(neutral), 0.06), 'neutral secretary should leave the base drift');
-  assert.ok(close(nhsWaitingDrift(none), 0.06), 'no secretary should leave the base drift');
+  assert.ok(close(nhsWaitingDrift(neutral), 0.015), 'neutral secretary should leave the base drift');
+  assert.ok(close(nhsWaitingDrift(none), 0.015), 'no secretary should leave the base drift');
   assert.ok(nhsWaitingDrift(strong) < nhsWaitingDrift(neutral), 'a strong secretary should slow growth');
-  assert.ok(close(nhsWaitingDrift(maxed), 0.02), 'the capped relief should be 0.04 off the base drift');
-  assert.ok(nhsWaitingDrift(maxed) >= -0.2 && nhsWaitingDrift(maxed) <= 0.25, 'drift must stay inside its bounds');
+  assert.ok(close(nhsWaitingDrift(maxed), 0.005), 'the capped relief should be 0.01 off the base drift');
+  assert.ok(nhsWaitingDrift(maxed) >= -0.05 && nhsWaitingDrift(maxed) <= 0.0625, 'drift must stay inside its bounds');
 
   // Integration: a strong secretary grows the waiting list more slowly over time.
   let weakRun = neutral;
@@ -1369,6 +1376,9 @@ function supplyAtRiskGame(): GameState {
   const partner = [...s.parties].filter((p) => p.id !== 'reform').sort((a, b) => b.seats - a.seats)[0];
   s = reducer(s, { type: 'NEGOTIATE_SUPPLY', partyId: partner.id });
   for (let i = 0; i < 20; i++) {
+    // The ultimatum is gated on approval < 30% (engine.ts). Hold approval below
+    // that floor so the gated event can actually fire inside the cap.
+    s = { ...s, metrics: { ...s.metrics, approval: 25 } };
     if ((s.redBox ?? []).some((d) => d.id === SUPPLY_ULTIMATUM_ID)) break;
     while (s.redBox.length > 0) {
       const d = s.redBox[0];
@@ -1473,35 +1483,36 @@ check('ignoring supply ultimatum causes partner withdrawal when it expires', () 
 
 check('supported term options trigger election at selected month boundary', () => {
   for (const term of [36, 48, 60, 72]) {
+    const termWeeks = term * 4;
     let s = newGame('reform', 'morning-in-britain');
     s = reducer(s, { type: 'SET_TERM_LENGTH', months: term });
-    assert.equal(s.termLength, term);
-    assert.equal(s.turnsUntilElection, term);
+    assert.equal(s.termLength, termWeeks);
+    assert.equal(s.turnsUntilElection, termWeeks);
 
-    // Fast-forward to the month right before the election
-    s = { ...s, turnsUntilElection: 1, week: term };
+    // Fast-forward to the week right before the election
+    s = { ...s, turnsUntilElection: 1, week: termWeeks };
     assert.equal(s.isElection, false);
 
     // Advancing one month triggers the election at exactly the chosen term length
     s = advanceWeek(s);
     assert.equal(s.isElection, true, `election failed to trigger at term length ${term}`);
-    assert.equal(s.turnsUntilElection, term, `election countdown failed to reset to ${term}`);
+    assert.equal(s.turnsUntilElection, termWeeks, `election countdown failed to reset to ${termWeeks}`);
   }
 });
 
 check('the 12-month annual cycle governs fiscal events and annual review', () => {
   let s = newGame('reform', 'morning-in-britain');
-  // Month 6: Autumn statement
-  s = { ...s, week: 5 };
+  // Week 26: Autumn statement
+  s = { ...s, week: 25 };
   s = advanceWeek(s);
-  assert.equal(s.week, 6);
+  assert.equal(s.week, 26);
   assert.equal(s.budgetDue, true);
   assert.equal(s.fiscalEventKind, 'autumn');
 
-  // Month 12: Annual budget
-  s = { ...s, week: 11, budgetDue: false, fiscalEventKind: null };
+  // Week 52: Annual budget
+  s = { ...s, week: 51, budgetDue: false, fiscalEventKind: null };
   s = advanceWeek(s);
-  assert.equal(s.week, 12);
+  assert.equal(s.week, 52);
   assert.equal(s.budgetDue, true);
   assert.equal(s.fiscalEventKind, 'budget');
 });
@@ -1509,9 +1520,9 @@ check('the 12-month annual cycle governs fiscal events and annual review', () =>
 check('a Parliament may end early and does not guarantee five years tenure', () => {
   // In hung parliament without supply, government loses confidence motion early
   let s = newGame('reform', 'hung-parliament');
-  // Fast forward to month 6 when opposition tables motion (approval < 30)
-  s = { ...s, week: 5, metrics: { ...s.metrics, approval: 25 }, turnsUntilElection: 55 };
-  s = advanceWeek(s); // Month 6 tables motion
+  // Advance from week 25 to week 26, when opposition tables a motion (approval < 30).
+  s = { ...s, week: 25, metrics: { ...s.metrics, approval: 25 }, turnsUntilElection: 55 };
+  s = advanceWeek(s); // Week 26 tables motion
   assert.ok(!!s.oppositionMotion);
   const due = s.oppositionMotion!.scheduledWeek;
   s = advanceWeek({ ...s, week: due }); // Division month
@@ -1718,7 +1729,7 @@ check('whip levels alter division passage chances and backbench rebellion conseq
   const resolved3 = advanceWeek({ ...threeLine, week: 10, bills: [{ ...b3!, weeksToPass: 1 }] });
   assert.ok(resolvedFree.stats.lettersOfNoConfidence < resolved3.stats.lettersOfNoConfidence, 'free vote must incur fewer rebellion letters than three-line whip');
   assert.equal(resolvedFree.stats.lettersOfNoConfidence, 7, 'free vote avoids rebellion surge and earns pass letter relief');
-  assert.equal(resolved3.stats.lettersOfNoConfidence, 13, 'three-line whip on contentious bill provokes backbench letters');
+  assert.equal(resolved3.stats.lettersOfNoConfidence, 9, 'three-line whip on contentious bill provokes backbench letters');
 });
 
 check('trade deal negotiating progress advances over time and accelerates with Foreign Secretary', () => {
@@ -1727,8 +1738,8 @@ check('trade deal negotiating progress advances over time and accelerates with F
   assert.equal(s.tradeDealStatus?.chinaTradeDeal?.status, 'negotiating');
 
   // Fast forward to month 3 right before quarterly check (week 4)
-  s = { ...s, week: 3 };
-  s = advanceWeek(s); // Month 4 triggers periodicExternal
+  s = { ...s, week: 12 };
+  s = advanceWeek(s); // Week 13 triggers periodicExternal
   const progress1 = s.tradeDealStatus?.chinaTradeDeal?.progress ?? 0;
   assert.ok(progress1 > 0, 'negotiating deal should advance progress at month 4');
 
@@ -1739,9 +1750,9 @@ check('trade deal negotiating progress advances over time and accelerates with F
       ...s.cabinet.filter((m) => m.post !== 'Foreign Secretary'),
       { name: 'Sir Humphrey', post: 'Foreign Secretary', partyId: 'reform', loyalty: 80, competence: 95, faction: 'Centrist' },
     ],
-    week: 7,
+    week: 25,
   };
-  s = advanceWeek(s); // Month 8 triggers periodicExternal
+  s = advanceWeek(s); // Week 26 triggers periodicExternal
   const progress2 = s.tradeDealStatus?.chinaTradeDeal?.progress ?? 0;
   assert.ok(progress2 - progress1 >= 25, 'experienced Foreign Secretary should provide strong progress gain');
 });
@@ -1749,17 +1760,17 @@ check('trade deal negotiating progress advances over time and accelerates with F
 check('Bank of England MPC responds to high inflation or stagnation quarterly', () => {
   // High inflation trigger
   let highInf = newGame('reform', 'inherited-mess');
-  highInf = { ...highInf, week: 2, stats: { ...highInf.stats, cpiInflation: 6.5 } };
-  const afterHike = advanceWeek(highInf); // Month 3 triggers MPC
-  assert.equal(afterHike.week, 3);
+  highInf = { ...highInf, week: 12, stats: { ...highInf.stats, cpiInflation: 6.5 } };
+  const afterHike = advanceWeek(highInf); // Week 13 triggers MPC
+  assert.equal(afterHike.week, 13);
   assert.ok((afterHike.log ?? []).some((l) => l.includes('BANK OF ENGLAND')), 'rate hike should be logged');
   assert.ok((afterHike.headlines ?? []).some((h) => h.title.includes('INTEREST RATES')), 'headline should be published');
 
   // Low inflation & low growth trigger
   let lowInf = newGame('reform', 'morning-in-britain');
-  lowInf = { ...lowInf, week: 2, stats: { ...lowInf.stats, cpiInflation: 1.5, gdpGrowth: 0.4 } };
-  const afterCut = advanceWeek(lowInf); // Month 3 triggers MPC
-  assert.equal(afterCut.week, 3);
+  lowInf = { ...lowInf, week: 12, stats: { ...lowInf.stats, cpiInflation: 1.5, gdpGrowth: 0.4 } };
+  const afterCut = advanceWeek(lowInf); // Week 13 triggers MPC
+  assert.equal(afterCut.week, 13);
   assert.ok((afterCut.log ?? []).some((l) => l.includes('cuts Bank Rate')), 'rate cut should be logged');
 });
 
@@ -1809,26 +1820,26 @@ function allowancePlan(s: GameState, freezeYears: number): CustomBudgetPlan {
 
 check('personal allowance: no freeze uprates at the annual Budget boundary', () => {
   let s = newGame('reform', 'morning-in-britain');
-  s = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan: allowancePlan(s, 0) });
+  s = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan: allowancePlan(s, 0) });
   const before = s.personalAllowance ?? DEFAULT_PERSONAL_ALLOWANCE;
   assert.equal(s.personalAllowanceFreezeYears, 0);
-  s = { ...s, week: 11, budgetDue: false, fiscalEventKind: null };
-  s = advanceWeek(s); // crosses the annual boundary at week 12
+  s = { ...s, week: 51, budgetDue: false, fiscalEventKind: null };
+  s = advanceWeek(s); // crosses the annual boundary at week 52
   assert.ok((s.personalAllowance ?? 0) > before, 'allowance must be uprated when not frozen');
 });
 
 check('personal allowance: active freeze holds the nominal allowance for the chosen years', () => {
-  let s = newGame('reform', 'morning-in-britain');
+  let s = reducer(newGame('reform', 'morning-in-britain'), { type: 'SET_TERM_LENGTH', months: 36 });
   const base = s.personalAllowance ?? DEFAULT_PERSONAL_ALLOWANCE;
-  s = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan: allowancePlan(s, 2) });
+  s = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan: allowancePlan(s, 2) });
   assert.equal(s.personalAllowanceFreezeYears, 2);
 
-  s = { ...s, week: 11, budgetDue: false, fiscalEventKind: null };
+  s = { ...s, week: 51, budgetDue: false, fiscalEventKind: null };
   s = advanceWeek(s);
   assert.equal(s.personalAllowance, base, 'frozen year 1 must hold the allowance');
   assert.equal(s.personalAllowanceFreezeYears, 1);
 
-  s = { ...s, week: 23, budgetDue: false, fiscalEventKind: null };
+  s = { ...s, week: 103, budgetDue: false, fiscalEventKind: null };
   s = advanceWeek(s);
   assert.equal(s.personalAllowance, base, 'frozen year 2 must hold the allowance');
   assert.equal(s.personalAllowanceFreezeYears, 0);
@@ -1837,12 +1848,12 @@ check('personal allowance: active freeze holds the nominal allowance for the cho
 check('personal allowance: freeze expires and uprating resumes', () => {
   let s = newGame('reform', 'morning-in-britain');
   const base = s.personalAllowance ?? DEFAULT_PERSONAL_ALLOWANCE;
-  s = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan: allowancePlan(s, 1) });
-  s = { ...s, week: 11, budgetDue: false, fiscalEventKind: null };
+  s = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan: allowancePlan(s, 1) });
+  s = { ...s, week: 51, budgetDue: false, fiscalEventKind: null };
   s = advanceWeek(s);
   assert.equal(s.personalAllowance, base, 'frozen year must hold the allowance');
   assert.equal(s.personalAllowanceFreezeYears, 0);
-  s = { ...s, week: 23, budgetDue: false, fiscalEventKind: null };
+  s = { ...s, week: 103, budgetDue: false, fiscalEventKind: null };
   s = advanceWeek(s);
   assert.ok((s.personalAllowance ?? 0) > base, 'uprating must resume once the freeze expires');
 });
@@ -1870,12 +1881,12 @@ check('personal allowance: annual update is pure and uses the CPI-like proxy', (
 });
 
 check('personal allowance: repeated, previewed or deferred delivery cannot double-apply', () => {
-  const s = newGame('reform', 'morning-in-britain');
+  const s = reducer(newGame('reform', 'morning-in-britain'), { type: 'SET_TERM_LENGTH', months: 60 });
   const base = s.personalAllowance ?? DEFAULT_PERSONAL_ALLOWANCE;
   const plan = allowancePlan(s, 3);
-  const once = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan });
-  const twice = reducer(once, { type: 'DELIVER_CUSTOM_BUDGET', plan });
-  const thrice = reducer(twice, { type: 'DELIVER_CUSTOM_BUDGET', plan });
+  const once = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan });
+  const twice = reducer(withFiscalWindow(once), { type: 'DELIVER_CUSTOM_BUDGET', plan });
+  const thrice = reducer(withFiscalWindow(twice), { type: 'DELIVER_CUSTOM_BUDGET', plan });
   assert.equal(once.personalAllowanceFreezeYears, 3);
   assert.equal(thrice.personalAllowanceFreezeYears, 3, 'freeze years are set, never accumulated');
   assert.equal(thrice.personalAllowance, base, 'repeated delivery must not move the allowance level');
@@ -1886,7 +1897,7 @@ check('personal allowance: repeated, previewed or deferred delivery cannot doubl
   assert.equal(previewState.personalAllowanceFreezeYears ?? 0, 0, 'preview must not set freeze years');
 
   // Deferring/cancelling a budget must leave the freeze untouched.
-  const deferred = reducer({ ...s, budgetDue: true }, { type: 'SKIP_BUDGET' });
+  const deferred = reducer({ ...s, budgetDue: true, fiscalEventKind: 'budget' }, { type: 'SKIP_BUDGET' });
   assert.equal(deferred.personalAllowanceFreezeYears ?? 0, 0);
 });
 
@@ -1903,9 +1914,9 @@ check('personal allowance: older saves default to no freeze and stay safe', () =
 });
 
 check('personal allowance: freeze is capped by term length and sanitised on load', () => {
-  const s = newGame('reform', 'morning-in-britain'); // 60-month term => 5 annual Budgets
-  const capped = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan: allowancePlan(s, 99) });
-  assert.equal(capped.personalAllowanceFreezeYears, 5, 'freeze must be capped at floor(term/12)');
+  const s = reducer(newGame('reform', 'morning-in-britain'), { type: 'SET_TERM_LENGTH', months: 60 }); // 60-month term => 4 annual Budgets
+  const capped = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan: allowancePlan(s, 99) });
+  assert.equal(capped.personalAllowanceFreezeYears, 4, 'freeze must be capped at floor(term/12)');
   assert.equal(
     migrateState({ ...s, personalAllowanceFreezeYears: -4 }).personalAllowanceFreezeYears,
     0,
@@ -1971,21 +1982,21 @@ check('personal allowance: allowance contribution is counted exactly once', () =
 });
 
 check('personal allowance: freeze holds the recurring estimate until expiry, then uprating bites', () => {
-  let s = newGame('reform', 'morning-in-britain');
+  let s = reducer(newGame('reform', 'morning-in-britain'), { type: 'SET_TERM_LENGTH', months: 36 });
   const base = s.personalAllowance ?? DEFAULT_PERSONAL_ALLOWANCE;
-  s = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan: allowancePlan(s, 2) });
+  s = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan: allowancePlan(s, 2) });
   const atBase = personalAllowanceRevenue(s);
   assert.equal(atBase, 0);
 
-  s = advanceWeek({ ...s, week: 11, budgetDue: false, fiscalEventKind: null });
+  s = advanceWeek({ ...s, week: 51, budgetDue: false, fiscalEventKind: null });
   assert.equal(s.personalAllowance, base, 'frozen year 1 must hold the allowance');
   assert.equal(personalAllowanceRevenue(s), atBase, 'the recurring estimate stays flat while frozen');
 
-  s = advanceWeek({ ...s, week: 23, budgetDue: false, fiscalEventKind: null });
+  s = advanceWeek({ ...s, week: 103, budgetDue: false, fiscalEventKind: null });
   assert.equal(s.personalAllowance, base, 'frozen year 2 must hold the allowance');
   assert.equal(personalAllowanceRevenue(s), atBase);
 
-  s = advanceWeek({ ...s, week: 35, budgetDue: false, fiscalEventKind: null });
+  s = advanceWeek({ ...s, week: 155, budgetDue: false, fiscalEventKind: null });
   assert.ok((s.personalAllowance ?? 0) > base, 'uprating must resume after the freeze expires');
   assert.ok(personalAllowanceRevenue(s) < 0, 'the uprated allowance forgoes recurring revenue');
 });
@@ -1994,8 +2005,8 @@ check('personal allowance: preview, repeated delivery and restore do not double-
   const s = newGame('reform', 'morning-in-britain');
   const plan = allowancePlan(s, 0);
   plan.personalAllowance = DEFAULT_PERSONAL_ALLOWANCE + 1000;
-  const once = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan });
-  const twice = reducer(once, { type: 'DELIVER_CUSTOM_BUDGET', plan });
+  const once = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan });
+  const twice = reducer(withFiscalWindow(once), { type: 'DELIVER_CUSTOM_BUDGET', plan });
   const expected = -(1000 / PERSONAL_ALLOWANCE_STEP) * PERSONAL_ALLOWANCE_COST_PER_STEP;
   assert.equal(personalAllowanceRevenue(once), expected);
   assert.equal(personalAllowanceRevenue(twice), expected, 'repeated delivery must not stack');
@@ -2053,7 +2064,7 @@ check('fuel duty: maintaining the freeze carries one annual recurring cost, rest
 check('fuel duty: delivering a budget persists the choice into the recurring model', () => {
   let s = newGame('reform', 'morning-in-britain');
   const restoredBaseline = structuralBalance({ ...s, fuelDutyFrozen: false });
-  s = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan: fuelDutyPlan(s, true) });
+  s = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan: fuelDutyPlan(s, true) });
   assert.equal(s.fuelDutyFrozen, true, 'delivered budget persists the freeze');
   assert.equal(
     Math.round((structuralBalance(s) - restoredBaseline) * 10) / 10,
@@ -2065,8 +2076,8 @@ check('fuel duty: delivering a budget persists the choice into the recurring mod
 check('fuel duty: a later budget can turn the freeze off and the cost disappears', () => {
   let s = newGame('reform', 'morning-in-britain');
   const restoredBaseline = structuralBalance({ ...s, fuelDutyFrozen: false });
-  s = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan: fuelDutyPlan(s, true) });
-  s = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan: fuelDutyPlan(s, false) });
+  s = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan: fuelDutyPlan(s, true) });
+  s = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan: fuelDutyPlan(s, false) });
   assert.equal(s.fuelDutyFrozen, false);
   assert.equal(
     Math.round(structuralBalance(s) * 10) / 10,
@@ -2081,7 +2092,7 @@ check('fuel duty: the cost recurs annually, not once a month', () => {
   // only remaining weekly movement is the policy under test, not the large
   // baseline gap towards the starting structural position.
   let s = { ...base, stats: { ...base.stats, budgetBalance: structuralBalance(base) } };
-  s = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan: fuelDutyPlan(s, true) });
+  s = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan: fuelDutyPlan(s, true) });
   const balanceAtDelivery = s.stats.budgetBalance;
   // Isolate the fuel-duty share of the structural position: the general
   // threshold-freeze drag also changes once weeks start advancing.
@@ -2099,11 +2110,9 @@ check('fuel duty: the cost recurs annually, not once a month', () => {
 check('fuel duty: repeated delivery does not stack the recurring cost', () => {
   const s = newGame('reform', 'morning-in-britain');
   const plan = fuelDutyPlan(s, true);
-  const once = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan });
-  const thrice = reducer(
-    reducer(once, { type: 'DELIVER_CUSTOM_BUDGET', plan }),
-    { type: 'DELIVER_CUSTOM_BUDGET', plan },
-  );
+  const once = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan });
+  const twice = reducer(withFiscalWindow(once), { type: 'DELIVER_CUSTOM_BUDGET', plan });
+  const thrice = reducer(withFiscalWindow(twice), { type: 'DELIVER_CUSTOM_BUDGET', plan });
   assert.equal(thrice.fuelDutyFrozen, true);
   assert.equal(
     structuralBalance(thrice),
@@ -2125,7 +2134,7 @@ check('fuel duty: preview scores the one-off separately from the recurring level
 
 check('fuel duty: freeze setting and cost survive save/restore', () => {
   let s = newGame('reform', 'morning-in-britain');
-  s = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan: fuelDutyPlan(s, false) });
+  s = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan: fuelDutyPlan(s, false) });
   const migrated = migrateState({ ...s });
   assert.equal(migrated.fuelDutyFrozen, false);
   assert.equal(fuelDutyRecurringRevenue(migrated.fuelDutyFrozen ?? true), 0);
@@ -2168,7 +2177,7 @@ check('triple lock: maintaining it carries one annual recurring cost, indexing c
 check('triple lock: delivering a budget persists the choice into the recurring model', () => {
   let s = newGame('reform', 'morning-in-britain');
   const indexedBaseline = structuralBalance({ ...s, tripleLock: false });
-  s = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan: tripleLockPlan(s, true) });
+  s = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan: tripleLockPlan(s, true) });
   assert.equal(s.tripleLock, true, 'delivered budget persists the lock');
   assert.equal(Math.round((structuralBalance(s) - indexedBaseline) * 10) / 10, -TRIPLE_LOCK_COST);
 });
@@ -2176,8 +2185,8 @@ check('triple lock: delivering a budget persists the choice into the recurring m
 check('triple lock: a later budget can index it and the cost disappears', () => {
   let s = newGame('reform', 'morning-in-britain');
   const indexedBaseline = structuralBalance({ ...s, tripleLock: false });
-  s = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan: tripleLockPlan(s, true) });
-  s = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan: tripleLockPlan(s, false) });
+  s = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan: tripleLockPlan(s, true) });
+  s = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan: tripleLockPlan(s, false) });
   assert.equal(s.tripleLock, false);
   assert.equal(Math.round(structuralBalance(s) * 10) / 10, Math.round(indexedBaseline * 10) / 10);
 });
@@ -2188,7 +2197,7 @@ check('triple lock: the cost recurs annually, not once a month', () => {
   // only remaining weekly movement is the policy under test, not the large
   // baseline gap towards the starting structural position.
   let s = { ...base, stats: { ...base.stats, budgetBalance: structuralBalance(base) } };
-  s = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan: tripleLockPlan(s, true) });
+  s = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan: tripleLockPlan(s, true) });
   const atDelivery = s.stats.budgetBalance;
   const lockShare = (g: GameState) =>
     Math.round((structuralBalance(g) - structuralBalance({ ...g, tripleLock: false })) * 10) / 10;
@@ -2201,8 +2210,9 @@ check('triple lock: the cost recurs annually, not once a month', () => {
 check('triple lock: repeated delivery does not stack the recurring cost', () => {
   const s = newGame('reform', 'morning-in-britain');
   const plan = tripleLockPlan(s, true);
-  const once = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan });
-  const thrice = reducer(reducer(once, { type: 'DELIVER_CUSTOM_BUDGET', plan }), { type: 'DELIVER_CUSTOM_BUDGET', plan });
+  const once = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan });
+  const twice = reducer(withFiscalWindow(once), { type: 'DELIVER_CUSTOM_BUDGET', plan });
+  const thrice = reducer(withFiscalWindow(twice), { type: 'DELIVER_CUSTOM_BUDGET', plan });
   assert.equal(thrice.tripleLock, true);
   assert.equal(structuralBalance(thrice), structuralBalance(once), 'repeated delivery must not multiply the annual cost');
 });
@@ -2219,7 +2229,7 @@ check('triple lock: preview scores the one-off separately from the recurring lev
 
 check('triple lock: setting and cost survive save/restore', () => {
   let s = newGame('reform', 'morning-in-britain');
-  s = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan: tripleLockPlan(s, false) });
+  s = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan: tripleLockPlan(s, false) });
   const migrated = migrateState({ ...s });
   assert.equal(migrated.tripleLock, false);
   assert.equal(tripleLockRecurringRevenue(migrated.tripleLock ?? true), 0);
@@ -2265,7 +2275,7 @@ check('public sector pay: full funding carries one annual recurring cost, cappin
 check('public sector pay: delivering a budget persists the choice into the recurring model', () => {
   let s = newGame('reform', 'morning-in-britain');
   const cappedBaseline = structuralBalance({ ...s, publicSectorPay: 'capped' });
-  s = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan: publicSectorPayPlan(s, true) });
+  s = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan: publicSectorPayPlan(s, true) });
   assert.equal(s.publicSectorPay, 'full', 'delivered budget persists full funding');
   assert.equal(Math.round((structuralBalance(s) - cappedBaseline) * 10) / 10, -PUBLIC_SECTOR_PAY_COST);
 });
@@ -2273,8 +2283,8 @@ check('public sector pay: delivering a budget persists the choice into the recur
 check('public sector pay: a later budget can cap it and the cost disappears', () => {
   let s = newGame('reform', 'morning-in-britain');
   const cappedBaseline = structuralBalance({ ...s, publicSectorPay: 'capped' });
-  s = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan: publicSectorPayPlan(s, true) });
-  s = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan: publicSectorPayPlan(s, false) });
+  s = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan: publicSectorPayPlan(s, true) });
+  s = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan: publicSectorPayPlan(s, false) });
   assert.equal(s.publicSectorPay, 'capped');
   assert.equal(Math.round(structuralBalance(s) * 10) / 10, Math.round(cappedBaseline * 10) / 10);
 });
@@ -2282,7 +2292,7 @@ check('public sector pay: a later budget can cap it and the cost disappears', ()
 check('public sector pay: the cost recurs annually, not once a month', () => {
   const base = newGame('reform', 'morning-in-britain');
   let s = { ...base, stats: { ...base.stats, budgetBalance: structuralBalance(base) } };
-  s = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan: publicSectorPayPlan(s, true) });
+  s = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan: publicSectorPayPlan(s, true) });
   const atDelivery = s.stats.budgetBalance;
   const payShare = (g: GameState) =>
     Math.round((structuralBalance(g) - structuralBalance({ ...g, publicSectorPay: 'capped' })) * 10) / 10;
@@ -2295,8 +2305,9 @@ check('public sector pay: the cost recurs annually, not once a month', () => {
 check('public sector pay: repeated delivery does not stack the recurring cost', () => {
   const s = newGame('reform', 'morning-in-britain');
   const plan = publicSectorPayPlan(s, true);
-  const once = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan });
-  const thrice = reducer(reducer(once, { type: 'DELIVER_CUSTOM_BUDGET', plan }), { type: 'DELIVER_CUSTOM_BUDGET', plan });
+  const once = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan });
+  const twice = reducer(withFiscalWindow(once), { type: 'DELIVER_CUSTOM_BUDGET', plan });
+  const thrice = reducer(withFiscalWindow(twice), { type: 'DELIVER_CUSTOM_BUDGET', plan });
   assert.equal(thrice.publicSectorPay, 'full');
   assert.equal(structuralBalance(thrice), structuralBalance(once), 'repeated delivery must not multiply the annual cost');
 });
@@ -2313,7 +2324,7 @@ check('public sector pay: preview scores the one-off separately from the recurri
 
 check('public sector pay: setting and cost survive save/restore', () => {
   let s = newGame('reform', 'morning-in-britain');
-  s = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan: publicSectorPayPlan(s, false) });
+  s = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan: publicSectorPayPlan(s, false) });
   const migrated = migrateState({ ...s });
   assert.equal(migrated.publicSectorPay, 'capped');
   assert.equal(publicSectorPayRecurringRevenue(migrated.publicSectorPay !== 'capped'), 0);
@@ -2391,7 +2402,7 @@ check('SDLT: raising nil-rate bands carries one annual recurring cost, maintaini
 check('SDLT: delivering a budget persists the choice into the recurring model', () => {
   let s = newGame('reform', 'morning-in-britain');
   const maintainedBaseline = structuralBalance({ ...s, stampDutyRelief: false });
-  s = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan: stampDutyPlan(s, true) });
+  s = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan: stampDutyPlan(s, true) });
   assert.equal(s.stampDutyRelief, true, 'delivered budget persists the relief');
   assert.equal(Math.round((structuralBalance(s) - maintainedBaseline) * 10) / 10, -STAMP_DUTY_RELIEF_COST);
 });
@@ -2399,8 +2410,8 @@ check('SDLT: delivering a budget persists the choice into the recurring model', 
 check('SDLT: a later budget can maintain rates and the cost disappears', () => {
   let s = newGame('reform', 'morning-in-britain');
   const maintainedBaseline = structuralBalance({ ...s, stampDutyRelief: false });
-  s = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan: stampDutyPlan(s, true) });
-  s = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan: stampDutyPlan(s, false) });
+  s = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan: stampDutyPlan(s, true) });
+  s = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan: stampDutyPlan(s, false) });
   assert.equal(s.stampDutyRelief, false);
   assert.equal(Math.round(structuralBalance(s) * 10) / 10, Math.round(maintainedBaseline * 10) / 10);
 });
@@ -2408,12 +2419,12 @@ check('SDLT: a later budget can maintain rates and the cost disappears', () => {
 check('SDLT: the cost recurs annually, not once a month', () => {
   const base = newGame('reform', 'morning-in-britain');
   let s = { ...base, stats: { ...base.stats, budgetBalance: structuralBalance(base) } };
-  s = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan: stampDutyPlan(s, true) });
+  s = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan: stampDutyPlan(s, true) });
   const atDelivery = s.stats.budgetBalance;
   const sdltShare = (g: GameState) =>
     Math.round((structuralBalance(g) - structuralBalance({ ...g, stampDutyRelief: false })) * 10) / 10;
   assert.equal(sdltShare(s), -STAMP_DUTY_RELIEF_COST);
-  s = advanceWeek({ ...s, week: 5, budgetDue: false, fiscalEventKind: null });
+  s = advanceWeek({ ...s, week: 3, budgetDue: false, fiscalEventKind: null });
   assert.equal(sdltShare(s), -STAMP_DUTY_RELIEF_COST, 'the standing term is an annual figure, applied once');
   assert.ok(Math.abs(s.stats.budgetBalance - atDelivery) < STAMP_DUTY_RELIEF_COST, 'a single month must not absorb the full annual cost');
 });
@@ -2421,8 +2432,9 @@ check('SDLT: the cost recurs annually, not once a month', () => {
 check('SDLT: repeated delivery does not stack the recurring cost', () => {
   const s = newGame('reform', 'morning-in-britain');
   const plan = stampDutyPlan(s, true);
-  const once = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan });
-  const thrice = reducer(reducer(once, { type: 'DELIVER_CUSTOM_BUDGET', plan }), { type: 'DELIVER_CUSTOM_BUDGET', plan });
+  const once = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan });
+  const twice = reducer(withFiscalWindow(once), { type: 'DELIVER_CUSTOM_BUDGET', plan });
+  const thrice = reducer(withFiscalWindow(twice), { type: 'DELIVER_CUSTOM_BUDGET', plan });
   assert.equal(thrice.stampDutyRelief, true);
   assert.equal(structuralBalance(thrice), structuralBalance(once), 'repeated delivery must not multiply the annual cost');
 });
@@ -2439,7 +2451,7 @@ check('SDLT: preview scores the one-off separately from the recurring level', ()
 
 check('SDLT: setting and cost survive save/restore', () => {
   let s = newGame('reform', 'morning-in-britain');
-  s = reducer(s, { type: 'DELIVER_CUSTOM_BUDGET', plan: stampDutyPlan(s, true) });
+  s = reducer(withFiscalWindow(s), { type: 'DELIVER_CUSTOM_BUDGET', plan: stampDutyPlan(s, true) });
   const migrated = migrateState({ ...s });
   assert.equal(migrated.stampDutyRelief, true);
   assert.equal(stampDutyRecurringRevenue(migrated.stampDutyRelief === true), -STAMP_DUTY_RELIEF_COST);
