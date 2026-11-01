@@ -84,6 +84,12 @@ const CABINET_STRAIN_LETTERS_PER_WEEK = 1;
 const ALL_DOSSIERS = [...DOSSIER_POOL, ...DOSSIER_POOL_2, ...DOSSIER_POOL_3];
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
+/**
+ * Two-decimal rounding for stats whose weekly drift is smaller than 1 dp
+ * (~0.01/turn). At 1 dp the drift rounded away every turn and never accumulated,
+ * which silently disabled the whole metric. Display rounding stays 1 dp in the UI.
+ */
+const r2 = (n: number) => Math.round(n * 100) / 100;
 
 function clamp(n: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, n));
@@ -301,7 +307,8 @@ function applyEffects(s: GameState, fx: Effects): GameState {
     cpiInflation: r1(clamp(s.stats.cpiInflation + (fx.cpiInflation ?? 0), 0.4, CPI_INFLATION_MAX)),
     gdpGrowth: r1(clamp(s.stats.gdpGrowth + (fx.gdpGrowth ?? 0), GDP_GROWTH_MIN, GDP_GROWTH_MAX)),
     giltYield: r1(clamp(s.stats.giltYield + (fx.giltYield ?? 0), 1.0, GILT_YIELD_MAX)),
-    nhsWaitingList: r1(Math.max(2.0, s.stats.nhsWaitingList + (fx.nhsWaitingList ?? 0))),
+    // 2 dp, not 1: the weekly NHS drift is ~0.01/turn and 1 dp swallowed it entirely.
+    nhsWaitingList: r2(Math.max(2.0, s.stats.nhsWaitingList + (fx.nhsWaitingList ?? 0))),
     netMigration: Math.max(50, s.stats.netMigration + (fx.netMigration ?? 0)),
     lettersOfNoConfidence: clamp(s.stats.lettersOfNoConfidence + (fx.lettersDelta ?? 0), 0, 99),
     lettersThreshold: s.stats.lettersThreshold,
