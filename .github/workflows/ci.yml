@@ -18,11 +18,8 @@ jobs:
       - name: Install dependencies
         run: npm ci || npm install
 
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Run slice harnesses
-        run: npm run test:slices
+      - name: Run the full test suite (typecheck + engine + all slice harnesses)
+        run: npm test
 
       - name: Run E2E integration fuzzer
         run: npx --yes tsx scripts/e2e-integration-fuzzer.ts
