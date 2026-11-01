@@ -51,6 +51,7 @@ import {
   markLordsDelay,
   LORDS_STAGE_WEEKS,
 } from './parliament';
+import { advanceLobbying, createDefaultLobbyingState, committeeDelayWeeks } from './lobbying';
 import { advanceDevolution, createDefaultDevolutionState } from './devolution';
 import { DOSSIER_POOL_2 } from './dossiers2';
 import { DOSSIER_POOL_3 } from './dossiers3';
@@ -241,6 +242,7 @@ export function createInitialState(): GameState {
     immigrationState: createDefaultImmigrationState(),
     localGovernmentState: createDefaultLocalGovernmentState(),
     parliamentState: createDefaultParliamentState(),
+    lobbyingState: createDefaultLobbyingState(),
     devolutionState: createDefaultDevolutionState(),
   };
   const initial = { ...s, billResolutions: {} };
@@ -1155,7 +1157,16 @@ export function advanceWeek(s: GameState): GameState {
     const pipeline = next.parliamentState ?? createDefaultParliamentState();
     const progress = pipeline.inProgress.find((p) => p.billId === bill.id);
     if (progress && !progress.lordsDelayApplied) {
-      stillActive.push({ ...bill, weeksToPass: bill.weeksToPass - 1 + LORDS_STAGE_WEEKS });
+      // Committee scrutiny rides on the same one-time charge; it is zero until the
+      // committee has actually turned hostile, so a calm house costs a bill nothing.
+      stillActive.push({
+        ...bill,
+        weeksToPass:
+          bill.weeksToPass -
+          1 +
+          LORDS_STAGE_WEEKS +
+          committeeDelayWeeks(bill, next.lobbyingState ?? createDefaultLobbyingState()),
+      });
       next = {
         ...next,
         parliamentState: markLordsDelay(pipeline, bill.id),
@@ -1692,6 +1703,20 @@ export function advanceWeek(s: GameState): GameState {
     next = { ...next, log: [...parliamentResult.log, ...next.log].slice(0, 50) };
   }
 
+  // Interest groups, lobbying and select committees. Logic lives in ./lobbying; the tick
+  // is strictly inert, and committee heat is charged against bills only (see the bill loop).
+  const lobbyingResult = advanceLobbying({
+    state: next.lobbyingState ?? createDefaultLobbyingState(),
+    approval: next.metrics.approval,
+    partyConfidence: next.metrics.partyConfidence,
+    week: next.week,
+    seed: next.seed,
+  });
+  next = { ...next, lobbyingState: lobbyingResult.state };
+  if (lobbyingResult.log.length > 0) {
+    next = { ...next, log: [...lobbyingResult.log, ...next.log].slice(0, 50) };
+  }
+
   // 7. Draw fresh dossier.
   const activeIds = new Set(remaining.map((d) => d.id));
   const escalatedIds = new Set(next.escalatedDossierIds ?? []);
@@ -1991,6 +2016,7 @@ export function migrateState(saved: Partial<GameState> | null | undefined): Game
     immigrationState: { ...createDefaultImmigrationState(), ...(saved.immigrationState ?? {}) },
     localGovernmentState: { ...createDefaultLocalGovernmentState(), ...(saved.localGovernmentState ?? {}) },
     parliamentState: { ...createDefaultParliamentState(), ...(saved.parliamentState ?? {}) },
+    lobbyingState: { ...createDefaultLobbyingState(), ...(saved.lobbyingState ?? {}) },
     devolutionState: { ...createDefaultDevolutionState(), ...(saved.devolutionState ?? {}) },
     whips: { ...createDefaultWhips(), ...(saved.whips ?? {}) },
     ethics: {

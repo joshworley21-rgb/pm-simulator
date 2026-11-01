@@ -7,6 +7,7 @@ import type { MediaState } from './media';
 import type { ImmigrationState } from './immigration';
 import type { LocalGovernmentState } from './localGovernment';
 import type { ParliamentState } from './parliament';
+import type { LobbyingState } from './lobbying';
 import type { DevolutionState } from './devolution';
 
 export type RootStackParamList = {
@@ -369,6 +370,7 @@ export interface GameState {
   immigrationState?: ImmigrationState;
   localGovernmentState?: LocalGovernmentState;
   parliamentState?: ParliamentState;
+  lobbyingState?: LobbyingState;
   devolutionState?: DevolutionState;
 }
 
