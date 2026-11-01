@@ -12,8 +12,20 @@ import {
 import { DEFAULT_NOMINAL_GDP, getDefaultCustomPlan } from '../src/app/budget';
 import { TAX_YIELD_PER_POINT } from '../src/app/taxes';
 import { ministerSackingCost } from '../src/app/cabinetEffects';
+import { applyScenario } from '../src/app/scenarios';
 
 type FuzzerArchetype = 'Spender' | 'Hawk' | 'Reshuffler' | 'Idle' | 'Random';
+type GovernmentMode = 'majority' | 'hung';
+type ArchetypeLabel = `${FuzzerArchetype} [${GovernmentMode}]`;
+
+const GOVERNMENT_MODES: GovernmentMode[] = ['majority', 'hung'];
+
+function formatArchetypeLabel(
+  archetype: FuzzerArchetype,
+  mode: GovernmentMode,
+): ArchetypeLabel {
+  return `${archetype} [${mode}]`;
+}
 
 const FUZZER_ARCHETYPES: FuzzerArchetype[] = [
   'Spender',
@@ -24,7 +36,7 @@ const FUZZER_ARCHETYPES: FuzzerArchetype[] = [
 ];
 
 interface RunTelemetry {
-  archetype: FuzzerArchetype;
+  archetype: ArchetypeLabel;
   weeksSurvived: number;
   peakUnemployment: number;
   peakGiltYield: number;
@@ -38,7 +50,7 @@ interface TestResult {
   error?: string;
   duration: number;
   testCase: unknown;
-  archetype?: FuzzerArchetype;
+  archetype?: ArchetypeLabel;
   telemetry?: RunTelemetry;
 }
 
@@ -49,6 +61,7 @@ interface Summary {
   duration: number;
   failures: Array<{
     testCase: unknown;
+    archetype?: ArchetypeLabel;
     error: string;
   }>;
 }
@@ -282,10 +295,22 @@ function failStateFor(
 ): { name: string; detail: string } | undefined {
   if (state.gameOver) {
     const detail = String(state.gameOver);
-    return {
-      name: /confidence/i.test(detail) ? 'No Confidence Vote' : detail,
-      detail,
-    };
+    if (
+      /supply.{0,40}(withdraw|withdrew|withdrawn|ended|collapse)|(?:withdraw|withdrew|withdrawn).{0,40}supply/i.test(
+        detail,
+      )
+    ) {
+      return { name: 'Supply Withdrawal', detail };
+    }
+    if (
+      /confidence|lost.{0,30}motion|motion.{0,30}lost/i.test(detail)
+    ) {
+      return { name: 'No Confidence Vote', detail };
+    }
+    if (/government.{0,30}(collapse|fell|fall|defeat)/i.test(detail)) {
+      return { name: 'Government Collapse', detail };
+    }
+    return { name: detail, detail };
   }
 
   if (state.stats.debtToGdp >= 300 || state.stats.giltYield >= 20) {
@@ -692,7 +717,7 @@ function assertFiscalActionGuards(
     const openWindow = {
       ...outsidePurdah,
       budgetDue: true,
-      fiscalEventKind: 'budget',
+      fiscalEventKind: fiscalAction.name === 'SET_AUTUMN_TAXES' ? 'autumn' : 'budget',
     };
     const action = fiscalAction.makeAction(openWindow);
     const delivered = reducer(openWindow, action);
@@ -958,11 +983,13 @@ function assertMacroDynamics(
 async function runSimulation(
   testCase: SeededTestCase,
   archetype: FuzzerArchetype,
+  governmentMode: GovernmentMode,
   archetypeHorizon: number,
   telemetryTracker: TelemetryTracker,
 ): Promise<TestResult> {
   const startedAt = Date.now();
-  const telemetry = telemetryTracker.startNewRun(archetype);
+  const archetypeLabel = formatArchetypeLabel(archetype, governmentMode);
+  const telemetry = telemetryTracker.startNewRun(archetypeLabel);
 
   try {
     const { createInitialState, reducer, advanceWeek, structuralBalance, effectiveTaxBurden } = await import('../src/app/engine');
@@ -1018,6 +1045,53 @@ async function runSimulation(
       gameOver: null,
       seed: runSeed,
     };
+
+    if (governmentMode === 'hung') {
+      state = applyScenario(state, 'hung-parliament');
+      const playerPartyId = state.player?.partyId;
+      const otherParties = state.parties.filter(
+        (party) => party.id !== playerPartyId,
+      );
+      if (!playerPartyId || otherParties.length < 2) {
+        throw new Error('Cannot create a hung parliament without a player party and two other parties');
+      }
+
+      const playerSeats = 320;
+      const oppositionSeats = 650 - playerSeats;
+      const baseOppositionSeats = Math.floor(
+        oppositionSeats / otherParties.length,
+      );
+      let remainingOppositionSeats =
+        oppositionSeats % otherParties.length;
+
+      state = {
+        ...state,
+        parties: state.parties.map((party) => {
+          if (party.id === playerPartyId) {
+            return { ...party, seats: playerSeats };
+          }
+          const seats =
+            baseOppositionSeats + (remainingOppositionSeats > 0 ? 1 : 0);
+          remainingOppositionSeats -= 1;
+          return { ...party, seats };
+        }),
+      };
+
+      const playerParty = state.parties.find(
+        (party) => party.id === playerPartyId,
+      );
+      if (
+        !playerParty ||
+        playerParty.seats >= 325 ||
+        state.parties.some(
+          (party) =>
+            party.id !== playerPartyId && party.seats >= playerParty.seats,
+        )
+      ) {
+        throw new Error('Hung-parliament fixture must give the player the largest party without a majority');
+      }
+    }
+
     const startingWeek = state.week;
     telemetryTracker.updateFromState(state, startingWeek);
 
@@ -1323,12 +1397,12 @@ async function runSimulation(
       }
     }
 
-    telemetryTracker.finalizeRun(archetype, telemetry.failState);
+    telemetryTracker.finalizeRun(archetypeLabel, telemetry.failState);
     return {
       passed: true,
       duration: Date.now() - startedAt,
       testCase,
-      archetype,
+      archetype: archetypeLabel,
       telemetry,
     };
   } catch (error) {
@@ -1342,13 +1416,13 @@ async function runSimulation(
       telemetry.failureDetail = errorDetails;
     }
 
-    telemetryTracker.finalizeRun(archetype, telemetry.failState);
+    telemetryTracker.finalizeRun(archetypeLabel, telemetry.failState);
     return {
       passed: false,
       error: errorDetails,
       duration: Date.now() - startedAt,
       testCase,
-      archetype,
+      archetype: archetypeLabel,
       telemetry,
     };
   }
@@ -1374,22 +1448,22 @@ function median(values: number[]): number {
 }
 
 class TelemetryTracker {
-  private readonly runsByArchetype: Record<FuzzerArchetype, RunTelemetry[]> = {
-    Spender: [],
-    Hawk: [],
-    Reshuffler: [],
-    Idle: [],
-    Random: [],
-  };
+  private readonly runsByArchetype = new Map<ArchetypeLabel, RunTelemetry[]>();
   private currentRun: RunTelemetry | undefined = undefined;
 
   constructor(
     private readonly maxRunsPerArchetype: number,
     private readonly archetypeHorizon: number,
     private readonly seed: number,
-  ) {}
+  ) {
+    for (const archetype of FUZZER_ARCHETYPES) {
+      for (const mode of GOVERNMENT_MODES) {
+        this.runsByArchetype.set(formatArchetypeLabel(archetype, mode), []);
+      }
+    }
+  }
 
-  startNewRun(archetype: FuzzerArchetype): RunTelemetry {
+  startNewRun(archetype: ArchetypeLabel): RunTelemetry {
     if (this.currentRun) {
       throw new Error('Cannot start a run before finalizing the current run');
     }
@@ -1440,7 +1514,7 @@ class TelemetryTracker {
   }
 
   finalizeRun(
-    archetype: FuzzerArchetype,
+    archetypeLabel: ArchetypeLabel,
     failState: string | null,
   ): RunTelemetry {
     if (!this.currentRun) throw new Error('No active telemetry run');
@@ -1449,40 +1523,45 @@ class TelemetryTracker {
     }
 
     const run = this.currentRun;
-    this.runsByArchetype[archetype].push(run);
+    const runs = this.runsByArchetype.get(archetypeLabel);
+    if (!runs) throw new Error(`Unknown telemetry label: ${archetypeLabel}`);
+    runs.push(run);
     this.currentRun = undefined;
     return run;
   }
 
-  exportReport(): Record<FuzzerArchetype, ArchetypeTelemetrySummary> {
-    const summaries = {} as Record<FuzzerArchetype, ArchetypeTelemetrySummary>;
+  exportReport(): Record<ArchetypeLabel, ArchetypeTelemetrySummary> {
+    const summaries = {} as Record<ArchetypeLabel, ArchetypeTelemetrySummary>;
 
     for (const archetype of FUZZER_ARCHETYPES) {
-      const runsTelemetry = this.runsByArchetype[archetype];
-      const failStates: Record<string, number> = {};
+      for (const mode of GOVERNMENT_MODES) {
+        const label: ArchetypeLabel = formatArchetypeLabel(archetype, mode);
+        const runsTelemetry = this.runsByArchetype.get(label) ?? [];
+        const failStates: Record<string, number> = {};
 
-      for (const run of runsTelemetry) {
-        const name = run.failState ?? 'No failure';
-        failStates[name] = (failStates[name] ?? 0) + 1;
+        for (const run of runsTelemetry) {
+          const name = run.failState ?? 'No failure';
+          failStates[name] = (failStates[name] ?? 0) + 1;
+        }
+
+        summaries[label] = {
+          runs: runsTelemetry.length,
+          medianWeeksSurvived: median(
+            runsTelemetry.map((run) => run.weeksSurvived),
+          ),
+          medianPeakUnemployment: median(
+            runsTelemetry.map((run) => run.peakUnemployment),
+          ),
+          medianPeakGiltYield: median(
+            runsTelemetry.map((run) => run.peakGiltYield),
+          ),
+          medianPeakDebtToGdp: median(
+            runsTelemetry.map((run) => run.peakDebtToGdp),
+          ),
+          failStates,
+          runsTelemetry,
+        };
       }
-
-      summaries[archetype] = {
-        runs: runsTelemetry.length,
-        medianWeeksSurvived: median(
-          runsTelemetry.map((run) => run.weeksSurvived),
-        ),
-        medianPeakUnemployment: median(
-          runsTelemetry.map((run) => run.peakUnemployment),
-        ),
-        medianPeakGiltYield: median(
-          runsTelemetry.map((run) => run.peakGiltYield),
-        ),
-        medianPeakDebtToGdp: median(
-          runsTelemetry.map((run) => run.peakDebtToGdp),
-        ),
-        failStates,
-        runsTelemetry,
-      };
     }
 
     fs.writeFileSync(
@@ -1502,17 +1581,68 @@ class TelemetryTracker {
 
     console.log('\\n=== Archetype Telemetry ===');
     for (const archetype of FUZZER_ARCHETYPES) {
-      const data = summaries[archetype];
-      const failures = Object.entries(data.failStates)
-        .map(([name, count]) => `${name}: ${count}`)
-        .join(', ');
-      console.log(
-        `${archetype}: median weeks=${data.medianWeeksSurvived}, peak unemployment=${data.medianPeakUnemployment.toFixed(2)}%, peak gilt yield=${data.medianPeakGiltYield.toFixed(2)}%, peak debt/GDP=${data.medianPeakDebtToGdp.toFixed(2)}%; ${failures || 'No runs'}`,
-      );
+      for (const mode of GOVERNMENT_MODES) {
+        const label: ArchetypeLabel = formatArchetypeLabel(archetype, mode);
+        const data = summaries[label];
+        const failures = Object.entries(data.failStates)
+          .map(([name, count]) => `${name}: ${count}`)
+          .join(', ');
+        console.log(
+          `${label}: median weeks=${data.medianWeeksSurvived}, peak unemployment=${data.medianPeakUnemployment.toFixed(2)}%, peak gilt yield=${data.medianPeakGiltYield.toFixed(2)}%, peak debt/GDP=${data.medianPeakDebtToGdp.toFixed(2)}%; ${failures || 'No runs'}`,
+        );
+      }
     }
 
     return summaries;
   }
+}
+
+function assertHungGovernmentCollapseOutcomes(results: TestResult[]): void {
+  const collapseStates = new Set([
+    'No Confidence Vote',
+    'Supply Withdrawal',
+    'Government Collapse',
+  ]);
+  let majorityRuns = 0;
+  let hungRuns = 0;
+  let majorityCollapses = 0;
+  let hungCollapses = 0;
+
+  for (const archetype of FUZZER_ARCHETYPES) {
+    const majorityLabel = formatArchetypeLabel(archetype, 'majority');
+    const hungLabel = formatArchetypeLabel(archetype, 'hung');
+    const archetypeMajority = results.filter(
+      (result) => result.archetype === majorityLabel,
+    );
+    const archetypeHung = results.filter(
+      (result) => result.archetype === hungLabel,
+    );
+    majorityRuns += archetypeMajority.length;
+    hungRuns += archetypeHung.length;
+    majorityCollapses += archetypeMajority.filter((result) =>
+      collapseStates.has(result.telemetry?.failState ?? ''),
+    ).length;
+    hungCollapses += archetypeHung.filter((result) =>
+      collapseStates.has(result.telemetry?.failState ?? ''),
+    ).length;
+  }
+
+  if (majorityRuns !== hungRuns || majorityRuns === 0) {
+    throw new Error(
+      `Cannot compare government modes: majority runs=${majorityRuns}, hung runs=${hungRuns}`,
+    );
+  }
+
+  const minimumAdditionalCollapses = Math.max(1, Math.ceil(majorityRuns * 0.05));
+  if (hungCollapses - majorityCollapses < minimumAdditionalCollapses) {
+    throw new Error(
+      `Hung-parliament runs must produce at least ${minimumAdditionalCollapses} more government-collapse outcome(s) than majority runs; majority=${majorityCollapses}, hung=${hungCollapses}`,
+    );
+  }
+
+  console.log(
+    `Government-collapse assertion passed: majority=${majorityCollapses}/${majorityRuns}, hung=${hungCollapses}/${hungRuns}`,
+  );
 }
 
 async function main() {
@@ -1541,22 +1671,28 @@ async function main() {
     const archetype = FUZZER_ARCHETYPES[archetypeIndex];
     const testCases = generateTestCases(archetypeIndex, maxRuns, baseSeed);
 
-    for (const testCase of testCases) {
-      const result = await runSimulation(
-        testCase,
-        archetype,
-        archetypeHorizon,
-        telemetryTracker,
-      );
-      results.push(result);
-
-      if (VERBOSE) {
-        console.log(
-          `${archetype} test ${result.passed ? 'PASSED' : 'FAILED'} in ${result.duration.toFixed(2)}ms`,
+    for (const governmentMode of GOVERNMENT_MODES) {
+      const label: ArchetypeLabel = formatArchetypeLabel(archetype, governmentMode);
+      for (const testCase of testCases) {
+        const result = await runSimulation(
+          testCase,
+          archetype,
+          governmentMode,
+          archetypeHorizon,
+          telemetryTracker,
         );
+        results.push(result);
+
+        if (VERBOSE) {
+          console.log(
+            `${label} test ${result.passed ? 'PASSED' : 'FAILED'} in ${result.duration.toFixed(2)}ms`,
+          );
+        }
       }
     }
   }
+
+  assertHungGovernmentCollapseOutcomes(results);
 
   const duration = Date.now() - startTime;
   const summary = buildSummary(results, duration);
@@ -1567,13 +1703,13 @@ async function main() {
   console.log(`Failed: ${summary.failed}`);
   console.log(`Duration: ${summary.duration}ms`);
   console.log(
-    `Configuration: MAX_RUNS=${maxRuns} per archetype (${FUZZER_ARCHETYPES.length} sequential batches), ARCHETYPE_HORIZON=${archetypeHorizon}, SEED=${baseSeed} (default ${DEFAULT_SEED})`,
+    `Configuration: MAX_RUNS=${maxRuns} per archetype/mode (${FUZZER_ARCHETYPES.length} archetypes, ${GOVERNMENT_MODES.length} modes), ARCHETYPE_HORIZON=${archetypeHorizon}, SEED=${baseSeed} (default ${DEFAULT_SEED})`,
   );
 
   for (const failure of summary.failures) {
     const testCase = failure.testCase as SeededTestCase;
     console.error(
-      `REPORTED ISSUE run=${testCase.id} seed=${testCase.seed}\n${failure.error}`,
+      `REPORTED ISSUE archetype=${failure.archetype ?? 'unknown'} run=${testCase.id} seed=${testCase.seed}\n${failure.error}`,
     );
   }
 
@@ -1607,6 +1743,7 @@ function buildSummary(results: TestResult[], duration: number): Summary {
     .filter(r => !r.passed)
     .map(r => ({
       testCase: r.testCase,
+      archetype: r.archetype,
       error: r.error || 'No error details captured'
     }));
 
