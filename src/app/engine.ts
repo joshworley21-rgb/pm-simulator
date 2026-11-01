@@ -61,6 +61,13 @@ import {
   swanDossierCard,
   SWAN_WINDOW_WEEKS,
 } from './blackSwans';
+import {
+  advanceCentralBank,
+  appointMpcMember,
+  createDefaultCentralBankState,
+  credibilityPremium,
+  leanOnTheBank,
+} from './centralBank';
 import { advanceDevolution, createDefaultDevolutionState } from './devolution';
 import { DOSSIER_POOL_2 } from './dossiers2';
 import { DOSSIER_POOL_3 } from './dossiers3';
@@ -253,6 +260,7 @@ export function createInitialState(): GameState {
     parliamentState: createDefaultParliamentState(),
     lobbyingState: createDefaultLobbyingState(),
     blackSwanState: createDefaultBlackSwanState(),
+    centralBankState: createDefaultCentralBankState(),
     devolutionState: createDefaultDevolutionState(),
   };
   const initial = { ...s, billResolutions: {} };
@@ -640,11 +648,15 @@ function weeklyEconomy(s: GameState): GameState {
   const inflationExpectations = Math.log(Math.max(0.1, cpi / 2.5));
   const debtRiskPremium =
     DEBT_YIELD_RISK_PREMIUM_CAP * Math.min(1, Math.max(0, debt - 120) / 120);
+  // A lost-independence premium: zero while the Bank's credibility is intact, so this
+  // coupling costs nothing at default state and only bites after the government leans on it.
+  const bankPremium = credibilityPremium(s.centralBankState ?? createDefaultCentralBankState());
   const giltTarget =
     NEUTRAL_GILT_YIELD +
     (debt - 100) * DEBT_YIELD_SENSITIVITY +
     debtRiskPremium +
-    inflationExpectations * INFLATION_EXPECTATION_YIELD_SENSITIVITY;
+    inflationExpectations * INFLATION_EXPECTATION_YIELD_SENSITIVITY +
+    bankPremium;
   gilt +=
     (giltTarget - gilt) * monthlyRateToWeekly(GILT_MEAN_REVERSION_MONTHLY_RATE);
 
@@ -1002,28 +1014,34 @@ function periodicExternal(s: GameState): GameState {
   let next = s;
   const tradeStatus = next.tradeDealStatus ? cloneTradeDealStatus(next.tradeDealStatus) : cloneTradeDealStatus(DEFAULT_TRADE_DEAL_STATUS);
 
-  // Bank of England Monetary Policy Committee (MPC) review (quarterly).
-  if (next.week % TURNS_PER_QUARTER === 0 && !next.gameOver) {
-    if (next.stats.cpiInflation > 4.5) {
-      next = applyEffects(next, {
-        cpiInflation: -0.2,
-        gdpGrowth: -0.1,
-        giltYield: 0.1,
-      });
+  // Bank of England quarterly review. The rule now lives in ./centralBank; at its default
+  // state the vote reproduces the previous hard-coded rule to the decimal, so this
+  // extraction is behaviour-neutral and the Idle archetype stays pinned at 315 weeks.
+  // Independence, credibility and the committee are the additions on top.
+  if (!next.gameOver) {
+    const review = advanceCentralBank({
+      state: next.centralBankState ?? createDefaultCentralBankState(),
+      cpiInflation: next.stats.cpiInflation,
+      gdpGrowth: next.stats.gdpGrowth,
+      week: next.week,
+    });
+    next = { ...next, centralBankState: review.state };
+    if (review.decision !== 'hold') {
+      next = applyEffects(next, review.effects);
       next = {
         ...next,
-        log: [`BANK OF ENGLAND: MPC raises Bank Rate by 25bps to counter inflation (${next.stats.cpiInflation}%).`, ...(next.log ?? [])].slice(0, 50),
-        headlines: [{ paper: 'The Courier', title: 'BANK OF ENGLAND HIKES INTEREST RATES', stance: 'right' as const }, ...next.headlines].slice(0, 4),
-      };
-    } else if (next.stats.cpiInflation < 2.0 && next.stats.gdpGrowth < 1.0) {
-      next = applyEffects(next, {
-        gdpGrowth: 0.1,
-        giltYield: -0.1,
-      });
-      next = {
-        ...next,
-        log: [`BANK OF ENGLAND: MPC cuts Bank Rate to stimulate economic growth.`, ...(next.log ?? [])].slice(0, 50),
-        headlines: [{ paper: 'The National Standard', title: 'BANK OF ENGLAND CUTS RATES TO BOOST GROWTH', stance: 'centrist' as const }, ...next.headlines].slice(0, 4),
+        log: [
+          review.decision === 'hike'
+            ? `BANK OF ENGLAND: MPC raises Bank Rate by 25bps to counter inflation (${next.stats.cpiInflation}%).`
+            : `BANK OF ENGLAND: MPC cuts Bank Rate to stimulate economic growth.`,
+          ...(next.log ?? []),
+        ].slice(0, 50),
+        headlines: [
+          review.decision === 'hike'
+            ? { paper: 'The Courier', title: 'BANK OF ENGLAND HIKES INTEREST RATES', stance: 'right' as const }
+            : { paper: 'The National Standard', title: 'BANK OF ENGLAND CUTS RATES TO BOOST GROWTH', stance: 'centrist' as const },
+          ...next.headlines,
+        ].slice(0, 4),
       };
     }
   }
@@ -2048,6 +2066,7 @@ export function migrateState(saved: Partial<GameState> | null | undefined): Game
     parliamentState: { ...createDefaultParliamentState(), ...(saved.parliamentState ?? {}) },
     lobbyingState: { ...createDefaultLobbyingState(), ...(saved.lobbyingState ?? {}) },
     blackSwanState: { ...createDefaultBlackSwanState(), ...(saved.blackSwanState ?? {}) },
+    centralBankState: { ...createDefaultCentralBankState(), ...(saved.centralBankState ?? {}) },
     devolutionState: { ...createDefaultDevolutionState(), ...(saved.devolutionState ?? {}) },
     whips: { ...createDefaultWhips(), ...(saved.whips ?? {}) },
     ethics: {
@@ -2113,6 +2132,21 @@ export function reducer(state: GameState, action: Action): GameState {
 
     case 'START_TURN':
       return advanceWeek(state);
+
+    case 'LEAN_ON_BANK': {
+      // The government gets its way today; the market remembers tomorrow.
+      const leaned = leanOnTheBank(state.centralBankState ?? createDefaultCentralBankState());
+      return applyEffects({ ...state, centralBankState: leaned.state }, leaned.effects);
+    }
+
+    case 'APPOINT_MPC_MEMBER':
+      return {
+        ...state,
+        centralBankState: appointMpcMember(
+          state.centralBankState ?? createDefaultCentralBankState(),
+          action.kind,
+        ),
+      };
 
     case 'ANSWER_BLACK_SWAN': {
       const resolution = resolveBlackSwan(

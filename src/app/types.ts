@@ -9,6 +9,7 @@ import type { LocalGovernmentState } from './localGovernment';
 import type { ParliamentState } from './parliament';
 import type { LobbyingState } from './lobbying';
 import type { BlackSwanState } from './blackSwans';
+import type { CentralBankState } from './centralBank';
 import type { DevolutionState } from './devolution';
 
 export type RootStackParamList = {
@@ -373,6 +374,7 @@ export interface GameState {
   parliamentState?: ParliamentState;
   lobbyingState?: LobbyingState;
   blackSwanState?: BlackSwanState;
+  centralBankState?: CentralBankState;
   devolutionState?: DevolutionState;
 }
 
@@ -386,6 +388,8 @@ export type Action =
   | { type: 'CLOSE_DOSSIER' }
   | { type: 'RESOLVE_DOSSIER'; dossierId: string; choiceId: string }
   | { type: 'ANSWER_BLACK_SWAN'; optionId: string }
+  | { type: 'LEAN_ON_BANK' }
+  | { type: 'APPOINT_MPC_MEMBER'; kind: 'hawk' | 'dove' }
   | { type: 'PROPOSE_BILL'; billId: string; whipLevel?: WhipLevel }
   | { type: 'SACK_MINISTER'; name: string }
   | { type: 'PICK_MINISTER'; name: string }
