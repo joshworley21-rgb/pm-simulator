@@ -184,3 +184,47 @@ export function lobbyBriefing(
 export function coverageTone(state: MediaState): number {
   return state.cycleTone;
 }
+
+/** A published line, as the engine stores it. */
+export interface Headline {
+  paper: string;
+  title: string;
+  stance: 'left' | 'centrist' | 'right';
+}
+
+/**
+ * Tone marks are APPENDED, never substituted. Existing callers assert on substrings
+ * (e.g. `title.includes('INTEREST RATES')`), so the base copy must survive intact.
+ */
+export const PRESS_HOSTILE_MARK = ' - MINISTERS UNDER FIRE';
+export const PRESS_WARM_MARK = ' - PM BACKED TO DELIVER';
+
+function isVoiced(title: string): boolean {
+  return title.endsWith(PRESS_HOSTILE_MARK) || title.endsWith(PRESS_WARM_MARK);
+}
+
+/**
+ * Re-voice this week's headlines from the press state: an outlet that has turned cold
+ * files a hostile line, a warm one backs the government, and a merely neutral press
+ * leaves the copy exactly as written.
+ *
+ * COSMETIC ONLY: this returns no effects and touches no metric. The approval penalty
+ * for a hostile press already lives in mediaEffects, so voicing it here as well would
+ * double-count it -- which is precisely what this signature makes impossible.
+ */
+export function voiceHeadlines(state: MediaState, headlines: Headline[]): Headline[] {
+  return headlines.map((headline) => {
+    if (isVoiced(headline.title)) return headline;
+
+    const outlet = MEDIA_OUTLETS.find((o) => o.name === headline.paper);
+    const mood = outlet ? (state.pressMood[outlet.id] ?? 50) : 50;
+    const hostile = state.hostility >= MEDIA_HOSTILITY_FLOOR || mood < MEDIA_MOOD_BAND_LOW;
+    const warm = !hostile && mood > MEDIA_MOOD_BAND_HIGH && state.hostility < 30;
+    if (!hostile && !warm) return headline;
+
+    return {
+      ...headline,
+      title: headline.title + (hostile ? PRESS_HOSTILE_MARK : PRESS_WARM_MARK),
+    };
+  });
+}

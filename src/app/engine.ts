@@ -40,7 +40,7 @@ import {
 import type { EfficiencyTargetPct } from './spendingReview';
 import { calculate1922Mood, calculateBlindsideRisk } from './leadershipChallenge';
 import { advanceCabinet, createDefaultCabinetState } from './cabinet';
-import { advanceMedia, createDefaultMediaState } from './media';
+import { advanceMedia, createDefaultMediaState, voiceHeadlines } from './media';
 import { advanceImmigration, createDefaultImmigrationState } from './immigration';
 import { advanceLocalGovernment, createDefaultLocalGovernmentState } from './localGovernment';
 import {
@@ -1647,6 +1647,10 @@ export function advanceWeek(s: GameState): GameState {
   if (Object.keys(mediaResult.effects).length > 0) {
     next = applyEffects(next, mediaResult.effects);
   }
+  // Re-voice the week's headlines from the press state. Cosmetic only: no effects, so the
+  // hostile-press approval penalty is never double-counted, and the tone is APPENDED so
+  // existing title-substring assertions keep holding.
+  next = { ...next, headlines: voiceHeadlines(mediaResult.state, next.headlines) };
   if (mediaResult.log.length > 0) {
     next = { ...next, log: [...mediaResult.log, ...next.log].slice(0, 50) };
   }

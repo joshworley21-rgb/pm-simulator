@@ -27,6 +27,7 @@ import { advanceRelationDecay } from '../src/app/diplomacy';
 import { DOSSIER_POOL, REGIONS, REGION_COUNCIL_META } from '../src/app/data';
 import { BILL_POOL } from '../src/app/bills';
 import { LORDS_STAGE_WEEKS, TURNS_PER_SESSION } from '../src/app/parliament';
+import { createDefaultMediaState, MEDIA_HOSTILITY_FLOOR, PRESS_HOSTILE_MARK } from '../src/app/media';
 import { DOSSIER_POOL_2 } from '../src/app/dossiers2';
 import { DOSSIER_POOL_3 } from '../src/app/dossiers3';
 import type { GameState, Bill, CustomBudgetPlan } from '../src/app/types';
@@ -2683,6 +2684,29 @@ check('wash-up drops a government bill still in flight at the session end', () =
   );
   assert.ok((rolled.parliamentState?.washedUp ?? 0) >= 1, 'the loss must be counted');
   assert.ok(rolled.metrics.partyConfidence <= before, 'wash-up must not raise party confidence');
+});
+
+check('a hostile press re-voices headlines, and a calm press leaves them alone', () => {
+  const base = newGame('reform', 'morning-in-britain');
+  assert.ok((base.headlines ?? []).length > 0, 'expected starting headlines to re-voice');
+
+  // Hostile press: the copy already on the desk should be re-voiced as hostile.
+  const hostile = {
+    ...base,
+    mediaState: { ...createDefaultMediaState(), hostility: MEDIA_HOSTILITY_FLOOR + 10 },
+  };
+  const after = advanceWeek(hostile);
+  assert.ok(
+    (after.headlines ?? []).some((h) => h.title.includes(PRESS_HOSTILE_MARK)),
+    'a hostile press must re-voice the week\'s headlines',
+  );
+
+  // Calm press: untouched copy, proving the voicing is conditional rather than always on.
+  const calm = advanceWeek(newGame('reform', 'morning-in-britain'));
+  assert.ok(
+    !(calm.headlines ?? []).some((h) => h.title.includes(PRESS_HOSTILE_MARK)),
+    'a calm press must leave the copy exactly as written',
+  );
 });
 
 console.log('');

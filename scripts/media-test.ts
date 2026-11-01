@@ -10,6 +10,9 @@ import {
   mediaEffects,
   BRIEFING_COOLDOWN_WEEKS,
   MEDIA_HOSTILITY_FLOOR,
+  voiceHeadlines,
+  PRESS_HOSTILE_MARK,
+  PRESS_WARM_MARK,
   type MediaState,
 } from '../src/app/media';
 
@@ -151,6 +154,58 @@ check('identical inputs and seeds produce identical module output', () => {
     seed: 4242,
   };
   assert.equal(JSON.stringify(advanceMedia(input)), JSON.stringify(advanceMedia(input)));
+});
+
+check('a calm press leaves the copy exactly as written', () => {
+  const calm = createDefaultMediaState();
+  const base = { paper: 'The Courier', title: 'BUDGET LEAKED', stance: 'right' as const };
+  assert.equal(voiceHeadlines(calm, [base])[0].title, base.title, 'neutral press must not re-voice');
+});
+
+check('a hostile press appends its mark without destroying the base title', () => {
+  const base = { paper: 'The Courier', title: 'BUDGET LEAKED', stance: 'right' as const };
+  const hostile: MediaState = {
+    ...createDefaultMediaState(),
+    hostility: MEDIA_HOSTILITY_FLOOR + 10,
+  };
+  const voiced = voiceHeadlines(hostile, [base])[0];
+  assert.ok(voiced.title.startsWith('BUDGET LEAKED'), 'the base title must survive intact');
+  assert.ok(voiced.title.includes(PRESS_HOSTILE_MARK), 'a hostile press files a hostile line');
+  // Idempotent: re-voicing the same array must never stack marks.
+  assert.equal(voiceHeadlines(hostile, [voiced])[0].title, voiced.title, 'marks must not stack');
+});
+
+check('mood decides the tone: a warm outlet backs the government, a cold one turns', () => {
+  const item = { paper: 'The Courier', title: 'GROWTH UP', stance: 'right' as const };
+  const warm: MediaState = {
+    ...createDefaultMediaState(),
+    pressMood: { ...createDefaultMediaState().pressMood, courier: 95 },
+    hostility: 5,
+  };
+  assert.ok(
+    voiceHeadlines(warm, [item])[0].title.includes(PRESS_WARM_MARK),
+    'a warm outlet should back the government',
+  );
+
+  const cold: MediaState = {
+    ...createDefaultMediaState(),
+    pressMood: { ...createDefaultMediaState().pressMood, courier: 10 },
+    hostility: 5,
+  };
+  assert.ok(
+    voiceHeadlines(cold, [item])[0].title.includes(PRESS_HOSTILE_MARK),
+    'a cold outlet should turn on the government',
+  );
+});
+
+check('voicing never mutates the input and carries no effects', () => {
+  const hostile: MediaState = { ...createDefaultMediaState(), hostility: MEDIA_HOSTILITY_FLOOR + 10 };
+  const input = [{ paper: 'The Courier', title: 'ORIGINAL', stance: 'right' as const }];
+  const snapshot = JSON.stringify(input);
+  voiceHeadlines(hostile, input);
+  assert.equal(JSON.stringify(input), snapshot, 'the input headlines must not be mutated');
+  // The signature returns an array, not effects: double-counting is structurally impossible.
+  assert.equal(voiceHeadlines(hostile, input).length, 1);
 });
 
 console.log('');
