@@ -304,18 +304,18 @@ function applyEffects(s: GameState, fx: Effects): GameState {
     mediaAttention: clamp(s.metrics.mediaAttention + (fx.mediaAttention ?? 0), 0, 100),
   };
   const stats = {
-    cpiInflation: r1(clamp(s.stats.cpiInflation + (fx.cpiInflation ?? 0), 0.4, CPI_INFLATION_MAX)),
-    gdpGrowth: r1(clamp(s.stats.gdpGrowth + (fx.gdpGrowth ?? 0), GDP_GROWTH_MIN, GDP_GROWTH_MAX)),
-    giltYield: r1(clamp(s.stats.giltYield + (fx.giltYield ?? 0), 1.0, GILT_YIELD_MAX)),
+    cpiInflation: r2(clamp(s.stats.cpiInflation + (fx.cpiInflation ?? 0), 0.4, CPI_INFLATION_MAX)),
+    gdpGrowth: r2(clamp(s.stats.gdpGrowth + (fx.gdpGrowth ?? 0), GDP_GROWTH_MIN, GDP_GROWTH_MAX)),
+    giltYield: r2(clamp(s.stats.giltYield + (fx.giltYield ?? 0), 1.0, GILT_YIELD_MAX)),
     // 2 dp, not 1: the weekly NHS drift is ~0.01/turn and 1 dp swallowed it entirely.
     nhsWaitingList: r2(Math.max(2.0, s.stats.nhsWaitingList + (fx.nhsWaitingList ?? 0))),
     netMigration: Math.max(50, s.stats.netMigration + (fx.netMigration ?? 0)),
     lettersOfNoConfidence: clamp(s.stats.lettersOfNoConfidence + (fx.lettersDelta ?? 0), 0, 99),
     lettersThreshold: s.stats.lettersThreshold,
-    taxRate: r1(clamp(s.stats.taxRate + (fx.taxRate ?? 0), 15, 60)),
-    debtToGdp: r1(clamp(s.stats.debtToGdp + (fx.debtToGdp ?? 0), 30, DEBT_TO_GDP_MAX)),
+    taxRate: r2(clamp(s.stats.taxRate + (fx.taxRate ?? 0), 15, 60)),
+    debtToGdp: r2(clamp(s.stats.debtToGdp + (fx.debtToGdp ?? 0), 30, DEBT_TO_GDP_MAX)),
     unemployment: clamp(s.stats.unemployment + (fx.unemployment ?? 0), 0, 20),
-    budgetBalance: r1(s.stats.budgetBalance + (fx.budgetBalance ?? 0)),
+    budgetBalance: r2(s.stats.budgetBalance + (fx.budgetBalance ?? 0)),
   };
   return { ...s, parties, metrics, stats };
 }
@@ -665,10 +665,10 @@ function weeklyEconomy(s: GameState): GameState {
     stats: {
       ...st,
       budgetBalance: balance,
-      giltYield: r1(clamp(gilt, 1.0, GILT_YIELD_MAX)),
-      debtToGdp: r1(clamp(debt, 30, DEBT_TO_GDP_MAX)),
-      cpiInflation: r1(clamp(cpi, 0.1, CPI_INFLATION_MAX)),
-      gdpGrowth: r1(clamp(gdp, GDP_GROWTH_MIN, GDP_GROWTH_MAX)),
+      giltYield: r2(clamp(gilt, 1.0, GILT_YIELD_MAX)),
+      debtToGdp: r2(clamp(debt, 30, DEBT_TO_GDP_MAX)),
+      cpiInflation: r2(clamp(cpi, 0.1, CPI_INFLATION_MAX)),
+      gdpGrowth: r2(clamp(gdp, GDP_GROWTH_MIN, GDP_GROWTH_MAX)),
       // Preserve weekly changes so Okun's law can accumulate instead of
       // rounding each sub-0.1-point movement away.
       unemployment: clamp(unemployment, 0, 20),

@@ -1421,7 +1421,8 @@ check('player can concede to supply ultimatum to preserve the agreement at a fis
   assert.equal(resolved.supplyPartnerId, partnerId, 'supply partner should remain active');
   assert.equal(
     resolved.stats.budgetBalance,
-    Math.round((initialBalance - 2) * 10) / 10,
+    // Engine rounds stats to 2 dp now, so the expected value must too.
+    Math.round((initialBalance - 2) * 100) / 100,
     'concession should cost £2bn on budget balance',
   );
   assert.equal(
