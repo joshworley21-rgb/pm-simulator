@@ -26,6 +26,7 @@ import { createInitialState, migrateState, reducer, advanceWeek, chancellorBudge
 import { advanceRelationDecay } from '../src/app/diplomacy';
 import { DOSSIER_POOL, REGIONS, REGION_COUNCIL_META } from '../src/app/data';
 import { BILL_POOL } from '../src/app/bills';
+import { LORDS_STAGE_WEEKS, TURNS_PER_SESSION } from '../src/app/parliament';
 import { DOSSIER_POOL_2 } from '../src/app/dossiers2';
 import { DOSSIER_POOL_3 } from '../src/app/dossiers3';
 import type { GameState, Bill, CustomBudgetPlan } from '../src/app/types';
@@ -2595,6 +2596,93 @@ check('personal allowance: engine and budget recurring estimates stay identical 
 
   // Today's baseline: the default allowance sits exactly on the frozen baseline.
   assert.equal(budgetEstimate(DEFAULT_PERSONAL_ALLOWANCE), 0);
+});
+
+// ===== Parliament as process: bill-path wiring =====
+
+/** weeksToPass 4, so it is never immediately due: the Lords leg stays observable. */
+const lordsTestBillId = 'bill-gb-energy';
+
+check('a proposed bill picks up a one-time two-week Lords delay', () => {
+  const proposed = reducer(newGame('reform', 'morning-in-britain'), {
+    type: 'PROPOSE_BILL',
+    billId: lordsTestBillId,
+  });
+  const introduced = proposed.bills.find((b) => b.id === lordsTestBillId);
+  assert.ok(!!introduced, 'bill should be introduced');
+  assert.equal(introduced!.weeksToPass, 4, 'proposing must not apply the delay itself');
+
+  // First travelling week: the plain -1 countdown becomes -1 + LORDS_STAGE_WEEKS.
+  const afterOne = advanceWeek(proposed);
+  const travelling = afterOne.bills.find((b) => b.id === lordsTestBillId);
+  assert.ok(!!travelling, 'bill should still be travelling');
+  assert.equal(
+    travelling!.weeksToPass,
+    4 - 1 + LORDS_STAGE_WEEKS,
+    'the Lords stage must add its two weeks',
+  );
+  assert.ok(
+    (afterOne.log ?? []).some((l) => l.includes('LORDS:')),
+    'entering the second chamber must be logged',
+  );
+
+  // Charged exactly once: the following week is a plain single-step countdown.
+  const afterTwo = advanceWeek(afterOne);
+  assert.equal(
+    afterTwo.bills.find((b) => b.id === lordsTestBillId)!.weeksToPass,
+    4 - 1 + LORDS_STAGE_WEEKS - 1,
+    'the Lords delay must not stack',
+  );
+});
+
+check('a bill injected straight into bills never pays the Lords delay', () => {
+  // The golden bill checks inject into `bills` without PROPOSE_BILL. Those must keep
+  // the plain countdown, or their exact semantics would silently change underneath them.
+  const blueprint = BILL_POOL.find((b) => b.id === lordsTestBillId)!;
+  const injected = {
+    ...newGame('reform', 'morning-in-britain'),
+    bills: [{ ...blueprint, weeksToPass: 4 }],
+  };
+  const afterOne = advanceWeek(injected);
+  assert.equal(
+    afterOne.bills.find((b) => b.id === lordsTestBillId)!.weeksToPass,
+    3,
+    'an injected bill keeps the plain one-week countdown',
+  );
+  assert.ok(
+    !(afterOne.log ?? []).some((l) => l.includes('LORDS:')),
+    'an injected bill is never sent to the Lords',
+  );
+});
+
+check('wash-up drops a government bill still in flight at the session end', () => {
+  let s = reducer(newGame('reform', 'morning-in-britain'), {
+    type: 'PROPOSE_BILL',
+    billId: lordsTestBillId,
+  });
+  // Park two weeks short of the rollover: the ticks land on week 51, then week 52.
+  s = { ...s, week: TURNS_PER_SESSION - 2 };
+  s = advanceWeek(s);
+  s = advanceWeek(s);
+  assert.equal(s.week, TURNS_PER_SESSION, 'the bill should be in flight at the session end');
+  assert.ok(
+    s.bills.some((b) => b.id === lordsTestBillId),
+    'the bill should still be unfinished at the session end',
+  );
+
+  const before = s.metrics.partyConfidence;
+  const rolled = advanceWeek(s); // lands on TURNS_PER_SESSION + 1, a new session
+  assert.equal(rolled.week, TURNS_PER_SESSION + 1, 'the clock must roll into a new session');
+  assert.ok(
+    !rolled.bills.some((b) => b.id === lordsTestBillId),
+    'wash-up must claim the in-flight bill',
+  );
+  assert.ok(
+    (rolled.log ?? []).some((l) => l.includes('wash-up')),
+    'wash-up must be logged',
+  );
+  assert.ok((rolled.parliamentState?.washedUp ?? 0) >= 1, 'the loss must be counted');
+  assert.ok(rolled.metrics.partyConfidence <= before, 'wash-up must not raise party confidence');
 });
 
 console.log('');
