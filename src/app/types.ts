@@ -8,6 +8,7 @@ import type { ImmigrationState } from './immigration';
 import type { LocalGovernmentState } from './localGovernment';
 import type { ParliamentState } from './parliament';
 import type { LobbyingState } from './lobbying';
+import type { BlackSwanState } from './blackSwans';
 import type { DevolutionState } from './devolution';
 
 export type RootStackParamList = {
@@ -371,6 +372,7 @@ export interface GameState {
   localGovernmentState?: LocalGovernmentState;
   parliamentState?: ParliamentState;
   lobbyingState?: LobbyingState;
+  blackSwanState?: BlackSwanState;
   devolutionState?: DevolutionState;
 }
 

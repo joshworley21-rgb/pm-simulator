@@ -52,6 +52,7 @@ import {
   LORDS_STAGE_WEEKS,
 } from './parliament';
 import { advanceLobbying, createDefaultLobbyingState, committeeDelayWeeks } from './lobbying';
+import { advanceBlackSwans, createDefaultBlackSwanState } from './blackSwans';
 import { advanceDevolution, createDefaultDevolutionState } from './devolution';
 import { DOSSIER_POOL_2 } from './dossiers2';
 import { DOSSIER_POOL_3 } from './dossiers3';
@@ -243,6 +244,7 @@ export function createInitialState(): GameState {
     localGovernmentState: createDefaultLocalGovernmentState(),
     parliamentState: createDefaultParliamentState(),
     lobbyingState: createDefaultLobbyingState(),
+    blackSwanState: createDefaultBlackSwanState(),
     devolutionState: createDefaultDevolutionState(),
   };
   const initial = { ...s, billResolutions: {} };
@@ -1717,6 +1719,19 @@ export function advanceWeek(s: GameState): GameState {
     next = { ...next, log: [...lobbyingResult.log, ...next.log].slice(0, 50) };
   }
 
+  // Black swans: authored shock decision trees. Logic lives in ./blackSwans; the tick is
+  // strictly inert and an unanswered shock expires neutrally, so a passive premiership is
+  // never dragged below the 315-week Idle floor. Effects fire only on a chosen response.
+  const blackSwanResult = advanceBlackSwans({
+    state: next.blackSwanState ?? createDefaultBlackSwanState(),
+    week: next.week,
+    seed: next.seed,
+  });
+  next = { ...next, blackSwanState: blackSwanResult.state };
+  if (blackSwanResult.log.length > 0) {
+    next = { ...next, log: [...blackSwanResult.log, ...next.log].slice(0, 50) };
+  }
+
   // 7. Draw fresh dossier.
   const activeIds = new Set(remaining.map((d) => d.id));
   const escalatedIds = new Set(next.escalatedDossierIds ?? []);
@@ -2017,6 +2032,7 @@ export function migrateState(saved: Partial<GameState> | null | undefined): Game
     localGovernmentState: { ...createDefaultLocalGovernmentState(), ...(saved.localGovernmentState ?? {}) },
     parliamentState: { ...createDefaultParliamentState(), ...(saved.parliamentState ?? {}) },
     lobbyingState: { ...createDefaultLobbyingState(), ...(saved.lobbyingState ?? {}) },
+    blackSwanState: { ...createDefaultBlackSwanState(), ...(saved.blackSwanState ?? {}) },
     devolutionState: { ...createDefaultDevolutionState(), ...(saved.devolutionState ?? {}) },
     whips: { ...createDefaultWhips(), ...(saved.whips ?? {}) },
     ethics: {
