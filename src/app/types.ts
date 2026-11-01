@@ -3,6 +3,7 @@ import type { NHSMetrics } from './nhsMetrics';
 import type { WhipsState } from './modules/whips';
 import type { EthicsState } from './modules/ethics';
 import type { CabinetState } from './cabinet';
+import type { MediaState } from './media';
 
 export type RootStackParamList = {
   Menu: undefined;
@@ -360,6 +361,7 @@ export interface GameState {
   whips?: WhipsState;
   ethics?: EthicsState;
   cabinetState?: CabinetState;
+  mediaState?: MediaState;
 }
 
 export type Action =

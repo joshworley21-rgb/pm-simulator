@@ -40,6 +40,7 @@ import {
 import type { EfficiencyTargetPct } from './spendingReview';
 import { calculate1922Mood, calculateBlindsideRisk } from './leadershipChallenge';
 import { advanceCabinet, createDefaultCabinetState } from './cabinet';
+import { advanceMedia, createDefaultMediaState } from './media';
 import { DOSSIER_POOL_2 } from './dossiers2';
 import { DOSSIER_POOL_3 } from './dossiers3';
 import { applyScenario } from './scenarios';
@@ -225,6 +226,7 @@ export function createInitialState(): GameState {
     whips: createDefaultWhips(),
     ethics: createDefaultEthics(),
     cabinetState: createDefaultCabinetState(),
+    mediaState: createDefaultMediaState(),
   };
   const initial = { ...s, billResolutions: {} };
   const nhsMetrics = nhsMetricsFromGame(initial);
@@ -1556,6 +1558,25 @@ export function advanceWeek(s: GameState): GameState {
     next = { ...next, log: [...cabinetResult.log, ...next.log].slice(0, 50) };
   }
 
+  // Media cycle: press mood, hostility and coverage tone. Logic lives in ./media.
+  const mediaResult = advanceMedia({
+    state: next.mediaState ?? createDefaultMediaState(),
+    approval: next.metrics.approval,
+    cpiInflation: next.stats.cpiInflation,
+    publicServices: next.metrics.publicServices,
+    mediaAttention: next.metrics.mediaAttention,
+    factionUnrest: next.factionUnrest,
+    week: next.week,
+    seed: next.seed,
+  });
+  next = { ...next, mediaState: mediaResult.state };
+  if (Object.keys(mediaResult.effects).length > 0) {
+    next = applyEffects(next, mediaResult.effects);
+  }
+  if (mediaResult.log.length > 0) {
+    next = { ...next, log: [...mediaResult.log, ...next.log].slice(0, 50) };
+  }
+
   // 7. Draw fresh dossier.
   const activeIds = new Set(remaining.map((d) => d.id));
   const escalatedIds = new Set(next.escalatedDossierIds ?? []);
@@ -1851,6 +1872,7 @@ export function migrateState(saved: Partial<GameState> | null | undefined): Game
     tripleLock: typeof saved.tripleLock === 'boolean' ? saved.tripleLock : true,
     publicSectorPay: saved.publicSectorPay === 'capped' ? 'capped' : 'full',
     cabinetState: { ...createDefaultCabinetState(), ...(saved.cabinetState ?? {}) },
+    mediaState: { ...createDefaultMediaState(), ...(saved.mediaState ?? {}) },
     whips: { ...createDefaultWhips(), ...(saved.whips ?? {}) },
     ethics: {
       ...createDefaultEthics(),
