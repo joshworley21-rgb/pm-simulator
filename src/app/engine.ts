@@ -42,6 +42,7 @@ import { calculate1922Mood, calculateBlindsideRisk } from './leadershipChallenge
 import { advanceCabinet, createDefaultCabinetState } from './cabinet';
 import { advanceMedia, createDefaultMediaState } from './media';
 import { advanceImmigration, createDefaultImmigrationState } from './immigration';
+import { advanceLocalGovernment, createDefaultLocalGovernmentState } from './localGovernment';
 import { advanceDevolution, createDefaultDevolutionState } from './devolution';
 import { DOSSIER_POOL_2 } from './dossiers2';
 import { DOSSIER_POOL_3 } from './dossiers3';
@@ -230,6 +231,7 @@ export function createInitialState(): GameState {
     cabinetState: createDefaultCabinetState(),
     mediaState: createDefaultMediaState(),
     immigrationState: createDefaultImmigrationState(),
+    localGovernmentState: createDefaultLocalGovernmentState(),
     devolutionState: createDefaultDevolutionState(),
   };
   const initial = { ...s, billResolutions: {} };
@@ -1613,6 +1615,22 @@ export function advanceWeek(s: GameState): GameState {
     next = { ...next, log: [...immigrationResult.log, ...next.log].slice(0, 50) };
   }
 
+  // Local government: council stress, s114 notices and the delivery gap. Logic in ./localGovernment.
+  const localGovernmentResult = advanceLocalGovernment({
+    state: next.localGovernmentState ?? createDefaultLocalGovernmentState(),
+    publicServices: next.metrics.publicServices,
+    approval: next.metrics.approval,
+    week: next.week,
+    seed: next.seed,
+  });
+  next = { ...next, localGovernmentState: localGovernmentResult.state };
+  if (Object.keys(localGovernmentResult.effects).length > 0) {
+    next = applyEffects(next, localGovernmentResult.effects);
+  }
+  if (localGovernmentResult.log.length > 0) {
+    next = { ...next, log: [...localGovernmentResult.log, ...next.log].slice(0, 50) };
+  }
+
   // 7. Draw fresh dossier.
   const activeIds = new Set(remaining.map((d) => d.id));
   const escalatedIds = new Set(next.escalatedDossierIds ?? []);
@@ -1910,6 +1928,7 @@ export function migrateState(saved: Partial<GameState> | null | undefined): Game
     cabinetState: { ...createDefaultCabinetState(), ...(saved.cabinetState ?? {}) },
     mediaState: { ...createDefaultMediaState(), ...(saved.mediaState ?? {}) },
     immigrationState: { ...createDefaultImmigrationState(), ...(saved.immigrationState ?? {}) },
+    localGovernmentState: { ...createDefaultLocalGovernmentState(), ...(saved.localGovernmentState ?? {}) },
     devolutionState: { ...createDefaultDevolutionState(), ...(saved.devolutionState ?? {}) },
     whips: { ...createDefaultWhips(), ...(saved.whips ?? {}) },
     ethics: {

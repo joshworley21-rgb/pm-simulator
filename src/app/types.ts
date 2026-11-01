@@ -5,6 +5,7 @@ import type { EthicsState } from './modules/ethics';
 import type { CabinetState } from './cabinet';
 import type { MediaState } from './media';
 import type { ImmigrationState } from './immigration';
+import type { LocalGovernmentState } from './localGovernment';
 import type { DevolutionState } from './devolution';
 
 export type RootStackParamList = {
@@ -365,6 +366,7 @@ export interface GameState {
   cabinetState?: CabinetState;
   mediaState?: MediaState;
   immigrationState?: ImmigrationState;
+  localGovernmentState?: LocalGovernmentState;
   devolutionState?: DevolutionState;
 }
 
