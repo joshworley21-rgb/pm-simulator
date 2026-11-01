@@ -32,7 +32,7 @@ export const SCENARIOS: Scenario[] = [
     name: 'Inherited Mess',
     blurb:
       'You have won, but the books are wrecked. Inflation is sticky, borrowing costs are up and every department says it is already cut to the bone.',
-    difficulty: 'hard',
+    difficulty: 'normal',
     tagline: 'Deficit, inflation and broken services',
     approval: 40,
     unity: 52,
@@ -72,7 +72,7 @@ export const SCENARIOS: Scenario[] = [
     name: 'Hung Parliament',
     blurb:
       'You are the largest party but 26 seats short. Every bill is a negotiation and the smaller parties know it.',
-    difficulty: 'brutal',
+    difficulty: 'hard',
     tagline: 'Minority government, no safe majority',
     approval: 45,
     unity: 48,
@@ -110,32 +110,15 @@ export const SCENARIOS: Scenario[] = [
       lettersOfNoConfidence: 18,
     },
   },
-  {
-    id: 'wartime-footing',
-    name: 'Wartime Footing',
-    blurb:
-      'A land war in Europe has reset every priority. Defence is ring-fenced, everything else is not, and the public is behind you for now.',
-    difficulty: 'normal',
-    tagline: 'Defence first, services squeezed',
-    approval: 51,
-    unity: 60,
-    stats: {
-      cpiInflation: 4.1,
-      gdpGrowth: 0.8,
-      giltYield: 4.4,
-      nhsWaitingList: 8.0,
-      netMigration: 190,
-      unemployment: 4.8,
-      debtToGdp: 101,
-      budgetBalance: -120,
-    },
-  },
 ];
 
 export const DEFAULT_SCENARIO_ID = 'inherited-mess';
 
 export function getScenario(id: string | undefined): Scenario {
-  return SCENARIOS.find((s) => s.id === id) ?? SCENARIOS[0];
+  return (
+    SCENARIOS.find((s) => s.id === id) ??
+    SCENARIOS.find((s) => s.id === DEFAULT_SCENARIO_ID)!
+  );
 }
 
 /**
