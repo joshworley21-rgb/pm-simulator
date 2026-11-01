@@ -43,6 +43,7 @@ import { advanceCabinet, createDefaultCabinetState } from './cabinet';
 import { advanceMedia, createDefaultMediaState } from './media';
 import { advanceImmigration, createDefaultImmigrationState } from './immigration';
 import { advanceLocalGovernment, createDefaultLocalGovernmentState } from './localGovernment';
+import { advanceParliament, createDefaultParliamentState } from './parliament';
 import { advanceDevolution, createDefaultDevolutionState } from './devolution';
 import { DOSSIER_POOL_2 } from './dossiers2';
 import { DOSSIER_POOL_3 } from './dossiers3';
@@ -232,6 +233,7 @@ export function createInitialState(): GameState {
     mediaState: createDefaultMediaState(),
     immigrationState: createDefaultImmigrationState(),
     localGovernmentState: createDefaultLocalGovernmentState(),
+    parliamentState: createDefaultParliamentState(),
     devolutionState: createDefaultDevolutionState(),
   };
   const initial = { ...s, billResolutions: {} };
@@ -1631,6 +1633,19 @@ export function advanceWeek(s: GameState): GameState {
     next = { ...next, log: [...localGovernmentResult.log, ...next.log].slice(0, 50) };
   }
 
+  // Parliament as process: session clock and wash-up bookkeeping. Logic lives in ./parliament.
+  // This tick is strictly inert (advanceParliament never returns effects), so it cannot
+  // move the Idle archetype; bills enter the pipeline only through explicit calls.
+  const parliamentResult = advanceParliament({
+    state: next.parliamentState ?? createDefaultParliamentState(),
+    week: next.week,
+    seed: next.seed,
+  });
+  next = { ...next, parliamentState: parliamentResult.state };
+  if (parliamentResult.log.length > 0) {
+    next = { ...next, log: [...parliamentResult.log, ...next.log].slice(0, 50) };
+  }
+
   // 7. Draw fresh dossier.
   const activeIds = new Set(remaining.map((d) => d.id));
   const escalatedIds = new Set(next.escalatedDossierIds ?? []);
@@ -1929,6 +1944,7 @@ export function migrateState(saved: Partial<GameState> | null | undefined): Game
     mediaState: { ...createDefaultMediaState(), ...(saved.mediaState ?? {}) },
     immigrationState: { ...createDefaultImmigrationState(), ...(saved.immigrationState ?? {}) },
     localGovernmentState: { ...createDefaultLocalGovernmentState(), ...(saved.localGovernmentState ?? {}) },
+    parliamentState: { ...createDefaultParliamentState(), ...(saved.parliamentState ?? {}) },
     devolutionState: { ...createDefaultDevolutionState(), ...(saved.devolutionState ?? {}) },
     whips: { ...createDefaultWhips(), ...(saved.whips ?? {}) },
     ethics: {
