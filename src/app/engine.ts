@@ -39,6 +39,7 @@ import {
 } from './spendingReview';
 import type { EfficiencyTargetPct } from './spendingReview';
 import { calculate1922Mood, calculateBlindsideRisk } from './leadershipChallenge';
+import { advanceCabinet, createDefaultCabinetState } from './cabinet';
 import { DOSSIER_POOL_2 } from './dossiers2';
 import { DOSSIER_POOL_3 } from './dossiers3';
 import { applyScenario } from './scenarios';
@@ -223,6 +224,7 @@ export function createInitialState(): GameState {
     efficiencyTargetPct: 0,
     whips: createDefaultWhips(),
     ethics: createDefaultEthics(),
+    cabinetState: createDefaultCabinetState(),
   };
   const initial = { ...s, billResolutions: {} };
   const nhsMetrics = nhsMetricsFromGame(initial);
@@ -1537,6 +1539,23 @@ export function advanceWeek(s: GameState): GameState {
     }
   }
 
+  // Cabinet as persons: tenure, rivalries and cohesion. Wired here, logic in ./cabinet.
+  const cabinetResult = advanceCabinet({
+    cabinet: next.cabinet,
+    state: next.cabinetState ?? createDefaultCabinetState(),
+    factionUnrest: next.factionUnrest,
+    partyConfidence: next.metrics.partyConfidence,
+    week: next.week,
+    seed: next.seed,
+  });
+  next = { ...next, cabinetState: cabinetResult.state };
+  if (Object.keys(cabinetResult.effects).length > 0) {
+    next = applyEffects(next, cabinetResult.effects);
+  }
+  if (cabinetResult.log.length > 0) {
+    next = { ...next, log: [...cabinetResult.log, ...next.log].slice(0, 50) };
+  }
+
   // 7. Draw fresh dossier.
   const activeIds = new Set(remaining.map((d) => d.id));
   const escalatedIds = new Set(next.escalatedDossierIds ?? []);
@@ -1831,6 +1850,7 @@ export function migrateState(saved: Partial<GameState> | null | undefined): Game
     stampDutyRelief: saved.stampDutyRelief === true,
     tripleLock: typeof saved.tripleLock === 'boolean' ? saved.tripleLock : true,
     publicSectorPay: saved.publicSectorPay === 'capped' ? 'capped' : 'full',
+    cabinetState: { ...createDefaultCabinetState(), ...(saved.cabinetState ?? {}) },
     whips: { ...createDefaultWhips(), ...(saved.whips ?? {}) },
     ethics: {
       ...createDefaultEthics(),

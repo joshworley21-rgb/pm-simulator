@@ -2,6 +2,7 @@ import type { UKTradeDealStatus, TradePartner } from './tradeDeals';
 import type { NHSMetrics } from './nhsMetrics';
 import type { WhipsState } from './modules/whips';
 import type { EthicsState } from './modules/ethics';
+import type { CabinetState } from './cabinet';
 
 export type RootStackParamList = {
   Menu: undefined;
@@ -358,6 +359,7 @@ export interface GameState {
   efficiencyTargetPct?: 0 | 2 | 4;
   whips?: WhipsState;
   ethics?: EthicsState;
+  cabinetState?: CabinetState;
 }
 
 export type Action =
