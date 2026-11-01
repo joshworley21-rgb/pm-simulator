@@ -1,5 +1,7 @@
 import type { UKTradeDealStatus, TradePartner } from './tradeDeals';
 import type { NHSMetrics } from './nhsMetrics';
+import type { WhipsState } from './modules/whips';
+import type { EthicsState } from './modules/ethics';
 
 export type RootStackParamList = {
   Menu: undefined;
@@ -354,6 +356,8 @@ export interface GameState {
   obrAssessment?: 'compliant' | 'tight' | 'breach';
   /** Cross-Whitehall Spending Review efficiency savings target (0%, 2%, or 4%). */
   efficiencyTargetPct?: 0 | 2 | 4;
+  whips?: WhipsState;
+  ethics?: EthicsState;
 }
 
 export type Action =

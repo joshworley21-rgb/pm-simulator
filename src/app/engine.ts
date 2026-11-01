@@ -57,6 +57,8 @@ import {
 } from './cabinetEffects';
 import { computeBlocs, blocAverage } from './voterBlocs';
 import { projectSeats } from './electionProjection';
+import { advanceWhips, createDefaultWhips, divisionDisciplineModifier } from './modules/whips';
+import { advanceEthics, createDefaultEthics } from './modules/ethics';
 
 /** Placeholder partner ministers; enough variety to staff a coalition. */
 const COALITION_NAMES = [
@@ -213,6 +215,8 @@ export function createInitialState(): GameState {
     obrHeadroom: undefined,
     obrAssessment: undefined,
     efficiencyTargetPct: 0,
+    whips: createDefaultWhips(),
+    ethics: createDefaultEthics(),
   };
   const initial = { ...s, billResolutions: {} };
   const nhsMetrics = nhsMetricsFromGame(initial);
@@ -701,26 +705,29 @@ function resolveBill(s: GameState, bill: Bill, rng: () => number): GameState {
   const rebelLoss = rebels.length * 15;
   const seats = ownSeats + (partner?.seats ?? 0) - rebelLoss;
   const whip = bill.whipLevel ?? 'two-line';
+  const modifier = divisionDisciplineModifier(s.whips ?? createDefaultWhips(), whip);
+  const adjustedRebellionRisk = Math.max(0, bill.rebellionRisk + modifier.rebellionRiskDelta);
+  const adjustedDivisionSeats = seats + modifier.voteSwing;
 
   let passed: boolean;
   if (whip === 'three-line') {
     // Three-line whip: maximum attendance and discipline (+15 virtual votes in lobbies)
-    const effectiveSeats = seats + 15;
+    const effectiveSeats = adjustedDivisionSeats + 15;
     if (effectiveSeats >= 355) passed = true;
     else if (effectiveSeats >= 326) passed = rng() < 0.96;
     else if (effectiveSeats >= 300) passed = rng() < (partner ? 0.75 : 0.40);
     else passed = false;
   } else if (whip === 'free-vote') {
     // Free vote: MPs vote on conscience without party coercion
-    if (seats >= 360) passed = rng() < 0.88;
-    else if (seats >= 326) passed = rng() < 0.75;
-    else if (seats >= 300) passed = rng() < 0.50;
+    if (adjustedDivisionSeats >= 360) passed = rng() < 0.88;
+    else if (adjustedDivisionSeats >= 326) passed = rng() < 0.75;
+    else if (adjustedDivisionSeats >= 300) passed = rng() < 0.50;
     else passed = rng() < 0.25;
   } else {
     // Standard two-line whip (existing baseline)
-    if (seats >= 360) passed = true;
-    else if (seats >= 326) passed = rng() < 0.92;
-    else if (seats >= 300) passed = rng() < (partner ? 0.6 : 0.25);
+    if (adjustedDivisionSeats >= 360) passed = true;
+    else if (adjustedDivisionSeats >= 326) passed = rng() < 0.92;
+    else if (adjustedDivisionSeats >= 300) passed = rng() < (partner ? 0.6 : 0.25);
     else passed = false;
   }
 
@@ -731,10 +738,11 @@ function resolveBill(s: GameState, bill: Bill, rng: () => number): GameState {
     letters += 0;
   } else if (whip === 'three-line') {
     // Strict three-line whip: heavy-handedness increases backbench resentment
-    letters += Math.round(bill.rebellionRisk / 20);
+    letters += Math.round(adjustedRebellionRisk / 20);
   } else {
-    letters += Math.round(bill.rebellionRisk / 24);
+    letters += Math.round(adjustedRebellionRisk / 24);
   }
+  letters += modifier.resentmentDelta;
 
   const logMessage = passed
     ? `LAW PASSED: ${bill.title} (${whip === 'three-line' ? 'three-line whip' : whip === 'free-vote' ? 'free vote' : 'standard whip'})`
@@ -764,7 +772,7 @@ function resolveBill(s: GameState, bill: Bill, rng: () => number): GameState {
     next = applyEffects(next, bill.effects);
     // A carried bill is a genuine governing success: it buys party unity and
     // removes at most one active letter of no confidence.
-    next = applyEffects(next, { partyConfidence: whip === 'three-line' && bill.rebellionRisk > 30 ? 3 : 5 });
+    next = applyEffects(next, { partyConfidence: whip === 'three-line' && adjustedRebellionRisk > 30 ? 3 : 5 });
     letters = clamp(letters - 1, 0, 99);
     next = {
       ...next,
@@ -1215,6 +1223,44 @@ export function advanceWeek(s: GameState): GameState {
 
   // 3d. Trade position and spending-review envelope.
   next = periodicExternal(next);
+
+  // Whips and ethics advance on the weekly clock using the current engine seed.
+  const whipsResult = advanceWhips(next.whips ?? createDefaultWhips(), {
+    factionUnrest: next.factionUnrest,
+    partyConfidence: next.metrics.partyConfidence,
+    seed: next.seed,
+  });
+  next = {
+    ...next,
+    whips: whipsResult.state,
+    factionUnrest: clamp(next.factionUnrest + whipsResult.factionUnrestDelta, 0, 100),
+  };
+  if (whipsResult.logs.length > 0) {
+    next = { ...next, log: [...whipsResult.logs, ...next.log].slice(0, 50) };
+  }
+  next = applyEffects(next, { lettersDelta: whipsResult.lettersDelta });
+
+  const ethicsResult = advanceEthics(next.ethics ?? createDefaultEthics(), next.seed);
+  next = {
+    ...next,
+    ethics: ethicsResult.state,
+    factionUnrest: clamp(next.factionUnrest + ethicsResult.factionUnrestDelta, 0, 100),
+  };
+  if (ethicsResult.logs.length > 0) {
+    next = { ...next, log: [...ethicsResult.logs, ...next.log].slice(0, 50) };
+  }
+  next = applyEffects(next, { approval: ethicsResult.approvalDelta });
+  for (const finding of ethicsResult.findings) {
+    next = applyEffects(next, {
+      approval: finding.approvalHit,
+      mediaAttention: finding.mediaAttentionHit,
+      lettersDelta: finding.lettersDelta,
+    });
+    next = {
+      ...next,
+      factionUnrest: clamp(next.factionUnrest + finding.factionUnrestHit, 0, 100),
+    };
+  }
 
   // 4. 1922 Committee pressure: graded on party unity and backbench mood.
   const mood = calculate1922Mood(
@@ -1778,6 +1824,14 @@ export function migrateState(saved: Partial<GameState> | null | undefined): Game
     stampDutyRelief: saved.stampDutyRelief === true,
     tripleLock: typeof saved.tripleLock === 'boolean' ? saved.tripleLock : true,
     publicSectorPay: saved.publicSectorPay === 'capped' ? 'capped' : 'full',
+    whips: { ...createDefaultWhips(), ...(saved.whips ?? {}) },
+    ethics: {
+      ...createDefaultEthics(),
+      ...(saved.ethics ?? {}),
+      activeInvestigations: Array.isArray(saved.ethics?.activeInvestigations)
+        ? saved.ethics.activeInvestigations
+        : [],
+    },
     obrHeadroom:
       typeof saved.obrHeadroom === 'number' && Number.isFinite(saved.obrHeadroom)
         ? clamp(saved.obrHeadroom, -1_000_000, 1_000_000)
