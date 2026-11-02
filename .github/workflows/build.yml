@@ -19,11 +19,11 @@ jobs:
         with:
           distribution: "zulu"
           java-version: "17"
-      - name: Install SDK Packages and NDK
+      - name: Install missing NDK
         run: |
           export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
           yes | sdkmanager --licenses || true
-          sdkmanager --channel=3 "platforms;android-37" "build-tools;35.0.0" "ndk;27.1.12297006"
+          sdkmanager "ndk;27.1.12297006"
       - name: Install dependencies
         run: npm install
       - name: Generate Android folder
