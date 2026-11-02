@@ -16,11 +16,13 @@ import { fundedEnvelope, isFiscalWindow, remainingEmergencyFiscalActions, person
 import { spendingReviewEfficiencySavings } from '../spendingReview';
 import type { EfficiencyTargetPct } from '../spendingReview';
 import { relationBand } from '../diplomacy';
+import { PURDAH_TURNS } from '../calendar';
 import { getTraitDetails } from '../backgrounds';
 import { ElectionMap } from '../components/ElectionMap';
 import RedBoxScreen from './RedBoxScreen';
 import CabinetRoomScreen from './CabinetRoomScreen';
 import DivisionLobbyScreen from './DivisionLobbyScreen';
+import PressRoomScreen from './PressRoomScreen';
 import { BudgetWorkbench } from '../components/BudgetWorkbench';
 import type { RelationBand } from '../diplomacy';
 import type { RootStackParamList } from '../types';
@@ -125,7 +127,8 @@ export default function GameScreen() {
   const letters = state.stats.lettersOfNoConfidence;
   const revoltPct = Math.min(100, Math.round((letters / Math.max(1, threshold)) * 100));
   const urgentCount = state.redBox.filter((d) => d.urgent).length;
-  const inPurdah = state.turnsUntilElection <= 6;
+  // Single source of truth: same constant the engine's inPurdah() uses.
+  const inPurdah = state.turnsUntilElection <= PURDAH_TURNS;
   const fiscalWindowOpen = isFiscalWindow(state);
   const emergencyLevyLeft = remainingEmergencyFiscalActions(state);
   const traitDetails = useMemo(() => getTraitDetails(player?.background), [player?.background]);
@@ -792,6 +795,10 @@ export default function GameScreen() {
 
             {politicsTab === 'press' && (
               <View>
+                {/* Press Room: meters, headlines and the lobby briefing. Embedded so
+                    it shares GameScreen's scroll container instead of nesting another. */}
+                <PressRoomScreen embedded />
+
                 <Text style={[styles.label, { marginTop: spacing.md }]}>MANIFESTO PLEDGES</Text>
                 {(state.pledges ?? []).length === 0 ? (
                   <Text style={[styles.hint, { marginTop: 4 }]}>No promises on the record yet.</Text>
