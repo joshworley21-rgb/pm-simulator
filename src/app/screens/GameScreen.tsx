@@ -19,6 +19,7 @@ import { relationBand } from '../diplomacy';
 import { getTraitDetails } from '../backgrounds';
 import { CHANCELLOR_LEAK_LOYALTY_THRESHOLD } from '../cabinetEffects';
 import { ElectionMap } from '../components/ElectionMap';
+import RedBoxScreen from './RedBoxScreen';
 import { BudgetWorkbench } from '../components/BudgetWorkbench';
 import type { RelationBand } from '../diplomacy';
 import type { RootStackParamList } from '../types';
@@ -249,6 +250,10 @@ export default function GameScreen() {
 
         {tab === 'desk' && (
           <View>
+            {/* Dashboard: triad, fiscal watch and urgent briefings. Embedded so it
+                shares GameScreen's scroll container instead of nesting another. */}
+            <RedBoxScreen embedded />
+
             <SectionTitle title="Your Red Box" hint="Papers needing a decision. Ignored urgent items become scandals." />
             {redBox.length === 0 && <EmptyState title="Box cleared" body="Nothing awaiting signature. Advance the month to see what lands next." />}
 
