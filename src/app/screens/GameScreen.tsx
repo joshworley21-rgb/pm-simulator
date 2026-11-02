@@ -20,6 +20,7 @@ import { getTraitDetails } from '../backgrounds';
 import { ElectionMap } from '../components/ElectionMap';
 import RedBoxScreen from './RedBoxScreen';
 import CabinetRoomScreen from './CabinetRoomScreen';
+import DivisionLobbyScreen from './DivisionLobbyScreen';
 import { BudgetWorkbench } from '../components/BudgetWorkbench';
 import type { RelationBand } from '../diplomacy';
 import type { RootStackParamList } from '../types';
@@ -625,6 +626,10 @@ export default function GameScreen() {
 
             {politicsTab === 'westminster' && (
               <View>
+                {/* Division Lobby: majority, whips and motions. Embedded so it shares
+                    GameScreen's scroll container instead of nesting another. */}
+                <DivisionLobbyScreen embedded />
+
                 {!!state.oppositionMotion && (
                   <Card tone="danger">
                     <Text style={{ color: colors.danger, fontSize: font.tiny, fontWeight: '800', letterSpacing: 1 }}>
