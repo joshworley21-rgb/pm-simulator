@@ -34,13 +34,19 @@ jobs:
 
       # ADDED (not in the original spec): the generated project targets
       # compileSdk 37 / build-tools 37.0.0 / NDK 27.1.12297006, none of which the
-      # ubuntu-latest image ships by default. Installing them explicitly makes the
-      # build deterministic instead of relying on AGP's auto-download + licences.
+      # ubuntu-latest image ships by default.
+      #
+      # Channel note: build-tools 37.0.0 and NDK 27.1.12297006 are on the STABLE
+      # channel, but `platforms;android-37` exists only in the canary manifest
+      # (repository2-3.xml) and is absent from the stable repository2-1.xml — so it
+      # needs --channel=3 or sdkmanager reports "Failed to find package".
       - name: Install required Android SDK components
         run: |
           SDKMANAGER="$(command -v sdkmanager || echo "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager")"
           yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
-          "$SDKMANAGER" "platform-tools" "platforms;android-37" "build-tools;37.0.0" "ndk;27.1.12297006"
+          "$SDKMANAGER" "platform-tools" "build-tools;37.0.0" "ndk;27.1.12297006"
+          "$SDKMANAGER" --channel=3 "platforms;android-37"
+          yes | "$SDKMANAGER" --channel=3 --licenses >/dev/null 2>&1 || true
 
       # ADDED (not in the original spec): point Gradle at the runner's SDK.
       - name: Write local.properties
