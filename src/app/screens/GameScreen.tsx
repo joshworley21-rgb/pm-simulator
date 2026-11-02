@@ -17,9 +17,9 @@ import { spendingReviewEfficiencySavings } from '../spendingReview';
 import type { EfficiencyTargetPct } from '../spendingReview';
 import { relationBand } from '../diplomacy';
 import { getTraitDetails } from '../backgrounds';
-import { CHANCELLOR_LEAK_LOYALTY_THRESHOLD } from '../cabinetEffects';
 import { ElectionMap } from '../components/ElectionMap';
 import RedBoxScreen from './RedBoxScreen';
+import CabinetRoomScreen from './CabinetRoomScreen';
 import { BudgetWorkbench } from '../components/BudgetWorkbench';
 import type { RelationBand } from '../diplomacy';
 import type { RootStackParamList } from '../types';
@@ -79,7 +79,6 @@ export default function GameScreen() {
   const [politicsTab, setPoliticsTab] = useState<PoliticsTab>('cabinet');
   const [electionViewTab, setElectionViewTab] = useState<'summary' | 'map'>('summary');
   const [helpOpen, setHelpOpen] = useState(false);
-  const [confirmSack, setConfirmSack] = useState<string | null>(null);
 
   /* ---- weekly briefing: diff the log before/after advancing ---- */
   const previousLog = useRef<string[]>(state.log);
@@ -620,77 +619,7 @@ export default function GameScreen() {
                   </Card>
                 )}
                 <Text style={[styles.hint, { marginTop: spacing.md }]}>Faction unrest {state.factionUnrest}%</Text>
-                {state.cabinet.map((m) => (
-                  <Card key={m.name}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <View style={{ flex: 1 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                          <Text style={{ color: colors.text, fontSize: font.h3, fontWeight: '700' }}>{m.name}</Text>
-                          {m.post === 'Chancellor of the Exchequer' && m.loyalty < CHANCELLOR_LEAK_LOYALTY_THRESHOLD && (
-                            <View style={{ marginLeft: 8 }}>
-                              <Chip label="LEAK RISK" tone="danger" />
-                            </View>
-                          )}
-                        </View>
-                        <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 2 }}>
-                          {m.post} | {m.faction}{m.coalition ? ' | coalition' : ''}
-                          {m.coalition && m.loyalty < 45 ? ' | restive' : ''}
-                          {m.post === 'Chancellor of the Exchequer' && m.loyalty < CHANCELLOR_LEAK_LOYALTY_THRESHOLD ? ' | budget leak risk' : ''}
-                        </Text>
-                      </View>
-                      <Pressable onPress={() => setConfirmSack(m.name)} hitSlop={8}>
-                        <Text style={{ color: colors.muted, fontSize: font.small, fontWeight: '700' }}>Sack</Text>
-                      </Pressable>
-                    </View>
-                    {confirmSack === m.name && (
-                      <View style={{ marginTop: 6 }}>
-                        <Text style={{ color: colors.danger, fontSize: font.tiny, lineHeight: 17 }}>
-                          {m.coalition ? 'Sacking a coalition minister ends the agreement and your majority.' : 'This is final. You cannot re-appoint them this term.'}
-                        </Text>
-                        <View style={{ flexDirection: 'row', marginTop: 6 }}>
-                          <Pressable
-                            onPress={() => {
-                              dispatch({ type: 'SACK_MINISTER', name: m.name });
-                              setConfirmSack(null);
-                            }}
-                            hitSlop={8}
-                            style={{ marginRight: 16 }}
-                          >
-                            <Text style={{ color: colors.danger, fontSize: font.small, fontWeight: '800' }}>Confirm sack</Text>
-                          </Pressable>
-                          <Pressable onPress={() => setConfirmSack(null)} hitSlop={8}>
-                            <Text style={{ color: colors.muted, fontSize: font.small, fontWeight: '700' }}>Cancel</Text>
-                          </Pressable>
-                        </View>
-                      </View>
-                    )}
-                    <View style={{ marginTop: spacing.sm }}>
-                      <Text style={{ color: colors.muted, fontSize: font.tiny }}>Loyalty {m.loyalty}</Text>
-                      <Meter value={m.loyalty} color={m.loyalty > 60 ? colors.success : colors.warning} />
-                      <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 6 }}>Competence {m.competence}</Text>
-                      <Meter value={m.competence} />
-                    </View>
-                  </Card>
-                ))}
-
-                {state.backbenchers.length > 0 && (
-                  <>
-                    <Text style={[styles.label, { marginTop: spacing.lg }]}>BACKBENCHERS TO PROMOTE</Text>
-                    {state.backbenchers.map((b) => (
-                      <Card key={b.name}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                          <View style={{ flex: 1 }}>
-                            <Text style={{ color: colors.text, fontSize: font.h3, fontWeight: '700' }}>{b.name}</Text>
-                            <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 2 }}>
-                              {b.faction} | loyalty {b.loyalty} | competence {b.competence}
-                            </Text>
-                          </View>
-                          <Button label="Promote" variant="secondary" compact onPress={() => dispatch({ type: 'PICK_MINISTER', name: b.name })} />
-                        </View>
-                      </Card>
-                    ))}
-                  </>
-                )}
+                <CabinetRoomScreen embedded />
               </View>
             )}
 
@@ -1300,22 +1229,6 @@ export default function GameScreen() {
         </View>
       </Sheet>
 
-      {/* ================= MINISTER PICKER ================= */}
-      <Sheet visible={!!state.ministerPicker} onClose={() => dispatch({ type: 'CANCEL_APPOINT' })} eyebrow="CABINET PROMOTION" title={state.ministerPicker ? state.ministerPicker : ''}>
-        <View>
-          <Text style={{ color: colors.muted, fontSize: font.small }}>Choose the post for this appointment.</Text>
-          {MINISTER_POSTS.map((post) => (
-            <Pressable
-              key={post}
-              onPress={() => dispatch({ type: 'CONFIRM_APPOINT', post })}
-              style={{ borderWidth: 1, borderColor: colors.cardBorder, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.sm, backgroundColor: colors.card }}
-            >
-              <Text style={{ color: colors.text, fontSize: font.body, fontWeight: '700' }}>{post}</Text>
-            </Pressable>
-          ))}
-        </View>
-      </Sheet>
-
       {/* ================= ELECTION ================= */}
       <Modal visible={state.isElection && !state.gameOver} transparent animationType="fade">
         <View style={styles.centerBackdrop}>
@@ -1419,15 +1332,6 @@ const TRADE_ROWS: { key: Exclude<keyof UKTradeDealStatus, 'wtoBaseline'>; partne
   { key: 'cpTradeDeal', partner: 'commonwealth', label: 'Commonwealth' },
 ];
 
-const MINISTER_POSTS = [
-  'Chancellor of the Exchequer',
-  'Home Secretary',
-  'Health Secretary',
-  'Foreign Secretary',
-  'Defence Secretary',
-  'Education Secretary',
-  'Minister of State',
-];
 
 const HELP_ROWS: { title: string; body: string }[] = [
   { title: 'Advance', body: 'Moves one month. Anything urgent left undecided becomes a scandal and costs you approval.' },

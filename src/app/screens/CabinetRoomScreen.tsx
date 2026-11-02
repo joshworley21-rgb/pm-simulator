@@ -27,7 +27,15 @@ const MINISTER_POSTS = [
  * the existing SACK_MINISTER / PICK_MINISTER / CONFIRM_APPOINT actions.
  * Nothing is recomputed beyond deriving readings the engine already implies.
  */
-export default function CabinetRoomScreen() {
+export interface CabinetRoomScreenProps {
+  /**
+   * When true, renders without its own ScrollView so it can nest inside an
+   * existing scroll container (e.g. the GameScreen tab shell).
+   */
+  embedded?: boolean;
+}
+
+export default function CabinetRoomScreen({ embedded = false }: CabinetRoomScreenProps = {}) {
   const { state, dispatch } = useGame();
   const cabinetState = state.cabinetState ?? createDefaultCabinetState();
 
@@ -75,8 +83,8 @@ export default function CabinetRoomScreen() {
     closeSheet();
   };
 
-  return (
-    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+  const body = (
+    <>
       <Text style={styles.eyebrow}>WESTMINSTER</Text>
       <Text style={styles.title}>Cabinet Room</Text>
       <Text style={styles.subtitle}>
@@ -213,6 +221,14 @@ export default function CabinetRoomScreen() {
           </View>
         ) : null}
       </Sheet>
+    </>
+  );
+
+  return embedded ? (
+    <View style={styles.content}>{body}</View>
+  ) : (
+    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      {body}
     </ScrollView>
   );
 }
