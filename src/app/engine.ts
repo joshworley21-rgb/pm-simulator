@@ -38,7 +38,11 @@ import {
   spendingReviewEfficiencyEffects,
 } from './spendingReview';
 import type { EfficiencyTargetPct } from './spendingReview';
-import { calculate1922Mood, calculateBlindsideRisk } from './leadershipChallenge';
+import {
+  calculate1922Mood,
+  calculateBlindsideRisk,
+  NINETEEN_TWENTY_TWO_RULES,
+} from './leadershipChallenge';
 import {
   advanceCabinet,
   createDefaultCabinetState,
@@ -1410,6 +1414,18 @@ export function advanceWeek(s: GameState): GameState {
       mediaAttention: finding.mediaAttentionHit,
       lettersDelta: finding.lettersDelta,
     });
+    // ETHICS -> PRESS BRIDGE. An exposed COVER-UP is the player's own chosen deception, so
+    // it may breach the floor; every other finding traces back to a player sacking and is
+    // therefore also self-inflicted, but is applied through the clamped variant so a
+    // passive premiership (which never opens an investigation) is untouched either way.
+    const ethicsPress = next.mediaState ?? createDefaultMediaState();
+    next = {
+      ...next,
+      mediaState:
+        finding.id === 'cover-up-exposed'
+          ? degradePressFromChoice(ethicsPress, PRESS_DEGRADE_PER_CRISIS * 2)
+          : degradePress(ethicsPress, PRESS_DEGRADE_PER_CRISIS),
+    };
     next = {
       ...next,
       factionUnrest: clamp(next.factionUnrest + finding.factionUnrestHit, 0, 100),
@@ -1546,8 +1562,31 @@ export function advanceWeek(s: GameState): GameState {
       const mineInRegion = map[playerId] ?? 0;
       const blocMean =
         (next.blocs ?? []).reduce((sum, b) => sum + b.support * b.weight, 0) || next.metrics.approval;
+      // LOCAL GOVERNMENT + DEVOLUTION BRIDGE, PLAYER-GATED (Option a): a council that has
+      // issued s114, or a nation whose satisfaction has collapsed, costs the government
+      // votes -- but ONLY where the government's OWN discretionary spending decisions are
+      // what put them there. A passive premiership changes no departmental budget, so its
+      // by-elections are decided by exactly the arithmetic they always were.
+      const madeSpendingDecisions = next.departments.some(
+        (d) => INITIAL_DEPARTMENTS.find((base) => base.id === d.id)?.budget !== d.budget,
+      );
+      const s114InRegion = madeSpendingDecisions
+        ? (next.localGovernmentState?.authorities ?? []).filter(
+            (a) => a.regionId === regionId && a.section114,
+          ).length
+        : 0;
+      const devolvedNations = next.devolutionState?.nations as
+        | Record<string, { independencePressure: number }>
+        | undefined;
+      const devolvedPressure = madeSpendingDecisions
+        ? devolvedNations?.[regionId]?.independencePressure ?? 0
+        : 0;
+      const devolvedPenalty = devolvedPressure > 60 ? (devolvedPressure - 60) * 0.005 : 0;
       const holdChance = clamp(
-        (totalInRegion > 0 ? mineInRegion / totalInRegion : 0.3) + (blocMean - 50) / 150,
+        (totalInRegion > 0 ? mineInRegion / totalInRegion : 0.3) +
+          (blocMean - 50) / 150 -
+          s114InRegion * 0.06 -
+          devolvedPenalty,
         0.05,
         0.9,
       );
@@ -1592,7 +1631,15 @@ export function advanceWeek(s: GameState): GameState {
   // and the leader needs a majority of MPs voting for them. Results are
   // reported head-to-head, e.g. 211 for and 148 against.
   const threshold = next.stats.lettersThreshold || 15;
-  if (letters >= threshold && !next.gameOver) {
+  // STATUTORY 12-MONTH IMMUNITY: a leader who has just won a ballot cannot be challenged
+  // again for a year. THE CHANGED-RULES OVERRIDE is the real-world exception: once letters
+  // pass the blindside threshold AND confidence is on the floor, the executive threatens to
+  // rewrite the rules and the leader is forced out anyway.
+  const immunityActive =
+    next.lastVote !== undefined && next.week - next.lastVote.turn < TURNS_PER_YEAR;
+  const changedRulesOverride =
+    letters >= NINETEEN_TWENTY_TWO_RULES.blindsideThreshold && next.metrics.partyConfidence < 20;
+  if (letters >= threshold && !next.gameOver && (!immunityActive || changedRulesOverride)) {
     const conf = next.metrics.partyConfidence;
     const name = next.player ? `${next.player.firstName} ${next.player.lastName}` : 'The Prime Minister';
     const electorate = Math.max(

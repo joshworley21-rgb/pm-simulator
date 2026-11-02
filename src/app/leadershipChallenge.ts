@@ -81,38 +81,15 @@ export function calculate1922Mood(
   };
 }
 
-/** Determine if a leadership challenge should be triggered */
-export function shouldTriggerLeadershipChallenge(
-  lettersOfNoConfidence: number,
-  partyConfidence: number,
-  consecutiveLowSupportTurns: number,
-  lastChallengeTurn: number | null,
-  currentTurn: number
-): { trigger: boolean; reason: string } {
-  if (lastChallengeTurn !== null && currentTurn - lastChallengeTurn < NINETEEN_TWENTY_TWO_RULES.challengeCooldownTurns) {
-    return { trigger: false, reason: 'Cooldown period active' };
-  }
-  if (lettersOfNoConfidence >= NINETEEN_TWENTY_TWO_RULES.triggerThreshold) {
-    return { trigger: true, reason: `Letters threshold reached: ${lettersOfNoConfidence}` };
-  }
-  if (partyConfidence < 25 && consecutiveLowSupportTurns >= 6) {
-    return { trigger: true, reason: 'Party confidence collapsed' };
-  }
-  return { trigger: false, reason: 'No trigger conditions met' };
-}
-
-/** Simulate leadership vote outcome */
-export function simulateLeadershipVote(
-  incumbentSupport: number,
-  challengerSupport: number,
-  totalMPs: number,
-  partyConfidence: number
-): { votesForIncumbent: number; votesForChallenger: number; result: 'incumbent_wins' | 'challenger_wins' } {
-  const incumbentVotes = Math.round(totalMPs * (incumbentSupport / 100));
-  const challengerVotes = totalMPs - incumbentVotes;
-  const result = incumbentVotes > challengerVotes ? 'incumbent_wins' : 'challenger_wins';
-  return { votesForIncumbent: incumbentVotes, votesForChallenger: challengerVotes, result };
-}
+/**
+ * REMOVED (Commit B reconciliation): `shouldTriggerLeadershipChallenge` and
+ * `simulateLeadershipVote` were dead code -- nothing in src/ or scripts/ ever called them,
+ * and their rules disagreed with the engine's live ballot (a 55-letter trigger and a 12-TURN
+ * cooldown against the engine's per-seat threshold and 52-WEEK immunity). Two sources of
+ * truth for one mechanic is how the split stayed invisible, so the engine's unified pipeline
+ * in advanceWeek is now the single implementation. `NINETEEN_TWENTY_TWO_RULES` stays exported
+ * because the engine reads `blindsideThreshold` from it for the changed-rules override.
+ */
 
 /** Calculate blindside sacking risk */
 export function calculateBlindsideRisk(
