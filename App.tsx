@@ -8,6 +8,7 @@ import type { RootStackParamList } from './src/app/types';
 import MenuScreen from './src/app/screens/MenuScreen';
 import CreateScreen from './src/app/screens/CreateScreen';
 import GameScreen from './src/app/screens/GameScreen';
+import CrisisModal from './src/app/components/CrisisModal';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -23,6 +24,9 @@ export default function App() {
             <Stack.Screen name="Game" component={GameScreen} />
           </Stack.Navigator>
         </NavigationContainer>
+        {/* Global overlay: renders above the navigator whenever a Black Swan or
+            confidence alert is live. Must sit inside GameProvider for useGame(). */}
+        <CrisisModal />
       </GameProvider>
     </SafeAreaProvider>
   );
