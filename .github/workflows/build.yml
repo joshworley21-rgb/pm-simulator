@@ -23,7 +23,7 @@ jobs:
         run: |
           export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
           yes | sdkmanager --licenses || true
-          sdkmanager "ndk;27.1.12297006"
+          for i in 1 2 3 4; do sdkmanager "ndk;27.1.12297006" && break || sleep 5; done
       - name: Install dependencies
         run: npm install
       - name: Generate Android folder
