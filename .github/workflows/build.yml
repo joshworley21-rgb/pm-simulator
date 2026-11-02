@@ -21,10 +21,9 @@ jobs:
           java-version: "17"
       - name: Install SDK Packages and NDK
         run: |
-          export ANDROID_HOME=$HOME/android-sdk
-          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
+          export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
           yes | sdkmanager --licenses || true
-          sdkmanager --install "platforms;android-37" "build-tools;35.0.0" "ndk;27.1.12297006"
+          sdkmanager --channel=3 "platforms;android-37" "build-tools;35.0.0" "ndk;27.1.12297006"
       - name: Install dependencies
         run: npm install
       - name: Generate Android folder
