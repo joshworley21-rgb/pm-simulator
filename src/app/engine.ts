@@ -62,7 +62,11 @@ import {
   type PaperId,
 } from './media';
 import { advanceImmigration, createDefaultImmigrationState } from './immigration';
-import { advanceLocalGovernment, createDefaultLocalGovernmentState } from './localGovernment';
+import {
+  advanceLocalGovernment,
+  createDefaultLocalGovernmentState,
+  deliveryDiscount,
+} from './localGovernment';
 import {
   advanceParliament,
   createDefaultParliamentState,
@@ -111,6 +115,11 @@ import {
   BUDGET_LEAK_GILT_DELTA,
   BUDGET_LEAK_APPROVAL_DELTA,
   ministerSackingCost,
+  chancellorCredibilityHeadroomDelta,
+  CHANCELLOR_BREACH_LOYALTY_LOSS,
+  CHANCELLOR_BREACH_RESIGNATION_THRESHOLD,
+  CHANCELLOR_DEPARTURE_GILT_DELTA,
+  CHANCELLOR_DEPARTURE_CREDIBILITY_LOSS,
 } from './cabinetEffects';
 import { computeBlocs, blocAverage } from './voterBlocs';
 import { projectSeats } from './electionProjection';
@@ -150,6 +159,78 @@ const r2 = (n: number) => Math.round(n * 100) / 100;
 
 function clamp(n: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, n));
+}
+
+/** Change devolved satisfaction when a discretionary fiscal decision changes available funding. */
+function applyBarnettConsequential(s: GameState, fundingDelta: number): GameState {
+  const devolution = s.devolutionState ?? createDefaultDevolutionState();
+  const satisfactionDelta = clamp(fundingDelta * 0.02, -0.25, 0.25);
+  const adjustSatisfaction = (nation: typeof devolution.nations.scotland) => {
+    if (!('satisfaction' in nation) || typeof nation.satisfaction !== 'number') return nation;
+    return { ...nation, satisfaction: clamp(nation.satisfaction + satisfactionDelta, 0, 100) };
+  };
+  const updatedNations = {
+    scotland: adjustSatisfaction(devolution.nations.scotland),
+    wales: adjustSatisfaction(devolution.nations.wales),
+    ni: adjustSatisfaction(devolution.nations.ni),
+  };
+  return { ...s, devolutionState: { ...devolution, nations: updatedNations } };
+}
+
+/** Market, Bank-independence and press shock for the specified Chancellor departures only. */
+function applyChancellorDepartureShock(s: GameState): GameState {
+  const next = applyEffects(s, { giltYield: CHANCELLOR_DEPARTURE_GILT_DELTA });
+  const bank = next.centralBankState ?? createDefaultCentralBankState();
+  return {
+    ...next,
+    centralBankState: {
+      ...bank,
+      credibility: r1(clamp(bank.credibility - CHANCELLOR_DEPARTURE_CREDIBILITY_LOSS, 0, 100)),
+    },
+    mediaState: degradePressFromChoice(
+      next.mediaState ?? createDefaultMediaState(),
+      PRESS_DEGRADE_PER_CRISIS,
+    ),
+  };
+}
+
+/**
+ * Record the adjusted OBR assessment. A breach erodes the Chancellor's loyalty;
+ * crossing the resignation threshold removes them and applies the departure shock.
+ */
+function applyBudgetDeliveryAssessment(
+  s: GameState,
+  netDelta: number,
+  obrHeadroom: number,
+): GameState {
+  const chancellor = findPostHolder(s.cabinet, CHANCELLOR_POST);
+  const breach = netDelta > obrHeadroom + chancellorCredibilityHeadroomDelta(chancellor);
+  let next: GameState = { ...s, obrAssessment: breach ? 'breach' : 'compliant' };
+  if (!breach || !chancellor) return next;
+
+  const loyalty = clamp(chancellor.loyalty - CHANCELLOR_BREACH_LOYALTY_LOSS, 0, 100);
+  if (loyalty > CHANCELLOR_BREACH_RESIGNATION_THRESHOLD) {
+    return {
+      ...next,
+      cabinet: next.cabinet.map((m) => m.name === chancellor.name ? { ...m, loyalty } : m),
+    };
+  }
+
+  next = {
+    ...next,
+    cabinet: next.cabinet.filter((m) => m.name !== chancellor.name),
+    cabinetState: applyRemoval(
+      next.cabinetState ?? createDefaultCabinetState(),
+      chancellor.name,
+    ),
+    lastReshuffleWeek: next.cabinet.length === 1 ? next.week : next.lastReshuffleWeek,
+    log: [`RESIGNATION: ${chancellor.name} quit as Chancellor after the Budget breach.`, ...next.log].slice(0, 50),
+    headlines: [
+      { paper: 'The National Standard', title: 'CHANCELLOR RESIGNS AFTER BUDGET BREACH', stance: 'centrist' as const },
+      ...next.headlines,
+    ].slice(0, 4),
+  };
+  return applyChancellorDepartureShock(next);
 }
 
 function monthlyRateToWeekly(monthlyRate: number): number {
@@ -2471,8 +2552,10 @@ export function reducer(state: GameState, action: Action): GameState {
 
     case 'SACK_MINISTER': {
       const minister = state.cabinet.find((m) => m.name === action.name);
+      const wasChancellor = minister?.post === CHANCELLOR_POST;
       const wasCoalition = !!minister?.coalition;
       let sacked = resignMinister(state, action.name);
+      if (wasChancellor) sacked = applyChancellorDepartureShock(sacked);
 
       // Sacking a partner's minister ends the coalition, and with it the
       // majority that kept the government upright.
@@ -2679,7 +2762,11 @@ export function reducer(state: GameState, action: Action): GameState {
             ...next.headlines,
           ].slice(0, 4),
         };
-        return next;
+        return applyBudgetDeliveryAssessment(
+          next,
+          -(result.effects.budgetBalance ?? 0),
+          result.obrHeadroom,
+        );
       }
 
       const pkgId = action.type === 'DELIVER_BUDGET' ? action.packageId : undefined;
@@ -2693,7 +2780,11 @@ export function reducer(state: GameState, action: Action): GameState {
         log: [`BUDGET: ${pkg.title} delivered by the Chancellor.`, ...next.log].slice(0, 50),
         headlines: [{ paper: 'The National Standard', title: pkg.kicker, stance: 'centrist' as const }, ...next.headlines].slice(0, 4),
       };
-      return next;
+      return applyBudgetDeliveryAssessment(
+        next,
+        -(pkg.effects.budgetBalance ?? 0),
+        state.obrHeadroom ?? 0,
+      );
     }
 
     case 'SKIP_BUDGET':
@@ -2725,13 +2816,16 @@ export function reducer(state: GameState, action: Action): GameState {
       // Fiscal yield: raising tax improves the budget, lowers approval; vice versa.
       const yieldChange = delta * (TAX_YIELD_PER_POINT[tax.id] ?? 0);
       const approvalChange = -delta * tax.popularityWeight;
+      const deliveryFactor =
+        1 - deliveryDiscount(state.localGovernmentState ?? createDefaultLocalGovernmentState());
       let next = applyEffects(state, {
-        approval: approvalChange + (emergency ? EMERGENCY_APPROVAL_PENALTY : 0),
+        approval: approvalChange * deliveryFactor + (emergency ? EMERGENCY_APPROVAL_PENALTY : 0),
         budgetBalance: yieldChange,
         giltYield: emergency ? EMERGENCY_GILT_DELTA : undefined,
         taxRate: tax.id === 'income' ? delta : 0,
       });
       next = { ...next, taxes };
+      next = applyBarnettConsequential(next, yieldChange * deliveryFactor);
       if (emergency) {
         next = {
           ...next,
@@ -2776,19 +2870,21 @@ export function reducer(state: GameState, action: Action): GameState {
       const departments = state.departments.map((d, i) => (i === idx ? { ...d, budget } : d));
       // Spending costs the Exchequer; benefits scale with the (step-normalised) delta.
       const steps = Math.round(delta / dept.step);
+      const deliveryFactor =
+        1 - deliveryDiscount(state.localGovernmentState ?? createDefaultLocalGovernmentState());
       let fx: Effects = { budgetBalance: -delta };
       const b = dept.benefit;
       fx = {
-        approval: (b.approval ?? 0) * steps,
-        publicServices: (b.publicServices ?? 0) * steps,
-        security: (b.security ?? 0) * steps,
-        economy: (b.economy ?? 0) * steps,
-        nhsWaitingList: (b.nhsWaitingList ?? 0) * steps,
+        approval: (b.approval ?? 0) * steps * deliveryFactor,
+        publicServices: (b.publicServices ?? 0) * steps * deliveryFactor,
+        security: (b.security ?? 0) * steps * deliveryFactor,
+        economy: (b.economy ?? 0) * steps * deliveryFactor,
+        nhsWaitingList: (b.nhsWaitingList ?? 0) * steps * deliveryFactor,
         budgetBalance: -delta,
       };
       let next = applyEffects(state, fx);
       next = { ...next, departments };
-      return next;
+      return applyBarnettConsequential(next, delta * deliveryFactor);
     }
 
     case 'SET_EFFICIENCY_TARGET': {

@@ -41,6 +41,7 @@ export interface LocalGovernmentState {
 export const STRESS_START = 20;
 export const SECTION_114_STRESS = 85;
 export const DELIVERY_GAP_FLOOR = 50;
+const DELIVERY_GAP_SCALE = 100;
 
 const clamp = (n: number, min: number, max: number): number => Math.max(min, Math.min(max, n));
 const r1 = (n: number): number => Math.round(n * 10) / 10;
@@ -155,5 +156,5 @@ export function councilsAtRisk(state: LocalGovernmentState): number {
  * front line at the current gap. Pure helper for the UI and for future wiring.
  */
 export function deliveryDiscount(state: LocalGovernmentState): number {
-  return clamp(state.deliveryGap / 100, 0, 1);
+  return clamp(state.deliveryGap / DELIVERY_GAP_SCALE, 0, 1);
 }

@@ -27,6 +27,13 @@ export const HEALTH_SECRETARY_MAX_RELIEF = 0.04;
 
 /** Competence baseline for Chancellor fiscal management. */
 export const CHANCELLOR_COMPETENCE_BASELINE = 65;
+/** Loyalty lost when a delivered Budget breaches the adjusted OBR headroom. */
+export const CHANCELLOR_BREACH_LOYALTY_LOSS = 20;
+/** A Chancellor at or below this loyalty resigns after a breach. */
+export const CHANCELLOR_BREACH_RESIGNATION_THRESHOLD = 15;
+/** Market and Bank credibility cost when a Chancellor is sacked or resigns after a breach. */
+export const CHANCELLOR_DEPARTURE_GILT_DELTA = 0.15;
+export const CHANCELLOR_DEPARTURE_CREDIBILITY_LOSS = 8;
 
 /** Political cost of dismissing a minister, in existing game metric points. */
 export const MINISTER_SACK_BASE_APPROVAL_PENALTY = 0.25;
@@ -127,7 +134,7 @@ export function ministerSackingCost(minister: Minister): MinisterSackingCost {
 export function chancellorCredibilityHeadroomDelta(chancellor: Minister | undefined): number {
   if (!chancellor) return -1.5; // Missing Chancellor creates market uncertainty
   const diff = chancellor.competence - CHANCELLOR_COMPETENCE_BASELINE;
-  return Math.round((diff / 10) * 10) / 10;
+  return clamp(Math.round((diff / 10) * 10) / 10, -3, 3);
 }
 
 /** First holder of a post, preferring a minister from the PM's own party. */
