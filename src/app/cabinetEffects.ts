@@ -66,6 +66,12 @@ export interface MinisterSackingCost {
   partyConfidencePenalty: number;
   factionUnrestIncrease: number;
   lettersOfNoConfidenceIncrease: number;
+  /**
+   * Post seniority: 0 = junior, 1 = ordinary, 2 = senior. Exposed so callers can scale
+   * downstream consequences (e.g. a standards probe) to the post, rather than re-deriving
+   * the regex or abusing a penalty as a proxy for importance.
+   */
+  importance: number;
 }
 
 /** Calculate the political fallout of dismissing a minister. */
@@ -89,6 +95,7 @@ export function ministerSackingCost(minister: Minister): MinisterSackingCost {
   const coalitionPenalty = minister.coalition === true;
 
   return {
+    importance,
     approvalPenalty:
       MINISTER_SACK_BASE_APPROVAL_PENALTY +
       importance * MINISTER_SACK_SENIORITY_APPROVAL_PENALTY +

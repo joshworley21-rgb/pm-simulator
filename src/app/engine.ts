@@ -115,7 +115,7 @@ import {
 import { computeBlocs, blocAverage } from './voterBlocs';
 import { projectSeats } from './electionProjection';
 import { advanceWhips, createDefaultWhips, divisionDisciplineModifier, patronageEffect } from './modules/whips';
-import { advanceEthics, createDefaultEthics } from './modules/ethics';
+import { advanceEthics, createDefaultEthics, beginInvestigation } from './modules/ethics';
 
 /** Placeholder partner ministers; enough variety to staff a coalition. */
 const COALITION_NAMES = [
@@ -2047,11 +2047,34 @@ function resignMinister(s: GameState, name: string): GameState {
     lettersDelta: cost.lettersOfNoConfidenceIncrease,
   });
   const cabinet = politicallyCosted.cabinet.filter((x) => x.name !== name);
+  // ETHICS BRIDGE (PLAYER-ATTRIBUTABLE, TERM-THROTTLED): dismissing a minister invites a
+  // standards probe, but only ONCE PER GOVERNMENT PER TERM. The term is carried in the id
+  // (`sacking-y<year>-<name>`), so a sacking spree across DIFFERENT ministers cannot stack
+  // findings. A per-minister throttle was useless here because every sacking names someone
+  // new; that is what drove 80% of active runs into the polling floor.
+  // SENIOR POSTS ONLY (Option b): only a Great Office of State sacking carries the weight to
+  // invite a standards probe. Junior reshuffles -- the bulk of what the active archetypes do
+  // -- now bypass the ethics drag entirely, which is where the excess heat was coming from.
+  const activeEthics = politicallyCosted.ethics ?? createDefaultEthics();
+  const termIndex = Math.floor((s.week - 1) / TURNS_PER_YEAR);
+  const seniorSacking = cost.importance === 2;
+  const probedThisTerm = activeEthics.activeInvestigations.some((inv) =>
+    inv.id.startsWith(`sacking-y${termIndex}`),
+  );
   return {
     ...politicallyCosted,
     cabinet,
     // Patronage lifecycle: a departure forgets tenure, resignation pressure and rivalries.
     cabinetState: applyRemoval(politicallyCosted.cabinetState ?? createDefaultCabinetState(), name),
+    // Severity scaled to the POST: 3 / 12 / 15 for junior / ordinary / senior.
+    ethics:
+      seniorSacking && !probedThisTerm
+        ? beginInvestigation(activeEthics, {
+            id: `sacking-y${termIndex}-${m.name}`,
+            // Senior posts only, so the severity is always the top tier: 15 -> approvalHit -8.
+            severity: 15,
+          })
+        : activeEthics,
     lastReshuffleWeek: cabinet.length === 0 ? s.week : s.lastReshuffleWeek,
     factionUnrest: clamp(s.factionUnrest + cost.factionUnrestIncrease, 0, 100),
     log: [`CABINET: ${m.name} sacked as ${m.post}.`, ...s.log].slice(0, 50),
