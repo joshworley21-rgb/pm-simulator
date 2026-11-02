@@ -129,6 +129,14 @@ export default function GameScreen() {
   const urgentCount = state.redBox.filter((d) => d.urgent).length;
   // Single source of truth: same constant the engine's inPurdah() uses.
   const inPurdah = state.turnsUntilElection <= PURDAH_TURNS;
+
+  /** Lets a Red Box urgent briefing jump to the surface that resolves it. */
+  const handleRedBoxNavigate = (target: string, subTab?: string) => {
+    setTab(target as Tab);
+    if (subTab === 'cabinet' || subTab === 'westminster' || subTab === 'press') {
+      setPoliticsTab(subTab);
+    }
+  };
   const fiscalWindowOpen = isFiscalWindow(state);
   const emergencyLevyLeft = remainingEmergencyFiscalActions(state);
   const traitDetails = useMemo(() => getTraitDetails(player?.background), [player?.background]);
@@ -255,7 +263,7 @@ export default function GameScreen() {
           <View>
             {/* Dashboard: triad, fiscal watch and urgent briefings. Embedded so it
                 shares GameScreen's scroll container instead of nesting another. */}
-            <RedBoxScreen embedded />
+            <RedBoxScreen embedded onNavigate={handleRedBoxNavigate} />
 
             <SectionTitle title="Your Red Box" hint="Papers needing a decision. Ignored urgent items become scandals." />
             {redBox.length === 0 && <EmptyState title="Box cleared" body="Nothing awaiting signature. Advance the month to see what lands next." />}

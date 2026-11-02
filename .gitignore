@@ -47,3 +47,6 @@ yarn-error.*
 !.aider.conf.yml
 !.aider.model.settings.yml
 fuzzer-telemetry.json
+
+# capture harness output (screenshots + fixtures)
+/artifacts

@@ -45,6 +45,7 @@ export function Button({
   disabled,
   compact,
   testID,
+  style,
 }: {
   label: string;
   onPress: () => void;
@@ -52,6 +53,8 @@ export function Button({
   disabled?: boolean;
   compact?: boolean;
   testID?: string;
+  /** Optional overrides merged last — e.g. a taller hit target. */
+  style?: object;
 }) {
   const bg =
     variant === 'primary'
@@ -74,6 +77,7 @@ export function Button({
       style={({ pressed }) => [
         styles.button,
         compact && styles.buttonCompact,
+        style,
         { backgroundColor: bg, borderColor: border, borderWidth: variant === 'ghost' || variant === 'danger' ? 1 : 0 },
         disabled && { opacity: 0.4 },
         pressed && !disabled && { opacity: 0.75 },

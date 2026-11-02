@@ -20,9 +20,15 @@ export interface RedBoxScreenProps {
    * existing scroll container (e.g. the GameScreen tab shell).
    */
   embedded?: boolean;
+  /**
+   * Lets an urgent briefing jump the player to the surface that resolves it.
+   * `tab` is a top-level GameScreen tab; `subTab` is a Politics sub-tab key
+   * ('cabinet' | 'westminster' | 'press').
+   */
+  onNavigate?: (tab: string, subTab?: string) => void;
 }
 
-export default function RedBoxScreen({ embedded = false }: RedBoxScreenProps = {}) {
+export default function RedBoxScreen({ embedded = false, onNavigate }: RedBoxScreenProps = {}) {
   const { state } = useGame();
 
   // ----- Approval triad -------------------------------------------------
@@ -61,6 +67,10 @@ export default function RedBoxScreen({ embedded = false }: RedBoxScreenProps = {
       meta: `${swan.active.weeksRemaining} month(s) left to respond`,
       tone: 'danger',
       actionLabel: 'Respond',
+      // The live Black Swan is presented by the global CrisisModal, which overlays
+      // the entire app while `blackSwanState.active` is set — so this card is only
+      // reachable once that modal has been dealt with. Tapping returns to the desk.
+      onPress: () => onNavigate?.('desk'),
     });
   }
 
@@ -76,6 +86,7 @@ export default function RedBoxScreen({ embedded = false }: RedBoxScreenProps = {
       meta: `${weeksToWashUp} month(s) to wash-up`,
       tone: 'warning',
       actionLabel: 'Review',
+      onPress: () => onNavigate?.('politics', 'westminster'),
     });
   }
 
@@ -92,6 +103,7 @@ export default function RedBoxScreen({ embedded = false }: RedBoxScreenProps = {
       meta: `Lowest loyalty: ${lowestLoyalty}%`,
       tone: 'warning',
       actionLabel: 'Manage',
+      onPress: () => onNavigate?.('politics', 'cabinet'),
     });
   }
 

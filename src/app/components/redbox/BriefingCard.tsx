@@ -46,11 +46,13 @@ export function BriefingCard({
       {meta ? <Text style={styles.meta}>{meta}</Text> : null}
       {onPress ? (
         <View style={styles.action}>
-          {/* Non-compact: the button's own hit area clears the 44px touch minimum. */}
+          {/* Non-compact + explicit floor: keeps the hit target above the 44px
+              minimum with headroom instead of sitting on the boundary. */}
           <Button
             label={actionLabel ?? 'Open'}
             onPress={onPress}
             variant={tone === 'danger' ? 'danger' : 'secondary'}
+            style={styles.actionButton}
           />
         </View>
       ) : null}
@@ -96,5 +98,8 @@ const styles = StyleSheet.create({
   action: {
     alignSelf: 'flex-start',
     marginTop: spacing.sm,
+  },
+  actionButton: {
+    minHeight: 48,
   },
 });
