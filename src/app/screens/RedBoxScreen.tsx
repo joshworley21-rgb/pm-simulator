@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BriefingCard, type BriefingCardProps } from '../components/redbox/BriefingCard';
 import { Card, EmptyState, Meter, SectionTitle, StatTile } from '../components/ui';
 import { useGame } from '../state';
-import { colors, font, spacing } from '../theme';
+import { colors, font, headingFontFamily, spacing } from '../theme';
 import { activeSwanEvent } from '../blackSwans';
 import { TURNS_PER_SESSION, WASH_UP_WEEKS } from '../parliament';
 
@@ -110,12 +110,12 @@ export default function RedBoxScreen({ embedded = false, onNavigate }: RedBoxScr
   const body = (
     <>
       <Text style={styles.eyebrow}>10 DOWNING STREET</Text>
-      <Text style={styles.title}>Red Box</Text>
+      <Text style={styles.title}>The Dispatch Box</Text>
       <Text style={styles.subtitle}>
         {playerName} · Month {state.week} · Day {daysInOffice}
       </Text>
 
-      <SectionTitle title="Approval Triad" hint="The three numbers that decide your future." />
+      <SectionTitle title="National Sentiment" hint="The three numbers that decide your future." />
       <View style={styles.statRow}>
         <View style={styles.statTile}>
           <StatTile
@@ -205,6 +205,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: font.h1,
     fontWeight: '800',
+    fontFamily: headingFontFamily,
     marginTop: spacing.xs,
   },
   subtitle: {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Card, Chip } from '../ui';
-import { colors, font, spacing } from '../../theme';
+import { colors, font, headingFontFamily, spacing } from '../../theme';
 import { PRESS_HOSTILE_MARK, PRESS_WARM_MARK } from '../../media';
 
 /** Structurally identical to an element of GameState.headlines. */
@@ -86,6 +86,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: font.h3,
     fontWeight: '800',
+    fontFamily: headingFontFamily,
     marginTop: spacing.xs,
     lineHeight: 22,
   },

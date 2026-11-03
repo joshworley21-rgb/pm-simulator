@@ -5,7 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useGame } from '../state';
-import { colors, font, radius, spacing } from '../theme';
+import { colors, font, headingFontFamily, radius, spacing } from '../theme';
 import { Button, Card, Chip, EffectChips, EmptyState, Meter, SectionTitle, Segmented, Sheet, StatTile } from '../components/ui';
 import { BILL_POOL } from '../bills';
 import { BILL_POOL_2 } from '../bills2';
@@ -37,7 +37,7 @@ type PoliticsTab = 'cabinet' | 'westminster' | 'press';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 const TABS: { key: Tab; label: string; icon: IconName }[] = [
-  { key: 'desk', label: 'Red Box', icon: 'file-tray-full-outline' },
+  { key: 'desk', label: 'The Dispatch Box', icon: 'file-tray-full-outline' },
   { key: 'govern', label: 'Laws', icon: 'document-text-outline' },
   { key: 'money', label: 'Money', icon: 'cash-outline' },
   { key: 'politics', label: 'Politics', icon: 'business-outline' },
@@ -176,7 +176,7 @@ export default function GameScreen() {
               10 DOWNING STREET
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={{ color: colors.text, fontSize: font.h2, fontWeight: '800' }} numberOfLines={1}>
+              <Text style={{ color: colors.text, fontSize: font.h2, fontWeight: '800', fontFamily: headingFontFamily }} numberOfLines={1}>
                 {player?.firstName} {player?.lastName}
               </Text>
               {traitDetails && (
@@ -265,7 +265,7 @@ export default function GameScreen() {
                 shares GameScreen's scroll container instead of nesting another. */}
             <RedBoxScreen embedded onNavigate={handleRedBoxNavigate} />
 
-            <SectionTitle title="Your Red Box" hint="Papers needing a decision. Ignored urgent items become scandals." />
+            <SectionTitle title="The Dispatch Box" hint="Papers needing a decision. Ignored urgent items become scandals." />
             {redBox.length === 0 && <EmptyState title="Box cleared" body="Nothing awaiting signature. Advance the month to see what lands next." />}
 
             {redBox.map((d) => (
@@ -807,9 +807,9 @@ export default function GameScreen() {
                     it shares GameScreen's scroll container instead of nesting another. */}
                 <PressRoomScreen embedded />
 
-                <Text style={[styles.label, { marginTop: spacing.md }]}>MANIFESTO PLEDGES</Text>
+                <Text style={[styles.label, { marginTop: spacing.md }]}>FLAGSHIP POLICIES</Text>
                 {(state.pledges ?? []).length === 0 ? (
-                  <Text style={[styles.hint, { marginTop: 4 }]}>No promises on the record yet.</Text>
+                  <Text style={[styles.hint, { marginTop: 4 }]}>No flagship policies on the record yet.</Text>
                 ) : (
                   evaluatePledges(state, state.pledges ?? []).map((r) => (
                     <View key={r.pledge.id} style={{ marginTop: 6 }}>
@@ -1355,12 +1355,12 @@ const TRADE_ROWS: { key: Exclude<keyof UKTradeDealStatus, 'wtoBaseline'>; partne
 
 const HELP_ROWS: { title: string; body: string }[] = [
   { title: 'Advance', body: 'Moves one month. Anything urgent left undecided becomes a scandal and costs you approval.' },
-  { title: 'Red Box', body: 'Your inbox. Tap a paper to see each option and its likely effect before you decide.' },
+  { title: 'The Dispatch Box', body: 'Your inbox. Tap a paper to see each option and its likely effect before you decide.' },
   { title: 'Laws', body: 'Introduce bills. They take months to reach a division, and high rebellion risk means your own MPs may sink them.' },
   { title: 'Money', body: 'Set department budgets and tax rates. Spending buys services and approval but widens the deficit.' },
   { title: 'Politics', body: 'Watch the 1922 letters meter. Reach the threshold and you face a confidence vote among your own MPs.' },
   { title: 'World', body: 'Handle summits and keep an eye on growth, inflation, gilts and debt.' },
-  { title: 'Elections', body: 'Every term ends in a general election. Seats come from regional support, not national polls alone.' },
+  { title: 'Elections', body: 'Every term ends in a general election. Seats come from regional support, not national polls alone. Your flagship policies are judged at the next election.' },
 ];
 
 const styles = {
@@ -1370,7 +1370,7 @@ const styles = {
     flex: 1,
     justifyContent: 'center' as const,
     alignItems: 'center' as const,
-    backgroundColor: 'rgba(2,6,16,0.88)',
+    backgroundColor: 'rgba(51,65,85,0.28)',
     padding: spacing.xl,
   },
   centerCard: {

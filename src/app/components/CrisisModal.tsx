@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button, Chip, Divider } from './ui';
-import { colors, font, radius, spacing } from '../theme';
+import { colors, font, headingFontFamily, radius, spacing } from '../theme';
 import { useGame } from '../state';
 import { activeSwanEvent, SWAN_WINDOW_WEEKS } from '../blackSwans';
 import type { SwanKind } from '../blackSwans';
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(2,6,16,0.88)',
+    backgroundColor: 'rgba(51,65,85,0.28)',
     padding: spacing.xl,
   },
   warningCard: {
@@ -214,6 +214,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: font.h1,
     fontWeight: '800',
+    fontFamily: headingFontFamily,
     marginTop: spacing.md,
     lineHeight: 34,
   },

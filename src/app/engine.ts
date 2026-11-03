@@ -2006,7 +2006,7 @@ export function advanceWeek(s: GameState): GameState {
         { ...CONFIDENCE_WARNING_DOSSIER },
       ],
       log: [
-        `RED BOX: a confidence vote is being organised. Negotiate confidence and supply before the division.`,
+        `DISPATCH BOX: a confidence vote is being organised. Negotiate confidence and supply before the division.`,
         ...next.log,
       ].slice(0, 50),
     };
@@ -2027,7 +2027,7 @@ export function advanceWeek(s: GameState): GameState {
         ...next,
         redBox: [...next.redBox.filter((d) => d.id !== SUPPLY_ULTIMATUM_ID), ultimatum],
         log: [
-          `RED BOX: ${partner.name} threatens to withdraw confidence and supply. Address the ultimatum before support is pulled.`,
+          `DISPATCH BOX: ${partner.name} threatens to withdraw confidence and supply. Address the ultimatum before support is pulled.`,
           ...next.log,
         ].slice(0, 50),
         headlines: [
@@ -2094,7 +2094,7 @@ export function advanceWeek(s: GameState): GameState {
       });
       next = {
         ...next,
-        log: [`PLEDGES: ${kept} of ${total} manifesto promises kept.`, ...next.log].slice(0, 50),
+        log: [`FLAGSHIP POLICIES: ${kept} of ${total} policies kept.`, ...next.log].slice(0, 50),
       };
     }
     next = { ...next, pledges: makePledges(next, (next.seed + next.week) >>> 0) };
@@ -3082,7 +3082,7 @@ export function reducer(state: GameState, action: Action): GameState {
         });
         next = {
           ...next,
-          log: [`PLEDGES: ${kept} of ${total} manifesto promises kept.`, ...next.log].slice(0, 50),
+          log: [`FLAGSHIP POLICIES: ${kept} of ${total} policies kept.`, ...next.log].slice(0, 50),
         };
       }
       next = {

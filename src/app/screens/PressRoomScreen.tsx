@@ -5,7 +5,7 @@ import { SpinSheet } from '../components/press/SpinSheet';
 import type { SpinAngle } from '../components/press/SpinSheet';
 import { Button, Card, EmptyState, Meter, SectionTitle, StatTile } from '../components/ui';
 import { useGame } from '../state';
-import { colors, font, spacing } from '../theme';
+import { colors, font, headingFontFamily, spacing } from '../theme';
 import {
   MEDIA_HOSTILITY_FLOOR,
   MEDIA_OUTLETS,
@@ -150,6 +150,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: font.h1,
     fontWeight: '800',
+    fontFamily: headingFontFamily,
     marginTop: spacing.xs,
   },
   subtitle: {

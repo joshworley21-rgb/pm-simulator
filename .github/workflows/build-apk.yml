@@ -32,21 +32,29 @@ jobs:
           java-version: '17'
           cache: gradle
 
-      # ADDED (not in the original spec): the generated project targets
-      # compileSdk 37 / build-tools 37.0.0 / NDK 27.1.12297006, none of which the
-      # ubuntu-latest image ships by default.
+      # ADDED (not in the original spec). RN 0.88's version catalog defaults to
+      # compileSdk 37 / build-tools 37.0.0, but **API 37 is not published**: the
+      # package id `platforms;android-37` does not exist on any channel. The only
+      # API-37 artifacts are previews (`platforms;android-37.2`, `37.2-beta3`,
+      # `platform-canary-*.zip`), which is why sdkmanager reports
+      # "Failed to find package 'platforms;android-37'".
       #
-      # Channel note: build-tools 37.0.0 and NDK 27.1.12297006 are on the STABLE
-      # channel, but `platforms;android-37` exists only in the canary manifest
-      # (repository2-3.xml) and is absent from the stable repository2-1.xml — so it
-      # needs --channel=3 or sdkmanager reports "Failed to find package".
+      # Pin to the newest STABLE platform instead: API 36 + build-tools 36.0.0 are
+      # both present in the stable manifest (repository2-1.xml), as is the NDK.
+      - name: Pin Android SDK versions to the latest stable (API 37 is unpublished)
+        run: |
+          CATALOG=node_modules/react-native/gradle/libs.versions.toml
+          sed -i 's/^compileSdk = "37"/compileSdk = "36"/' "$CATALOG"
+          sed -i 's/^buildTools = "37.0.0"/buildTools = "36.0.0"/' "$CATALOG"
+          grep -E '^(minSdk|targetSdk|compileSdk|buildTools|ndkVersion)' "$CATALOG"
+
+      # ADDED (not in the original spec): install exactly the components the build
+      # now needs. All four exist on the STABLE channel.
       - name: Install required Android SDK components
         run: |
           SDKMANAGER="$(command -v sdkmanager || echo "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager")"
           yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
-          "$SDKMANAGER" "platform-tools" "build-tools;37.0.0" "ndk;27.1.12297006"
-          "$SDKMANAGER" --channel=3 "platforms;android-37"
-          yes | "$SDKMANAGER" --channel=3 --licenses >/dev/null 2>&1 || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-36" "build-tools;36.0.0" "ndk;27.1.12297006"
 
       # ADDED (not in the original spec): point Gradle at the runner's SDK.
       - name: Write local.properties

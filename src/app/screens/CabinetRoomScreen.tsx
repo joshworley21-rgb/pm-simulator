@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { MinisterCard } from '../components/cabinet/MinisterCard';
-import { Button, Card, Divider, EmptyState, Meter, SectionTitle, Sheet, StatTile } from '../components/ui';
+import { Button, Card, Divider, EmptyState, Grid, GridItem, Meter, SectionTitle, Sheet, StatTile } from '../components/ui';
 import { useGame } from '../state';
-import { colors, font, spacing } from '../theme';
+import { colors, font, headingFontFamily, spacing } from '../theme';
 import { CABINET_COHESION_FLOOR, createDefaultCabinetState, estimateResignationRisk } from '../cabinet';
 import { CHANCELLOR_POST, chancellorLeakRisk } from '../cabinetEffects';
 import type { Minister } from '../types';
@@ -108,15 +108,16 @@ export default function CabinetRoomScreen({ embedded = false }: CabinetRoomScree
         </View>
       </Card>
 
-      <View style={styles.statRow}>
-        <View style={styles.statTile}>
+      <Grid style={styles.statRow}>
+        <GridItem style={styles.statTile}>
           <StatTile
-            label="Avg Loyalty"
+            label="Avg Influence"
             value={Math.round(averageLoyalty)}
             tone={averageLoyalty >= 55 ? 'success' : averageLoyalty >= 40 ? 'warning' : 'danger'}
           />
         </View>
-        <View style={styles.statTile}>
+        </GridItem>
+        <GridItem style={styles.statTile}>
           <StatTile
             label="Leak Risks"
             value={leakRisks}
@@ -124,23 +125,25 @@ export default function CabinetRoomScreen({ embedded = false }: CabinetRoomScree
             hint={leakRisks > 0 ? 'budget leak risk' : 'none'}
           />
         </View>
-        <View style={styles.statTile}>
+        </GridItem>
+        <GridItem style={styles.statTile}>
           <StatTile
             label="Resign Risks"
             value={resignRisks}
             tone={resignRisks > 0 ? 'warning' : 'success'}
             hint={resignRisks > 0 ? 'pressure >= 50%' : 'none'}
           />
-        </View>
-      </View>
+        </GridItem>
+      </Grid>
 
       <SectionTitle title="Ministers" hint="Tap Manage for reshuffle and sacking options." />
       {cabinet.length === 0 ? (
         <EmptyState title="No ministers" body="Appoint a cabinet from the Politics tab to fill these posts." />
       ) : (
-        cabinet.map((m) => (
+        <Grid>
+        {cabinet.map((m) => (
+          <GridItem key={m.name}>
           <MinisterCard
-            key={m.name}
             minister={m}
             tenureWeeks={cabinetState.tenure[m.name] ?? 0}
             resignationRisk={estimateResignationRisk(cabinetState, m.name)}
@@ -148,7 +151,9 @@ export default function CabinetRoomScreen({ embedded = false }: CabinetRoomScree
             onPress={() => openSheet(m)}
             testID={`manage-${m.name}`}
           />
-        ))
+          </GridItem>
+        ))}
+        </Grid>
       )}
 
       <Sheet
@@ -162,7 +167,7 @@ export default function CabinetRoomScreen({ embedded = false }: CabinetRoomScree
             <Text style={styles.sheetLine}>
               {selected.faction}
               {selected.coalition ? ' · coalition partner' : ''} · loyalty{' '}
-              {Math.round(selected.loyalty)} · competence {Math.round(selected.competence)}
+              {Math.round(selected.loyalty)} · efficacy {Math.round(selected.competence)}
             </Text>
 
             <Button
@@ -194,7 +199,7 @@ export default function CabinetRoomScreen({ embedded = false }: CabinetRoomScree
                   <View style={{ flex: 1 }}>
                     <Text style={styles.rowTitle}>{b.name}</Text>
                     <Text style={styles.rowMeta}>
-                      {b.faction} · loyalty {Math.round(b.loyalty)} · competence {Math.round(b.competence)}
+                      {b.faction} · influence {Math.round(b.loyalty)} · efficacy {Math.round(b.competence)}
                     </Text>
                   </View>
                   <Text style={styles.rowAction}>Promote</Text>
@@ -248,6 +253,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: font.h1,
     fontWeight: '800',
+    fontFamily: headingFontFamily,
     marginTop: spacing.xs,
   },
   subtitle: {

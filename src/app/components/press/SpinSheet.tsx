@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Button, Chip, Sheet } from '../ui';
-import { colors, font, spacing } from '../../theme';
+import { colors, font, headingFontFamily, spacing } from '../../theme';
 import { BRIEFING_COOLDOWN_WEEKS, MEDIA_OUTLETS } from '../../media';
 import type { MediaState, PaperId } from '../../media';
 
@@ -125,6 +125,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: font.h3,
     fontWeight: '800',
+    fontFamily: headingFontFamily,
     flex: 1,
     paddingRight: spacing.sm,
   },

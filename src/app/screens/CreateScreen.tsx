@@ -4,8 +4,8 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGame } from '../state';
-import { colors, font, radius, spacing } from '../theme';
-import { Button, Card, SectionTitle } from '../components/ui';
+import { colors, font, headingFontFamily, radius, spacing } from '../theme';
+import { Button, Card, Grid, GridItem, SectionTitle } from '../components/ui';
 import { BACKGROUNDS } from '../data';
 import { SCENARIOS, DEFAULT_SCENARIO_ID } from '../scenarios';
 import type { RootStackParamList } from '../types';
@@ -48,7 +48,7 @@ export default function CreateScreen() {
       contentContainerStyle={{ padding: spacing.lg, paddingTop: insets.top + spacing.lg, paddingBottom: spacing.xxl }}
       keyboardShouldPersistTaps="handled"
     >
-      <Text style={{ color: colors.text, fontSize: font.h1, fontWeight: '800' }}>Create your Prime Minister</Text>
+      <Text style={{ color: colors.text, fontSize: font.h1, fontWeight: '800', fontFamily: headingFontFamily }}>Create your Prime Minister</Text>
       <Text style={{ color: colors.muted, fontSize: font.body, marginTop: 4 }}>Pick a name, a party and a past.</Text>
 
       <SectionTitle title="Name" />
@@ -72,11 +72,12 @@ export default function CreateScreen() {
       />
 
       <SectionTitle title="Party" hint="This sets your starting base of support and your natural allies." />
+      <Grid>
       {state.parties.map((p) => {
         const selected = p.id === partyId;
         return (
+          <GridItem key={p.id}>
           <Pressable
-            key={p.id}
             accessibilityRole="radio"
             accessibilityState={{ selected }}
             onPress={() => setPartyId(p.id)}
@@ -96,8 +97,10 @@ export default function CreateScreen() {
             </View>
             <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 4, lineHeight: 17 }}>{p.description}</Text>
           </Pressable>
+          </GridItem>
         );
       })}
+      </Grid>
 
       <SectionTitle title="Background" hint="Where you came from — and what the party makes of you." />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
@@ -128,13 +131,14 @@ export default function CreateScreen() {
         title="Starting position"
         hint="Same decisions, very different country. This is the main source of replay value."
       />
+      <Grid>
       {SCENARIOS.map((sc) => {
         const selected = sc.id === scenarioId;
         const tone =
           sc.difficulty === 'easy' ? colors.success : sc.difficulty === 'normal' ? colors.accent : sc.difficulty === 'hard' ? colors.warning : colors.danger;
         return (
+          <GridItem key={sc.id}>
           <Pressable
-            key={sc.id}
             accessibilityRole="radio"
             accessibilityState={{ selected }}
             onPress={() => setScenarioId(sc.id)}
@@ -158,8 +162,10 @@ export default function CreateScreen() {
               <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 6, lineHeight: 17 }}>{sc.blurb}</Text>
             )}
           </Pressable>
+          </GridItem>
         );
       })}
+      </Grid>
 
       <SectionTitle
         title="Parliament length"

@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Button, Card, Chip, Meter } from '../ui';
-import { colors, font, spacing } from '../../theme';
+import { colors, font, headingFontFamily, spacing } from '../../theme';
 import type { Minister } from '../../types';
 
 export interface MinisterCardProps {
@@ -55,7 +55,7 @@ export function MinisterCard({
       </View>
 
       <View style={styles.meterRow}>
-        <Text style={styles.meterLabel}>Loyalty</Text>
+        <Text style={styles.meterLabel}>Influence</Text>
         <Text style={[styles.meterValue, { color: loyaltyTone(minister.loyalty) }]}>
           {Math.round(minister.loyalty)}
         </Text>
@@ -63,7 +63,7 @@ export function MinisterCard({
       <Meter value={minister.loyalty} color={loyaltyTone(minister.loyalty)} />
 
       <View style={[styles.meterRow, styles.secondMeter]}>
-        <Text style={styles.meterLabel}>Competence</Text>
+        <Text style={styles.meterLabel}>Efficacy</Text>
         <Text style={[styles.meterValue, { color: competenceTone(minister.competence) }]}>
           {Math.round(minister.competence)}
         </Text>
@@ -88,6 +88,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: font.h3,
     fontWeight: '800',
+    fontFamily: headingFontFamily,
   },
   role: {
     color: colors.muted,

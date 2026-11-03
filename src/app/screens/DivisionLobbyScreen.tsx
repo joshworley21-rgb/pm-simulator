@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { EmptyState, Card, Meter, SectionTitle, StatTile } from '../components/ui';
 import { MotionRow, WHIP_LABEL } from '../components/division/MotionRow';
 import { useGame } from '../state';
-import { colors, font, spacing } from '../theme';
+import { colors, font, headingFontFamily, spacing } from '../theme';
 import { BILL_POOL } from '../bills';
 import { BILL_POOL_2 } from '../bills2';
 import { createDefaultWhips } from '../modules/whips';
@@ -223,6 +223,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: font.h1,
     fontWeight: '800',
+    fontFamily: headingFontFamily,
     marginTop: spacing.xs,
   },
   subtitle: {

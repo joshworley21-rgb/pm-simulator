@@ -154,8 +154,8 @@ export function ElectionMap({ regionSeats, parties, playerPartyId, defaultFilter
                 {selectedMeta?.bloc} • {selectedRegion.seats} parliamentary constituencies
               </Text>
             </View>
-            <View style={{ backgroundColor: selectedResult.party.color + '22', paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.sm, borderWidth: 1, borderColor: selectedResult.party.color }}>
-              <Text style={{ color: selectedResult.party.color, fontSize: font.small, fontWeight: '800' }}>
+            <View style={{ backgroundColor: colors.accentSoft, paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.cardBorder }}>
+              <Text style={{ color: colors.text, fontSize: font.small, fontWeight: '800' }}>
                 {selectedResult.party.name} Lead
               </Text>
             </View>

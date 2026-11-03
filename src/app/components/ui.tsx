@@ -1,6 +1,6 @@
 import React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { colors, font, radius, spacing } from '../theme';
+import { colors, font, headingFontFamily, radius, spacing } from '../theme';
 import type { Effects } from '../types';
 
 /* ------------------------------------------------------------------ *
@@ -32,6 +32,14 @@ export function SectionTitle({ title, hint }: { title: string; hint?: string }) 
 
 export function Divider() {
   return <View style={{ height: 1, backgroundColor: colors.cardBorder, marginVertical: spacing.md }} />;
+}
+
+export function Grid({ children, style }: { children: React.ReactNode; style?: object }) {
+  return <View style={[styles.grid, style]}>{children}</View>;
+}
+
+export function GridItem({ children, style }: { children: React.ReactNode; style?: object }) {
+  return <View style={[styles.gridItem, style]}>{children}</View>;
 }
 
 /* ------------------------------------------------------------------ *
@@ -359,11 +367,31 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
     padding: spacing.lg,
     marginTop: spacing.md,
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 0,
   },
-  sectionTitle: { color: colors.text, fontSize: font.h2, fontWeight: '800' },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -spacing.xs,
+  },
+  gridItem: {
+    width: '50%',
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs,
+  },
+  sectionTitle: {
+    color: colors.text,
+    fontSize: font.h2,
+    fontWeight: '800',
+    fontFamily: headingFontFamily,
+  },
   hint: { color: colors.muted, fontSize: font.small, lineHeight: 18, marginTop: 2 },
   button: {
     borderRadius: radius.md,
@@ -420,7 +448,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   segmentText: { fontSize: font.small, fontWeight: '700' },
-  sheetBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(2,6,16,0.75)' },
+  sheetBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(51,65,85,0.28)' },
   sheet: {
     backgroundColor: colors.bgElevated,
     borderTopLeftRadius: 22,

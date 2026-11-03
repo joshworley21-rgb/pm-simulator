@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button, Card } from '../ui';
-import { colors, font, spacing } from '../../theme';
+import { colors, font, headingFontFamily, spacing } from '../../theme';
 
 export type BriefingTone = 'default' | 'warning' | 'danger' | 'success' | 'accent';
 
@@ -82,6 +82,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: font.h3,
     fontWeight: '800',
+    fontFamily: headingFontFamily,
     marginTop: spacing.xs,
   },
   body: {

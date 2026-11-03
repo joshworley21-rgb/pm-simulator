@@ -17,7 +17,7 @@ export default function App() {
     <SafeAreaProvider>
       <GameProvider>
         <NavigationContainer>
-          <StatusBar style="auto" />
+          <StatusBar style="dark" />
           <Stack.Navigator initialRouteName="Menu" screenOptions={{ headerShown: false }}>
             <Stack.Screen name="Menu" component={MenuScreen} />
             <Stack.Screen name="Create" component={CreateScreen} />

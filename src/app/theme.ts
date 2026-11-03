@@ -1,19 +1,25 @@
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 
-/** Brand palette — deepened for contrast on mobile screens. */
+/** Shared paper-and-ink palette. */
 export const colors = {
-  bg: '#0b1220',
-  bgElevated: '#111c30',
-  card: '#16233c',
-  cardBorder: '#26385c',
-  text: '#eaf0fb',
-  muted: '#93a4c4',
-  accent: '#4f8cff',
-  accentSoft: '#1d2f52',
-  danger: '#ff6161',
-  warning: '#ffb648',
-  success: '#3ddc84',
+  bg: '#F8FAFC',
+  bgElevated: '#F1F5F9',
+  card: '#FFFFFF',
+  cardBorder: '#CBD5E1',
+  text: '#1E293B',
+  muted: '#64748B',
+  accent: '#334155',
+  accentSoft: '#E2E8F0',
+  danger: '#991B1B',
+  warning: '#92400E',
+  success: '#166534',
 };
+
+export const headingFontFamily = Platform.select({
+  ios: 'Georgia',
+  android: 'serif',
+  default: 'Georgia',
+})!;
 
 export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };
 export const radius = { sm: 8, md: 12, lg: 16, pill: 999 };
