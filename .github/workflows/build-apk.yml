@@ -49,28 +49,40 @@ jobs:
           grep -E '^(minSdk|targetSdk|compileSdk|buildTools|ndkVersion)' "$CATALOG"
 
       # ADDED (not in the original spec): install exactly the components the build
-      # now needs. All four exist on the STABLE channel.
+      # now needs. RN 0.88 pins CMake 3.30.5 for its native build, so install it
+      # explicitly instead of relying on AGP's SDK auto-download.
       - name: Install required Android SDK components
         run: |
           SDKMANAGER="$(command -v sdkmanager || echo "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager")"
           yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
-          "$SDKMANAGER" "platform-tools" "platforms;android-36" "build-tools;36.0.0" "ndk;27.1.12297006"
+          "$SDKMANAGER" "platform-tools" "platforms;android-36" "build-tools;36.0.0" "ndk;27.1.12297006" "cmake;3.30.5"
 
       # ADDED (not in the original spec): point Gradle at the runner's SDK.
       - name: Write local.properties
         run: echo "sdk.dir=${ANDROID_HOME}" > android/local.properties
 
-      - name: Build Debug APK
+      # The generated template only gives Gradle 2 GB. The release build runs R8
+      # and native tooling alongside Metro, so raise the heap and cap workers.
+      - name: Increase Gradle memory for the release build
+        run: |
+          sed -i 's/^org.gradle.jvmargs=.*/org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m/' android/gradle.properties
+          printf '\norg.gradle.workers.max=2\n' >> android/gradle.properties
+          grep -E '^org\.gradle\.(jvmargs|workers)' android/gradle.properties
+
+      - name: Build Release APK
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: List release APK
+        run: find android/app/build/outputs/apk/release -maxdepth 2 -type f -print
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pm-simulator-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: pm-simulator-release-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
           retention-days: 7
