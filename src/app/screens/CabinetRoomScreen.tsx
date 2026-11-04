@@ -115,7 +115,6 @@ export default function CabinetRoomScreen({ embedded = false }: CabinetRoomScree
             value={Math.round(averageLoyalty)}
             tone={averageLoyalty >= 55 ? 'success' : averageLoyalty >= 40 ? 'warning' : 'danger'}
           />
-        </View>
         </GridItem>
         <GridItem style={styles.statTile}>
           <StatTile
@@ -124,7 +123,6 @@ export default function CabinetRoomScreen({ embedded = false }: CabinetRoomScree
             tone={leakRisks > 0 ? 'danger' : 'success'}
             hint={leakRisks > 0 ? 'budget leak risk' : 'none'}
           />
-        </View>
         </GridItem>
         <GridItem style={styles.statTile}>
           <StatTile
