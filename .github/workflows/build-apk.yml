@@ -73,20 +73,23 @@ jobs:
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
         run: |
+          set -o pipefail
           cd android
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon --stacktrace --console=plain 2>&1 | tee "$GITHUB_WORKSPACE/gradle-release.log"
 
       - name: Report Gradle failure
-        if: failure()
+        if: always()
         run: |
           LOG="$GITHUB_WORKSPACE/gradle-release.log"
           if [ ! -f "$LOG" ]; then
             echo "::error title=Gradle release failure::No Gradle log was captured"
             exit 0
           fi
-          SUMMARY=$(tail -n 120 "$LOG" | sed -e 's/%/%25/g' -e 's/\r/%0D/g' | awk '{printf "%s%%0A", $0}')
-          echo "::error title=Gradle release failure::$SUMMARY"
+          if grep -qE 'BUILD FAILED|FAILURE:|What went wrong' "$LOG"; then
+            SUMMARY=$(tail -n 160 "$LOG" | sed -e 's/%/%25/g' -e 's/\r/%0D/g' | awk '{printf "%s%%0A", $0}')
+            echo "::error title=Gradle release failure::$SUMMARY"
+          fi
 
       - name: Upload Gradle logs
         if: always()
