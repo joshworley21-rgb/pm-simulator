@@ -33,13 +33,12 @@ jobs:
           cache: gradle
 
       # Expo SDK 58's modules declare minCompileSdk 37, but the final API 37
-      # platform is not published on the stable channel. Keep the library modules
-      # on stable API 36, then compile the app itself against API 37.2 via the
-      # canary-only platform and AGP's minor SDK support.
-      - name: Pin Android SDK versions
+      # platform is not published on the stable channel. Compile every Android
+      # module against API 37.2 via the canary-only platform and AGP's minor SDK
+      # support.
+      - name: Verify Android SDK versions
         run: |
           CATALOG=node_modules/react-native/gradle/libs.versions.toml
-          sed -i 's/^compileSdk = "37"/compileSdk = "36"/' "$CATALOG"
           grep -E '^(minSdk|targetSdk|compileSdk|buildTools|ndkVersion)' "$CATALOG"
 
       - name: Install required Android SDK components
@@ -50,20 +49,23 @@ jobs:
           "$SDKMANAGER" --channel=3 "platforms;android-37.2"
           test -f "${ANDROID_HOME}/platforms/android-37.2/android.jar"
 
-      - name: Compile the app against API 37.2
+      - name: Compile all Android modules against API 37.2
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
+          cat >> android/build.gradle <<'EOF'
 
-          path = Path('android/app/build.gradle')
-          source = path.read_text()
-          old = '    compileSdk rootProject.ext.compileSdkVersion\n'
-          new = '    compileSdk 37\n    compileSdkMinor 2\n'
-          if old not in source:
-              raise SystemExit('compileSdk line not found in android/app/build.gradle')
-          path.write_text(source.replace(old, new, 1))
-          PY
-          grep -nE 'compileSdk' android/app/build.gradle
+          // Expo SDK 58 AARs require compileSdk 37. API 37 is only published as
+          // the 37.2 minor platform, so apply it to every Android module.
+          allprojects {
+            afterEvaluate { project ->
+              def androidExtension = project.extensions.findByName("android")
+              if (androidExtension != null) {
+                androidExtension.compileSdkVersion = 37
+                androidExtension.compileSdkMinor = 2
+              }
+            }
+          }
+          EOF
+          tail -15 android/build.gradle
 
       # ADDED (not in the original spec): point Gradle at the runner's SDK.
       - name: Write local.properties
