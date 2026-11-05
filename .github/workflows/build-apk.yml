@@ -54,18 +54,20 @@ jobs:
           cat >> android/build.gradle <<'EOF'
 
           // Expo SDK 58 AARs require compileSdk 37. API 37 is only published as
-          // the 37.2 minor platform, so apply it to every Android module.
-          allprojects {
-            afterEvaluate { project ->
-              def androidExtension = project.extensions.findByName("android")
-              if (androidExtension != null) {
-                androidExtension.compileSdkVersion = 37
-                androidExtension.compileSdkMinor = 2
+          // the 37.2 minor platform, so apply it to every Android module after
+          // each module has finished configuring its Android DSL.
+          allprojects { project ->
+            ["com.android.application", "com.android.library"].each { pluginId ->
+              project.plugins.withId(pluginId) {
+                project.extensions.getByName("androidComponents").finalizeDsl { androidExtension ->
+                  androidExtension.compileSdk = 37
+                  androidExtension.compileSdkMinor = 2
+                }
               }
             }
           }
           EOF
-          tail -15 android/build.gradle
+          tail -18 android/build.gradle
 
       # ADDED (not in the original spec): point Gradle at the runner's SDK.
       - name: Write local.properties
@@ -96,8 +98,8 @@ jobs:
             echo "::error title=Gradle release failure::No Gradle log was captured"
             exit 0
           fi
-          if grep -qE 'BUILD FAILED|FAILURE:|What went wrong' "$LOG"; then
-            SUMMARY=$(tail -n 160 "$LOG" | sed -e 's/%/%25/g' -e 's/\r/%0D/g' | awk '{printf "%s%%0A", $0}')
+          if grep -qE 'FAILURE: Build failed|What went wrong' "$LOG"; then
+            SUMMARY=$(awk '/FAILURE: Build failed/{flag=1} flag{print}' "$LOG" | head -n 200 | sed -e 's/%/%25/g' -e 's/\r/%0D/g' | awk '{printf "%s%%0A", $0}')
             echo "::error title=Gradle release failure::$SUMMARY"
           fi
 
