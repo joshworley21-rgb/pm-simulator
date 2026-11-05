@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Button, Card, Chip, Meter } from '../ui';
-import { colors, font, headingFontFamily, spacing } from '../../theme';
+import { colors, font, spacing } from '../../theme';
 import type { Minister } from '../../types';
 
 export interface MinisterCardProps {
@@ -17,11 +17,11 @@ export interface MinisterCardProps {
   testID?: string;
 }
 
-const loyaltyTone = (loyalty: number): string =>
-  loyalty >= 55 ? colors.success : loyalty >= 40 ? colors.warning : colors.danger;
+const loyaltyTone = (loyalty: number): 'success' | 'warning' | 'danger' =>
+  loyalty >= 55 ? 'success' : loyalty >= 40 ? 'warning' : 'danger';
 
-const competenceTone = (competence: number): string =>
-  competence >= 65 ? colors.success : competence >= 50 ? colors.warning : colors.danger;
+const competenceTone = (competence: number): 'success' | 'warning' | 'danger' =>
+  competence >= 65 ? 'success' : competence >= 50 ? 'warning' : 'danger';
 
 export function MinisterCard({
   minister,
@@ -32,6 +32,8 @@ export function MinisterCard({
   testID,
 }: MinisterCardProps) {
   const riskPct = Math.round(resignationRisk * 100);
+  const lTone = loyaltyTone(minister.loyalty);
+  const cTone = competenceTone(minister.competence);
 
   return (
     <Card tone={leakRisk ? 'danger' : 'default'}>
@@ -56,19 +58,32 @@ export function MinisterCard({
 
       <View style={styles.meterRow}>
         <Text style={styles.meterLabel}>Influence</Text>
-        <Text style={[styles.meterValue, { color: loyaltyTone(minister.loyalty) }]}>
+        <Text
+          style={[
+            styles.meterValue,
+            { color: lTone === 'danger' ? colors.accent : lTone === 'warning' ? colors.warning : colors.success },
+          ]}
+        >
           {Math.round(minister.loyalty)}
         </Text>
       </View>
-      <Meter value={minister.loyalty} color={loyaltyTone(minister.loyalty)} />
+      <Meter value={minister.loyalty} color={lTone === 'danger' ? colors.accent : lTone === 'warning' ? colors.warning : colors.success} />
 
       <View style={[styles.meterRow, styles.secondMeter]}>
         <Text style={styles.meterLabel}>Efficacy</Text>
-        <Text style={[styles.meterValue, { color: competenceTone(minister.competence) }]}>
+        <Text
+          style={[
+            styles.meterValue,
+            { color: cTone === 'danger' ? colors.accent : cTone === 'warning' ? colors.warning : colors.success },
+          ]}
+        >
           {Math.round(minister.competence)}
         </Text>
       </View>
-      <Meter value={minister.competence} color={competenceTone(minister.competence)} />
+      <Meter
+        value={minister.competence}
+        color={cTone === 'danger' ? colors.accent : cTone === 'warning' ? colors.warning : colors.success}
+      />
 
       <Button label="Manage" variant="secondary" onPress={onPress} testID={testID} />
     </Card>
@@ -76,48 +91,20 @@ export function MinisterCard({
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  headerText: {
-    flex: 1,
-    paddingRight: spacing.sm,
-  },
-  name: {
-    color: colors.text,
-    fontSize: font.h3,
-    fontWeight: '800',
-    fontFamily: headingFontFamily,
-  },
-  role: {
-    color: colors.muted,
-    fontSize: font.tiny,
-    marginTop: 2,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: spacing.sm,
-  },
-  meterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  secondMeter: {
-    marginTop: spacing.md,
-  },
+  header: { flexDirection: 'row', alignItems: 'center' },
+  headerText: { flex: 1, marginRight: spacing.sm },
+  name: { color: colors.text, fontSize: font.body, fontWeight: '700', fontFamily: 'Georgia' },
+  role: { color: colors.muted, fontSize: font.tiny, marginTop: 1 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', marginTop: spacing.sm },
+  meterRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.md },
   meterLabel: {
     color: colors.muted,
     fontSize: font.tiny,
     fontWeight: '700',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginRight: 10,
   },
-  meterValue: {
-    fontSize: font.tiny,
-    fontWeight: '800',
-  },
+  meterValue: { color: colors.text, fontSize: font.small, fontWeight: '700' },
+  secondMeter: { marginTop: spacing.sm },
 });

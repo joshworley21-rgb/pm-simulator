@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, font, radius, spacing } from '../theme';
+import { colors, font, fileFontFamily, radius, spacing } from '../theme';
 import { Button, Card, Chip, EffectChips, Meter, SectionTitle } from './ui';
 import type { CustomBudgetPlan, GameState, Effects } from '../types';
 import {
@@ -637,10 +637,12 @@ export function BudgetWorkbench({ state, onDeliver, onDefer }: BudgetWorkbenchPr
 
 const styles = StyleSheet.create({
   subhead: {
-    color: colors.muted,
+    color: colors.gold,
     fontSize: font.tiny,
     fontWeight: '800',
     letterSpacing: 0.8,
+    fontFamily: fileFontFamily,
+    textTransform: 'uppercase',
   },
   presetBtn: {
     backgroundColor: colors.card,

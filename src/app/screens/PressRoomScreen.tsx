@@ -3,9 +3,9 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { HeadlineFeed } from '../components/press/HeadlineFeed';
 import { SpinSheet } from '../components/press/SpinSheet';
 import type { SpinAngle } from '../components/press/SpinSheet';
-import { Button, Card, EmptyState, Meter, SectionTitle, StatTile } from '../components/ui';
+import { Button, Card, Chip, EmptyState, Meter, SectionTitle } from '../components/ui';
 import { useGame } from '../state';
-import { colors, font, headingFontFamily, spacing } from '../theme';
+import { colors, font, fileFontFamily, headingFontFamily, spacing } from '../theme';
 import {
   MEDIA_HOSTILITY_FLOOR,
   MEDIA_OUTLETS,
@@ -41,12 +41,6 @@ export default function PressRoomScreen({ embedded = false }: PressRoomScreenPro
   const hostility = media.hostility;
   const approval = media.pressApproval;
 
-  const moodTone = pressMood >= 55 ? 'success' : pressMood >= 40 ? 'warning' : 'danger';
-  const hostilityTone =
-    hostility < 40 ? 'success' : hostility < MEDIA_HOSTILITY_FLOOR ? 'warning' : 'danger';
-  const approvalTone =
-    approval >= 50 ? 'success' : approval >= PRESS_APPROVAL_FLOOR ? 'warning' : 'danger';
-
   const brief = (outletId: PaperId, angle: SpinAngle) => {
     dispatch({ type: 'BRIEF_PRESS', outletId, angle });
     setSpinOpen(false);
@@ -58,42 +52,43 @@ export default function PressRoomScreen({ embedded = false }: PressRoomScreenPro
       <Text style={styles.title}>Press Room</Text>
       <Text style={styles.subtitle}>Month {state.week} · {state.headlines.length} line(s) on the record</Text>
 
-      <SectionTitle title="The Press" hint="Mood warms or cools by outlet; hostility is accumulated." />
-      <View style={styles.statRow}>
-        <View style={styles.statTile}>
-          <StatTile label="Press Mood" value={Math.round(pressMood)} tone={moodTone} />
-        </View>
-        <View style={styles.statTile}>
-          <StatTile
-            label="Hostility"
-            value={Math.round(hostility)}
-            tone={hostilityTone}
-            hint={hostility >= MEDIA_HOSTILITY_FLOOR ? 'over floor' : `floor ${MEDIA_HOSTILITY_FLOOR}`}
-          />
-        </View>
-        <View style={styles.statTile}>
-          <StatTile
-            label="Press Approval"
-            value={Math.round(approval)}
-            tone={approvalTone}
-            hint={approval < PRESS_APPROVAL_FLOOR ? 'drag active' : `floor ${PRESS_APPROVAL_FLOOR}`}
-          />
-        </View>
-      </View>
+<SectionTitle title="Fleet Street" hint="Three papers, three stances. Warm them or face the consequences." />
+      {MEDIA_OUTLETS.map((o) => {
+        const mood = media.pressMood[o.id] ?? 50;
+        const leaning = mood >= 60 ? 'warm' : mood >= 40 ? 'neutral' : 'cold';
+        const leaningTone: 'success' | 'neutral' | 'danger' =
+          leaning === 'warm' ? 'success' : leaning === 'neutral' ? 'neutral' : 'danger';
+        return (
+          <Card key={o.id}>
+            <View style={styles.paperRow}>
+              <View style={{ flex: 1, marginRight: spacing.sm }}>
+                <Text style={styles.paperName} numberOfLines={1}>
+                  {o.name}
+                </Text>
+                <Text style={styles.paperStance}>
+                  {o.stance.toUpperCase()} · MOOD {Math.round(mood)}
+                </Text>
+              </View>
+              <Chip label={leaning.toUpperCase()} tone={leaningTone} />
+            </View>
+            <Meter value={mood} color={mood >= 55 ? colors.success : mood >= 40 ? colors.warning : colors.accent} />
+          </Card>
+        );
+      })}
 
       <Card tone={hostility >= MEDIA_HOSTILITY_FLOOR || approval < PRESS_APPROVAL_FLOOR ? 'danger' : 'default'}>
         <View style={styles.meterRow}>
-          <Text style={styles.meterLabel}>Press Approval</Text>
+          <Text style={styles.meterLabel}>PRESS APPROVAL</Text>
           <Text style={styles.meterValue}>{Math.round(approval)}</Text>
         </View>
         <Meter
           value={approval}
           color={approval < PRESS_APPROVAL_FLOOR ? colors.danger : colors.success}
         />
-        <Text style={[styles.meterLabel, styles.secondMeter]}>Hostility</Text>
+        <Text style={[styles.meterLabel, styles.secondMeter]}>HOSTILITY</Text>
         <Meter
           value={hostility}
-          color={hostility >= MEDIA_HOSTILITY_FLOOR ? colors.danger : colors.warning}
+          color={hostility >= MEDIA_HOSTILITY_FLOOR ? colors.accent : colors.warning}
         />
         <Text style={styles.meterSub}>
           {approval < PRESS_APPROVAL_FLOOR
@@ -141,31 +136,44 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
   },
   eyebrow: {
-    color: colors.accent,
+    color: colors.gold,
     fontSize: font.tiny,
-    fontWeight: '800',
-    letterSpacing: 1.4,
+    fontWeight: '700',
+    fontFamily: fileFontFamily,
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
   },
   title: {
-    color: colors.text,
+    color: colors.card,
     fontSize: font.h1,
-    fontWeight: '800',
+    fontWeight: '700',
     fontFamily: headingFontFamily,
     marginTop: spacing.xs,
   },
   subtitle: {
-    color: colors.muted,
+    color: colors.faint,
     fontSize: font.small,
     marginTop: spacing.xs,
+    fontFamily: fileFontFamily,
   },
-  statRow: {
+  paperRow: {
     flexDirection: 'row',
-    marginTop: spacing.md,
-    marginHorizontal: -spacing.xs,
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
   },
-  statTile: {
-    flex: 1,
-    marginHorizontal: spacing.xs,
+  paperName: {
+    color: colors.text,
+    fontSize: font.body,
+    fontWeight: '700',
+    fontFamily: headingFontFamily,
+  },
+  paperStance: {
+    color: colors.muted,
+    fontSize: font.tiny,
+    letterSpacing: 0.8,
+    marginTop: 2,
+    fontFamily: fileFontFamily,
   },
   meterRow: {
     flexDirection: 'row',

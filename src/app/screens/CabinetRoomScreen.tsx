@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { MinisterCard } from '../components/cabinet/MinisterCard';
 import { Button, Card, Divider, EmptyState, Grid, GridItem, Meter, SectionTitle, Sheet, StatTile } from '../components/ui';
 import { useGame } from '../state';
-import { colors, font, headingFontFamily, spacing } from '../theme';
+import { colors, font, fileFontFamily, headingFontFamily, spacing } from '../theme';
 import { CABINET_COHESION_FLOOR, createDefaultCabinetState, estimateResignationRisk } from '../cabinet';
 import { CHANCELLOR_POST, chancellorLeakRisk } from '../cabinetEffects';
 import type { Minister } from '../types';
@@ -242,22 +242,25 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
   },
   eyebrow: {
-    color: colors.accent,
+    color: colors.gold,
     fontSize: font.tiny,
-    fontWeight: '800',
-    letterSpacing: 1.4,
+    fontWeight: '700',
+    fontFamily: fileFontFamily,
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
   },
   title: {
-    color: colors.text,
+    color: colors.card,
     fontSize: font.h1,
-    fontWeight: '800',
+    fontWeight: '700',
     fontFamily: headingFontFamily,
     marginTop: spacing.xs,
   },
   subtitle: {
-    color: colors.muted,
+    color: colors.faint,
     fontSize: font.small,
     marginTop: spacing.xs,
+    fontFamily: fileFontFamily,
   },
   meterRow: {
     flexDirection: 'row',
@@ -293,19 +296,21 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.xs,
   },
   sheetHeading: {
-    color: colors.text,
+    color: colors.card,
     fontSize: font.h3,
-    fontWeight: '800',
+    fontWeight: '700',
+    fontFamily: headingFontFamily,
     marginBottom: spacing.sm,
   },
   sheetLine: {
-    color: colors.muted,
+    color: colors.faint,
     fontSize: font.small,
     lineHeight: 19,
     marginBottom: spacing.sm,
+    fontFamily: fileFontFamily,
   },
   warningText: {
-    color: colors.muted,
+    color: colors.faint,
     fontSize: font.tiny,
     lineHeight: 17,
     marginTop: spacing.sm,
@@ -319,17 +324,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   rowTitle: {
-    color: colors.text,
+    color: colors.card,
     fontSize: font.body,
     fontWeight: '700',
   },
   rowMeta: {
-    color: colors.muted,
+    color: colors.faint,
     fontSize: font.tiny,
     marginTop: 2,
+    fontFamily: fileFontFamily,
   },
   rowAction: {
-    color: colors.accent,
+    color: colors.gold,
     fontSize: font.small,
     fontWeight: '800',
     marginLeft: spacing.sm,

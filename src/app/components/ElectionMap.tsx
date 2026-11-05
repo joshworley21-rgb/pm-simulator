@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, font, radius, spacing } from '../theme';
+import { colors, font, fileFontFamily, radius, spacing } from '../theme';
 import { Card, Chip } from './ui';
 import { REGIONS, REGION_COUNCIL_META } from '../data';
 import type { RegionCouncilMeta } from '../data';
@@ -88,7 +88,7 @@ export function ElectionMap({ regionSeats, parties, playerPartyId, defaultFilter
       <Text style={[styles.subhead, { marginBottom: spacing.xs }]}>
         {filter === 'england' ? 'REGIONAL COUNCIL BREAKDOWN (ENGLAND)' : 'ELECTORAL MAP OF THE UNITED KINGDOM'}
       </Text>
-      <Text style={{ color: colors.muted, fontSize: font.tiny, marginBottom: spacing.sm }}>
+      <Text style={{ color: colors.faint, fontSize: font.tiny, marginBottom: spacing.sm, fontFamily: fileFontFamily }}>
         Tap any region to inspect council districts and local seat results.
       </Text>
 
@@ -163,7 +163,7 @@ export function ElectionMap({ regionSeats, parties, playerPartyId, defaultFilter
 
           {/* Seat Breakdown List */}
           <Text style={[styles.subhead, { marginTop: spacing.sm, marginBottom: 4 }]}>SEATS WON BY PARTY</Text>
-          <View style={{ backgroundColor: colors.bgElevated, borderRadius: radius.sm, padding: spacing.sm }}>
+          <View style={{ backgroundColor: colors.cardAlt, borderRadius: radius.sm, padding: spacing.sm }}>
             {selectedResult.breakdown.map((item) => {
               const isPlayer = item.party.id === playerPartyId;
               const pct = selectedRegion.seats > 0 ? Math.round((item.seats / selectedRegion.seats) * 100) : 0;
@@ -224,10 +224,12 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   subhead: {
-    color: colors.muted,
+    color: colors.gold,
     fontSize: font.tiny,
     fontWeight: '800',
     letterSpacing: 0.8,
+    fontFamily: fileFontFamily,
+    textTransform: 'uppercase',
   },
   regionCard: {
     backgroundColor: colors.card,
@@ -239,7 +241,7 @@ const styles = StyleSheet.create({
   },
   regionCardSelected: {
     borderColor: colors.accent,
-    backgroundColor: colors.bgElevated,
+    backgroundColor: colors.cardAlt,
   },
   microBar: {
     flexDirection: 'row',

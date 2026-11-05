@@ -1,18 +1,30 @@
 import { Platform, StyleSheet } from 'react-native';
 
-/** Shared paper-and-ink palette. */
+/**
+ * "Red Box" archival palette.
+ * Aged cream paper, ink black, ox-blood stamps and gold file fasteners.
+ */
 export const colors = {
-  bg: '#F8FAFC',
-  bgElevated: '#F1F5F9',
-  card: '#FFFFFF',
-  cardBorder: '#CBD5E1',
-  text: '#1E293B',
-  muted: '#64748B',
-  accent: '#334155',
-  accentSoft: '#E2E8F0',
-  danger: '#991B1B',
-  warning: '#92400E',
-  success: '#166534',
+  bg: '#1B1512',
+  bgElevated: '#2A201A',
+  card: '#F5EFE3',
+  cardAlt: '#EBE2CF',
+  cardBorder: '#3B2D24',
+  cardBorderLight: '#D9CEB8',
+  ink: '#17110D',
+  text: '#201812',
+  textOnPaper: '#33261A',
+  muted: '#6D5C48',
+  faint: '#8C7A64',
+  accent: '#8C1C13',
+  accentDeep: '#5C110A',
+  accentSoft: '#E3C9A8',
+  gold: '#B08D3B',
+  leather: '#4A2C1C',
+  stamp: '#9E2B20',
+  danger: '#8C1C13',
+  warning: '#8A5A0B',
+  success: '#2E5E34',
 };
 
 export const headingFontFamily = Platform.select({
@@ -21,45 +33,52 @@ export const headingFontFamily = Platform.select({
   default: 'Georgia',
 })!;
 
+/** Typewriter / file-label voice. Falls back gracefully to a system serif. */
+export const fileFontFamily = Platform.select({
+  ios: 'Menlo',
+  android: 'monospace',
+  default: 'Menlo',
+})!;
+
 export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };
-export const radius = { sm: 8, md: 12, lg: 16, pill: 999 };
-export const font = { h1: 28, h2: 20, h3: 16, body: 14, small: 12, tiny: 11 };
+export const radius = { sm: 2, md: 4, lg: 6, pill: 3 };
+export const font = { h1: 26, h2: 20, h3: 16, body: 14, small: 12, tiny: 10 };
 
 /** Legacy global styles (kept for Menu/Create screens). */
 export const g = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg, padding: 20 },
-  title: { color: colors.text, fontSize: 32, fontWeight: '800' },
-  subtitle: { color: colors.muted, fontSize: 15, marginTop: 6, lineHeight: 21 },
+  title: { color: colors.card, fontSize: 30, fontWeight: '700' },
+  subtitle: { color: colors.faint, fontSize: 13, marginTop: 6, lineHeight: 19 },
   card: {
     backgroundColor: colors.card,
     borderColor: colors.cardBorder,
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: radius.md,
     padding: 16,
-    marginTop: 14,
+    marginTop: 16,
   },
-  cardTitle: { color: colors.text, fontSize: 18, fontWeight: '700' },
-  body: { color: colors.text, fontSize: 15, lineHeight: 22 },
-  muted: { color: colors.muted, fontSize: 13, lineHeight: 19 },
+  cardTitle: { color: colors.text, fontSize: 17, fontWeight: '700' },
+  body: { color: colors.text, fontSize: 14, lineHeight: 20 },
+  muted: { color: colors.faint, fontSize: 13, lineHeight: 19 },
   btn: {
     backgroundColor: colors.accent,
-    borderRadius: 12,
+    borderRadius: radius.sm,
     paddingVertical: 14,
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: 16,
   },
   btnGhost: {
     backgroundColor: 'transparent',
     borderColor: colors.cardBorder,
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: radius.sm,
     paddingVertical: 14,
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: 16,
   },
-  btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  btnGhostText: { color: colors.text, fontSize: 16, fontWeight: '600' },
+  btnText: { color: colors.card, fontSize: 15, fontWeight: '700' },
+  btnGhostText: { color: colors.faint, fontSize: 15, fontWeight: '700' },
   row: { flexDirection: 'row', alignItems: 'center' },
 });

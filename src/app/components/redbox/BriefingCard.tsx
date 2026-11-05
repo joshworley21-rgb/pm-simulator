@@ -1,106 +1,139 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Button, Card } from '../ui';
-import { colors, font, headingFontFamily, spacing } from '../../theme';
-
-export type BriefingTone = 'default' | 'warning' | 'danger' | 'success' | 'accent';
+import { colors, font, fileFontFamily, headingFontFamily, spacing } from '../../theme';
 
 export interface BriefingCardProps {
   eyebrow: string;
   title: string;
   body: string;
-  tone?: BriefingTone;
   meta?: string;
+  tone?: 'default' | 'warning' | 'danger' | 'success';
   actionLabel?: string;
   onPress?: () => void;
-  testID?: string;
 }
 
 export function BriefingCard({
   eyebrow,
   title,
   body,
-  tone = 'default',
   meta,
+  tone = 'default',
   actionLabel,
   onPress,
-  testID,
 }: BriefingCardProps) {
-  const cardTone = tone === 'warning' ? 'default' : tone;
-  const textColor =
-    tone === 'danger'
-      ? colors.danger
-      : tone === 'success'
-        ? colors.success
-        : tone === 'accent'
-          ? colors.accent
-          : tone === 'warning'
-            ? colors.warning
-            : colors.muted;
-
-  const content = (
-    <Card tone={cardTone}>
-      <Text style={[styles.eyebrow, { color: textColor }]}>{eyebrow}</Text>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.body}>{body}</Text>
-      {meta ? <Text style={styles.meta}>{meta}</Text> : null}
-      {onPress ? (
-        <View style={styles.action}>
-          {/* Non-compact + explicit floor: keeps the hit target above the 44px
-              minimum with headroom instead of sitting on the boundary. */}
-          <Button
-            label={actionLabel ?? 'Open'}
-            onPress={onPress}
-            variant={tone === 'danger' ? 'danger' : 'secondary'}
-            style={styles.actionButton}
-          />
+  const urgent = tone === 'danger';
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress}>
+      <View style={[styles.file, urgent && styles.fileUrgent, tone === 'warning' && styles.fileWarning]}>
+        <View style={styles.meta}>
+          <Text style={styles.department} numberOfLines={1}>
+            {eyebrow.toUpperCase()}
+          </Text>
+          {meta ? <Text style={[styles.deadline, urgent && styles.deadlineUrgent]}>{meta.toUpperCase()}</Text> : null}
         </View>
-      ) : null}
-    </Card>
-  );
-
-  return onPress ? (
-    <Pressable testID={testID} onPress={onPress} hitSlop={8} style={styles.pressable}>
-      {content}
+        <Text style={styles.title} numberOfLines={2}>
+          {title}
+        </Text>
+        <Text style={styles.summary} numberOfLines={3}>
+          {body}
+        </Text>
+        <View style={styles.footer}>
+          <Text style={styles.footerHint}>{(actionLabel ?? 'OPEN FILE').toUpperCase()}</Text>
+          <Text style={styles.stamp}>{urgent ? 'REQUIRES ACTION' : 'FOR REVIEW'}</Text>
+        </View>
+      </View>
     </Pressable>
-  ) : (
-    content
   );
 }
 
 const styles = StyleSheet.create({
-  pressable: {
-    minHeight: 44,
-    justifyContent: 'center',
+  file: {
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorderLight,
+    borderRadius: 2,
+    padding: spacing.md,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    shadowOffset: { width: 1, height: 2 },
+    elevation: 3,
   },
-  eyebrow: {
+  fileUrgent: {
+    borderColor: colors.accent,
+    borderLeftWidth: 5,
+    borderLeftColor: colors.accent,
+  },
+  fileWarning: {
+    borderLeftWidth: 5,
+    borderLeftColor: colors.warning,
+  },
+  meta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  department: {
+    color: colors.muted,
     fontSize: font.tiny,
-    fontWeight: '800',
+    fontFamily: fileFontFamily,
     letterSpacing: 1,
+    flexShrink: 1,
+  },
+  deadline: {
+    color: colors.muted,
+    fontSize: font.tiny,
+    fontFamily: fileFontFamily,
+    letterSpacing: 0.6,
+  },
+  deadlineUrgent: {
+    color: colors.accent,
+    fontWeight: '800',
   },
   title: {
     color: colors.text,
-    fontSize: font.h3,
-    fontWeight: '800',
+    fontSize: font.body,
+    fontWeight: '700',
     fontFamily: headingFontFamily,
-    marginTop: spacing.xs,
+    lineHeight: 22,
   },
-  body: {
+  summary: {
     color: colors.muted,
     fontSize: font.small,
-    lineHeight: 19,
-    marginTop: spacing.xs,
+    lineHeight: 18,
+    marginTop: 6,
   },
-  meta: {
-    color: colors.muted,
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.cardBorderLight,
+    paddingTop: 8,
+  },
+  footerHint: {
+    color: colors.textOnPaper,
     fontSize: font.tiny,
-    marginTop: spacing.sm,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
-  action: {
-    alignSelf: 'flex-start',
-    marginTop: spacing.sm,
-  },
-  actionButton: {
-    minHeight: 48,
+  stamp: {
+    color: colors.stamp,
+    fontSize: 9,
+    fontFamily: fileFontFamily,
+    letterSpacing: 1.2,
+    borderWidth: 1,
+    borderColor: colors.stamp,
+    borderRadius: 2,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    transform: [{ rotate: '-4deg' }],
+    opacity: 0.85,
   },
 });

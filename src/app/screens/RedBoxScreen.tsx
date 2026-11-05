@@ -1,11 +1,20 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BriefingCard, type BriefingCardProps } from '../components/redbox/BriefingCard';
-import { Card, EmptyState, Meter, SectionTitle, StatTile } from '../components/ui';
+import { Card, Chip, EmptyState, MandateBar, SectionTitle } from '../components/ui';
 import { useGame } from '../state';
-import { colors, font, headingFontFamily, spacing } from '../theme';
+import { colors, font, fileFontFamily, headingFontFamily, spacing } from '../theme';
 import { activeSwanEvent } from '../blackSwans';
 import { TURNS_PER_SESSION, WASH_UP_WEEKS } from '../parliament';
+import type { BlocSupport } from '../voterBlocs';
+
+/** Bloc mood → chip tone. */
+const BLOC_TONE: Record<BlocSupport['mood'], 'danger' | 'warning' | 'neutral' | 'success'> = {
+  hostile: 'danger',
+  restless: 'warning',
+  content: 'neutral',
+  loyal: 'success',
+};
 
 /**
  * Red Box dashboard — the landing surface.
@@ -37,16 +46,12 @@ export default function RedBoxScreen({ embedded = false, onNavigate }: RedBoxScr
     pressMoodValues.length > 0
       ? pressMoodValues.reduce((sum, mood) => sum + mood, 0) / pressMoodValues.length
       : 50;
-  const pressHostility = state.mediaState?.hostility ?? 0;
-
   const approval = state.metrics.approval;
   const partyConfidence = state.metrics.partyConfidence;
 
   // ----- Fiscal watch ---------------------------------------------------
   const obrHeadroom = state.obrHeadroom ?? 0;
   const giltYield = state.stats.giltYield;
-  // The app's calendar renders `state.week` as a month (see GameScreen header),
-  // so one turn == one month and "days in office" is months * 30.
   const daysInOffice = state.week * 30;
 
   const playerName = state.player
@@ -56,7 +61,6 @@ export default function RedBoxScreen({ embedded = false, onNavigate }: RedBoxScr
   // ----- Urgent briefings (wired to live engine state) ------------------
   const briefings: BriefingCardProps[] = [];
 
-  // (a) Black Swan: the engine stores the live shock under `.active`.
   const swan = state.blackSwanState;
   if (swan?.active) {
     const event = activeSwanEvent(swan);
@@ -67,14 +71,10 @@ export default function RedBoxScreen({ embedded = false, onNavigate }: RedBoxScr
       meta: `${swan.active.weeksRemaining} month(s) left to respond`,
       tone: 'danger',
       actionLabel: 'Respond',
-      // The live Black Swan is presented by the global CrisisModal, which overlays
-      // the entire app while `blackSwanState.active` is set — so this card is only
-      // reachable once that modal has been dealt with. Tapping returns to the desk.
       onPress: () => onNavigate?.('desk'),
     });
   }
 
-  // (b) Wash-up countdown: bills still in Parliament when the session ends.
   const sessionWeek = ((state.week - 1) % TURNS_PER_SESSION) + 1;
   const weeksToWashUp = TURNS_PER_SESSION - sessionWeek + 1;
   if (state.bills.length > 0 && weeksToWashUp <= WASH_UP_WEEKS) {
@@ -90,12 +90,10 @@ export default function RedBoxScreen({ embedded = false, onNavigate }: RedBoxScr
     });
   }
 
-  // (c) Cabinet defection risk.
   const restless = state.cabinet.filter((m) => m.loyalty < 35);
   const considering = state.committeeMood?.consideringDefection ?? restless.length;
   if (considering > 0) {
-    const lowestLoyalty =
-      state.cabinet.length > 0 ? Math.min(...state.cabinet.map((m) => m.loyalty)) : 0;
+    const lowestLoyalty = state.cabinet.length > 0 ? Math.min(...state.cabinet.map((m) => m.loyalty)) : 0;
     briefings.push({
       eyebrow: 'CABINET',
       title: 'Defection risk in the Cabinet',
@@ -109,74 +107,58 @@ export default function RedBoxScreen({ embedded = false, onNavigate }: RedBoxScr
 
   const body = (
     <>
-      <Text style={styles.eyebrow}>10 DOWNING STREET</Text>
-      <Text style={styles.title}>The Dispatch Box</Text>
-      <Text style={styles.subtitle}>
-        {playerName} · Month {state.week} · Day {daysInOffice}
-      </Text>
+      {/* Standalone view keeps its own masthead; embedded, the GameScreen tab
+          shell already carries the 10 Downing Street header, so skip it. */}
+      {!embedded && (
+        <>
+          <Text style={styles.eyebrow}>10 DOWNING STREET — PRIVATE OFFICE</Text>
+          <Text style={styles.title}>The Dispatch Box</Text>
+          <Text style={styles.subtitle}>
+            {playerName} · Month {state.week} · Day {daysInOffice}
+          </Text>
+          <View style={styles.rule} />
+        </>
+      )}
 
-      <SectionTitle title="National Sentiment" hint="The three numbers that decide your future." />
-      <View style={styles.statRow}>
-        <View style={styles.statTile}>
-          <StatTile
-            label="Public Approval"
-            value={Math.round(approval)}
-            tone={approval >= 45 ? 'success' : approval >= 35 ? 'warning' : 'danger'}
-          />
-        </View>
-        <View style={styles.statTile}>
-          <StatTile
-            label="Party Confidence"
-            value={Math.round(partyConfidence)}
-            tone={partyConfidence >= 55 ? 'success' : partyConfidence >= 40 ? 'warning' : 'danger'}
-          />
-        </View>
-        <View style={styles.statTile}>
-          <StatTile
-            label="Press Mood"
-            value={Math.round(pressMood)}
-            tone={pressMood >= 55 ? 'success' : pressMood >= 40 ? 'warning' : 'danger'}
-          />
-        </View>
-      </View>
+      <SectionTitle title="State of the Nation" hint="One bar decides your future: the line marks 50%." />
       <Card>
-        <Text style={styles.meterLabel}>Public Approval</Text>
-        <Meter value={approval} color={colors.accent} />
-        <Text style={[styles.meterLabel, styles.secondMeter]}>Press Hostility</Text>
-        <Meter value={pressHostility} color={pressHostility >= 60 ? colors.danger : colors.warning} />
+        <View style={styles.mandateRow}>
+          <Text style={styles.mandateValue}>{Math.round(approval)}%</Text>
+          <Text style={styles.mandateLabel}>PUBLIC APPROVAL</Text>
+        </View>
+        <MandateBar approval={approval} />
+        <Text style={styles.ledger} numberOfLines={1}>
+          Party {Math.round(partyConfidence)} · Press {Math.round(pressMood)} · Headroom{' '}
+          {obrHeadroom >= 0 ? '+' : '-'}£{Math.abs(obrHeadroom).toFixed(1)}bn · Gilts {giltYield.toFixed(2)}% · In
+          office {daysInOffice}d
+        </Text>
       </Card>
 
-      <SectionTitle title="Fiscal Watch" hint="The borrowing outlook and your time in office." />
-      <View style={styles.statRow}>
-        <View style={styles.statTile}>
-          <StatTile
-            label="OBR Headroom"
-            value={`${obrHeadroom >= 0 ? '+' : '-'}£${Math.abs(obrHeadroom).toFixed(1)}bn`}
-            tone={obrHeadroom >= 0 ? 'success' : obrHeadroom >= -15 ? 'warning' : 'danger'}
-          />
-        </View>
-        <View style={styles.statTile}>
-          <StatTile
-            label="Gilt Yield"
-            value={`${giltYield.toFixed(2)}%`}
-            tone={giltYield <= 4.5 ? 'success' : giltYield <= 5.5 ? 'warning' : 'danger'}
-          />
-        </View>
-        <View style={styles.statTile}>
-          <StatTile label="Days in Office" value={daysInOffice} />
-        </View>
-      </View>
+      <SectionTitle title="The Country" hint="Five blocs decide your majority. Govern for the ones that matter." />
+      {(state.blocs ?? []).map((bloc) => (
+        <Card key={bloc.id}>
+          <View style={styles.blocHeader}>
+            <Text style={styles.blocName} numberOfLines={1}>
+              {bloc.name}
+            </Text>
+            <Chip label={bloc.mood.toUpperCase()} tone={BLOC_TONE[bloc.mood]} />
+          </View>
+          <View style={styles.blocRow}>
+            <Text style={styles.blocDriver} numberOfLines={1}>
+              {bloc.driver}
+            </Text>
+            <Text style={[styles.blocSupport, { color: bloc.support >= 45 ? colors.success : colors.accent }]}>
+              {Math.round(bloc.support)}%
+            </Text>
+          </View>
+        </Card>
+      ))}
 
       <SectionTitle title="Urgent Briefings" hint="Items needing your attention this month." />
       {briefings.length === 0 ? (
-        <EmptyState
-          title="All quiet"
-          body="No urgent items this month. Advance the calendar to see what lands next."
-        />
+        <EmptyState title="All quiet" body="No urgent items this month. Advance the calendar to see what lands next." />
       ) : (
-        briefings.map((briefing, index) => (
-          <BriefingCard key={`${briefing.eyebrow}-${index}`} {...briefing} />
-        ))
+        briefings.map((briefing, index) => <BriefingCard key={`${briefing.eyebrow}-${index}`} {...briefing} />)
       )}
     </>
   );
@@ -196,38 +178,91 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
   },
   eyebrow: {
-    color: colors.accent,
+    color: colors.gold,
     fontSize: font.tiny,
-    fontWeight: '800',
-    letterSpacing: 1.4,
+    fontWeight: '700',
+    fontFamily: fileFontFamily,
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
   },
   title: {
-    color: colors.text,
+    color: colors.card,
     fontSize: font.h1,
-    fontWeight: '800',
+    fontWeight: '700',
     fontFamily: headingFontFamily,
     marginTop: spacing.xs,
   },
   subtitle: {
-    color: colors.muted,
+    color: colors.faint,
     fontSize: font.small,
     marginTop: spacing.xs,
+    fontFamily: fileFontFamily,
   },
-  statRow: {
+  rule: {
+    height: 1,
+    backgroundColor: colors.cardBorderLight,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+    opacity: 0.6,
+  },
+  mandateRow: {
     flexDirection: 'row',
-    marginHorizontal: -spacing.xs,
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
   },
-  statTile: {
-    flex: 1,
-    marginHorizontal: spacing.xs,
+  mandateValue: {
+    color: colors.text,
+    fontSize: font.h1,
+    fontWeight: '700',
+    fontFamily: fileFontFamily,
   },
-  meterLabel: {
+  mandateLabel: {
     color: colors.muted,
     fontSize: font.tiny,
     fontWeight: '700',
-    marginBottom: spacing.xs,
+    letterSpacing: 1,
+    fontFamily: fileFontFamily,
   },
-  secondMeter: {
-    marginTop: spacing.md,
+  ledger: {
+    color: colors.muted,
+    fontSize: font.tiny,
+    fontFamily: fileFontFamily,
+    marginTop: spacing.sm,
+  },
+  blocHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  blocName: {
+    color: colors.text,
+    fontSize: font.body,
+    fontWeight: '700',
+    fontFamily: headingFontFamily,
+    flex: 1,
+    marginRight: spacing.sm,
+  },
+  blocRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.cardBorderLight,
+    paddingTop: spacing.sm,
+  },
+  blocDriver: {
+    color: colors.muted,
+    fontSize: font.small,
+    lineHeight: 18,
+    flex: 1,
+    marginRight: spacing.sm,
+  },
+  blocSupport: {
+    color: colors.text,
+    fontSize: font.body,
+    fontWeight: '700',
+    fontFamily: fileFontFamily,
   },
 });

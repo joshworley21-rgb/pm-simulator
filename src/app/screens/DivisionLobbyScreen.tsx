@@ -1,13 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { EmptyState, Card, Meter, SectionTitle, StatTile } from '../components/ui';
+import { Chip, EmptyState, Card, Meter, SectionTitle, StatTile } from '../components/ui';
 import { MotionRow, WHIP_LABEL } from '../components/division/MotionRow';
 import { useGame } from '../state';
-import { colors, font, headingFontFamily, spacing } from '../theme';
+import { colors, font, fileFontFamily, headingFontFamily, spacing } from '../theme';
 import { BILL_POOL } from '../bills';
 import { BILL_POOL_2 } from '../bills2';
 import { createDefaultWhips } from '../modules/whips';
-import { TURNS_PER_SESSION } from '../parliament';
+import { TURNS_PER_SESSION, DIVISION_SLOTS_PER_SESSION } from '../parliament';
 import { PURDAH_TURNS } from '../calendar';
 import type { WhipLevel } from '../types';
 import type { BillProgress } from '../parliament';
@@ -68,6 +68,8 @@ export default function DivisionLobbyScreen({ embedded = false }: DivisionLobbyS
   const sessionWeek = ((state.week - 1) % TURNS_PER_SESSION) + 1;
   // Mirrors engine inPurdah(): no new bills once the pre-election quiet period starts.
   const inPurdah = state.phase === 'playing' && state.turnsUntilElection <= PURDAH_TURNS;
+  // Commons time is a resource: every bill before the House holds a division slot.
+  const orderPaperFull = activeBills.length >= DIVISION_SLOTS_PER_SESSION;
 
   const body = (
     <>
@@ -173,6 +175,18 @@ export default function DivisionLobbyScreen({ embedded = false }: DivisionLobbyS
         title="Upcoming Divisions"
         hint={inPurdah ? 'Purdah: no new bills until after polling day.' : 'Set the whip, then bring it to the House.'}
       />
+      {/* Commons time: the Order Paper has fixed division slots. */}
+      <View style={styles.orderPaperRow}>
+        <Chip
+          label={`ORDER PAPER ${activeBills.length}/${DIVISION_SLOTS_PER_SESSION} SLOTS`}
+          tone={orderPaperFull ? 'danger' : 'neutral'}
+        />
+        {orderPaperFull && (
+          <Text style={styles.orderPaperNote}>
+            The Order Paper is full — a bill must fall or pass before another is tabled.
+          </Text>
+        )}
+      </View>
       {upcoming.length === 0 ? (
         <EmptyState title="No bills left" body="Every available bill has already been introduced." />
       ) : (
@@ -188,7 +202,7 @@ export default function DivisionLobbyScreen({ embedded = false }: DivisionLobbyS
               setWhipChoice((prev) => ({ ...prev, [bill.id]: level }))
             }
             actionLabel={`Bring to the House · ${WHIP_LABEL[whipFor(bill.id)]}`}
-            actionDisabled={inPurdah}
+            actionDisabled={inPurdah || orderPaperFull}
             onAction={() =>
               dispatch({ type: 'PROPOSE_BILL', billId: bill.id, whipLevel: whipFor(bill.id) })
             }
@@ -214,22 +228,25 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
   },
   eyebrow: {
-    color: colors.accent,
+    color: colors.gold,
     fontSize: font.tiny,
-    fontWeight: '800',
-    letterSpacing: 1.4,
+    fontWeight: '700',
+    fontFamily: fileFontFamily,
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
   },
   title: {
-    color: colors.text,
+    color: colors.card,
     fontSize: font.h1,
-    fontWeight: '800',
+    fontWeight: '700',
     fontFamily: headingFontFamily,
     marginTop: spacing.xs,
   },
   subtitle: {
-    color: colors.muted,
+    color: colors.faint,
     fontSize: font.small,
     marginTop: spacing.xs,
+    fontFamily: fileFontFamily,
   },
   meterRow: {
     flexDirection: 'row',
@@ -265,5 +282,19 @@ const styles = StyleSheet.create({
   statTile: {
     flex: 1,
     marginHorizontal: spacing.xs,
+  },
+  orderPaperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    marginTop: spacing.xs,
+  },
+  orderPaperNote: {
+    color: colors.faint,
+    fontSize: font.tiny,
+    lineHeight: 16,
+    fontFamily: fileFontFamily,
+    marginTop: spacing.xs,
+    flexBasis: '100%',
   },
 });

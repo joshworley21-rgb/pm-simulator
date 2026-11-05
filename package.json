@@ -12,6 +12,7 @@
     "test:fuzzers": "npx --yes tsx scripts/political-fuzzer.ts && npx --yes tsx scripts/political-fuzzer-mild.ts && npx --yes tsx scripts/economy-fuzzer.ts && npx --yes tsx scripts/redbox-crawler.ts && npx --yes tsx scripts/fiscal-drag-model-guard-test.ts && npx --yes tsx scripts/personal-allowance-revenue-test.ts && npx --yes tsx scripts/e2e-integration-fuzzer.ts",
     "report": "npx --yes tsx scripts/generate-report.ts",
     "test:slices": "npx --yes tsx scripts/run-slice-tests.ts",
+    "test:ui": "node scripts/ui-smoke.mjs",
     "test": "npm run typecheck && npm run test:engine && npm run test:slices"
   },
   "dependencies": {

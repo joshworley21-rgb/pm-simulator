@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGame } from '../state';
-import { colors, font, headingFontFamily, radius, spacing } from '../theme';
+import { colors, font, fileFontFamily, headingFontFamily, radius, spacing } from '../theme';
 import { Button, Card, Grid, GridItem, SectionTitle } from '../components/ui';
 import { BACKGROUNDS } from '../data';
 import { SCENARIOS, DEFAULT_SCENARIO_ID } from '../scenarios';
@@ -48,8 +48,8 @@ export default function CreateScreen() {
       contentContainerStyle={{ padding: spacing.lg, paddingTop: insets.top + spacing.lg, paddingBottom: spacing.xxl }}
       keyboardShouldPersistTaps="handled"
     >
-      <Text style={{ color: colors.text, fontSize: font.h1, fontWeight: '800', fontFamily: headingFontFamily }}>Create your Prime Minister</Text>
-      <Text style={{ color: colors.muted, fontSize: font.body, marginTop: 4 }}>Pick a name, a party and a past.</Text>
+      <Text style={{ color: colors.card, fontSize: font.h1, fontWeight: '700', fontFamily: headingFontFamily }}>Create your Prime Minister</Text>
+      <Text style={{ color: colors.faint, fontSize: font.body, marginTop: 4, fontFamily: fileFontFamily }}>Pick a name, a party and a past.</Text>
 
       <SectionTitle title="Name" />
       <TextInput
@@ -90,10 +90,12 @@ export default function CreateScreen() {
               marginTop: spacing.sm,
             }}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: p.color, marginRight: 10 }} />
-              <Text style={{ color: colors.text, fontSize: font.h3, fontWeight: '700', flex: 1 }}>{p.name}</Text>
-              <Text style={{ color: colors.muted, fontSize: font.tiny }}>{p.baseSupport}% base</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+              <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: p.color, marginRight: 10, marginTop: 3 }} />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={{ color: colors.text, fontSize: font.h3, fontWeight: '700' }}>{p.name}</Text>
+                <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 2 }}>{p.baseSupport}% base</Text>
+              </View>
             </View>
             <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 4, lineHeight: 17 }}>{p.description}</Text>
           </Pressable>
@@ -205,7 +207,7 @@ export default function CreateScreen() {
 
       <Button label="Enter Number 10" onPress={start} disabled={!canStart} />
       {!canStart && (
-        <Text style={{ color: colors.muted, fontSize: font.tiny, textAlign: 'center', marginTop: spacing.sm }}>
+        <Text style={{ color: colors.faint, fontSize: font.tiny, textAlign: 'center', marginTop: spacing.sm, fontFamily: fileFontFamily }}>
           Add a first and last name to begin.
         </Text>
       )}

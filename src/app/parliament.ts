@@ -64,7 +64,14 @@ export const TURNS_PER_SESSION = 52;
 export const WASH_UP_WEEKS = 4;
 export const LORDS_STAGE_WEEKS = 2;
 export const PARLIAMENT_ACT_LIMIT_PER_TERM = 1;
-/** Party-confidence cost of ramming a bill past the Lords. */
+
+/**
+ * Commons time is a resource: each session has a fixed number of division
+ * slots on the Order Paper, and every bill in progress occupies one. When the
+ * slots are full the government must wait for a bill to fall or pass before
+ * tabling another — scheduling, not appetite, becomes the constraint.
+ */
+export const DIVISION_SLOTS_PER_SESSION = 4;
 export const PARLIAMENT_ACT_PRESSURE = 6;
 
 const clamp = (n: number, min: number, max: number): number => Math.max(min, Math.min(max, n));

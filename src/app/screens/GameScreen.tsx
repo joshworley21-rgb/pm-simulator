@@ -5,7 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useGame } from '../state';
-import { colors, font, headingFontFamily, radius, spacing } from '../theme';
+import { colors, font, headingFontFamily, fileFontFamily, radius, spacing } from '../theme';
 import { Button, Card, Chip, EffectChips, EmptyState, Meter, SectionTitle, Segmented, Sheet, StatTile } from '../components/ui';
 import { BILL_POOL } from '../bills';
 import { BILL_POOL_2 } from '../bills2';
@@ -17,6 +17,7 @@ import { spendingReviewEfficiencySavings } from '../spendingReview';
 import type { EfficiencyTargetPct } from '../spendingReview';
 import { relationBand } from '../diplomacy';
 import { PURDAH_TURNS } from '../calendar';
+import { DIVISION_SLOTS_PER_SESSION } from '../parliament';
 import { getTraitDetails } from '../backgrounds';
 import { ElectionMap } from '../components/ElectionMap';
 import RedBoxScreen from './RedBoxScreen';
@@ -82,6 +83,8 @@ export default function GameScreen() {
   const [politicsTab, setPoliticsTab] = useState<PoliticsTab>('cabinet');
   const [electionViewTab, setElectionViewTab] = useState<'summary' | 'map'>('summary');
   const [helpOpen, setHelpOpen] = useState(false);
+  // The red box: opening it is how the player moves between files.
+  const [boxOpen, setBoxOpen] = useState(false);
 
   /* ---- weekly briefing: diff the log before/after advancing ---- */
   const previousLog = useRef<string[]>(state.log);
@@ -129,6 +132,8 @@ export default function GameScreen() {
   const urgentCount = state.redBox.filter((d) => d.urgent).length;
   // Single source of truth: same constant the engine's inPurdah() uses.
   const inPurdah = state.turnsUntilElection <= PURDAH_TURNS;
+  // Commons time is a resource: every bill in progress holds a division slot.
+  const orderPaperFull = state.bills.length >= DIVISION_SLOTS_PER_SESSION;
 
   /** Lets a Red Box urgent briefing jump to the surface that resolves it. */
   const handleRedBoxNavigate = (target: string, subTab?: string) => {
@@ -172,11 +177,11 @@ export default function GameScreen() {
       <View style={{ paddingHorizontal: spacing.lg, paddingTop: insets.top + spacing.sm, paddingBottom: spacing.sm }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: colors.muted, fontSize: font.tiny, letterSpacing: 1.4, fontWeight: '700' }}>
+            <Text style={{ color: colors.gold, fontSize: font.tiny, letterSpacing: 1.6, fontWeight: '700', fontFamily: fileFontFamily }}>
               10 DOWNING STREET
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={{ color: colors.text, fontSize: font.h2, fontWeight: '800', fontFamily: headingFontFamily }} numberOfLines={1}>
+              <Text style={{ color: colors.card, fontSize: font.h2, fontWeight: '700', fontFamily: headingFontFamily }} numberOfLines={1}>
                 {player?.firstName} {player?.lastName}
               </Text>
               {traitDetails && (
@@ -187,12 +192,12 @@ export default function GameScreen() {
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
               <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: party?.color ?? colors.muted, marginRight: 6 }} />
-              <Text style={{ color: colors.muted, fontSize: font.small }} numberOfLines={1}>
+              <Text style={{ color: colors.faint, fontSize: font.small }} numberOfLines={1}>
                 {party ? party.abbreviation : '--'} | Month {state.week} | {state.turnsUntilElection}m to election
               </Text>
             </View>
             {traitDetails && (
-              <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 2 }} numberOfLines={1}>
+              <Text style={{ color: colors.faint, fontSize: font.tiny, marginTop: 2 }} numberOfLines={1}>
                 {player?.background} • {traitDetails.description}
               </Text>
             )}
@@ -208,15 +213,8 @@ export default function GameScreen() {
           <Button label="Advance" onPress={advanceWeek} compact disabled={!!state.gameOver} testID="advance-week" />
         </View>
 
-        {/* vitals */}
-        <View style={{ flexDirection: 'row', marginTop: spacing.md }}>
-          <StatTile label="Approval" value={`${Math.round(state.metrics.approval)}%`} tone={state.metrics.approval >= 45 ? 'success' : 'danger'} />
-          <StatTile label="Party unity" value={`${Math.round(state.metrics.partyConfidence)}%`} tone={state.metrics.partyConfidence >= 45 ? 'success' : 'danger'} />
-          <StatTile label="Inflation" value={`${state.stats.cpiInflation}%`} tone={state.stats.cpiInflation <= 3 ? 'success' : 'warning'} />
-          <StatTile label="Budget" value={budgetLabel(state.stats.budgetBalance)} tone={state.stats.budgetBalance < 0 ? 'danger' : 'success'} />
-        </View>
-
-        {/* alerts */}
+        {/* alerts — the only status that belongs on every tab; full vitals live
+            on the desk tab ("State of the Nation") to avoid duplication. */}
         {alerts.length > 0 && (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: spacing.sm }}>
             {alerts.map((a) => (
@@ -337,7 +335,19 @@ export default function GameScreen() {
               </>
             )}
 
-            <Text style={[styles.label, { marginTop: spacing.lg }]}>PROPOSE NEW LEGISLATION</Text>
+            {/* Commons time: the Order Paper has fixed division slots. */}
+            <View style={[styles.orderPaperRow, { marginTop: spacing.lg }]}>
+              <Chip
+                label={`ORDER PAPER ${state.bills.length}/${DIVISION_SLOTS_PER_SESSION} SLOTS`}
+                tone={orderPaperFull ? 'danger' : 'neutral'}
+              />
+              {orderPaperFull && (
+                <Text style={styles.orderPaperNote}>
+                  Commons time is full — a bill must fall or pass before another is tabled.
+                </Text>
+              )}
+            </View>
+            <Text style={styles.label}>PROPOSE NEW LEGISLATION</Text>
             {proposable.map((b) => (
               <Card key={b.id}>
                 <Text style={{ color: colors.accent, fontSize: font.tiny, fontWeight: '800' }} numberOfLines={1}>
@@ -351,13 +361,13 @@ export default function GameScreen() {
                 </Text>
                 <View style={{ flexDirection: 'row', marginTop: spacing.sm, flexWrap: 'wrap' }}>
                   <View style={{ marginRight: spacing.sm, marginBottom: 4 }}>
-                    <Button label="Standard Whip" variant="secondary" compact disabled={inPurdah} onPress={() => dispatch({ type: 'PROPOSE_BILL', billId: b.id, whipLevel: 'two-line' })} />
+                    <Button label="Standard Whip" variant="secondary" compact disabled={inPurdah || orderPaperFull} onPress={() => dispatch({ type: 'PROPOSE_BILL', billId: b.id, whipLevel: 'two-line' })} />
                   </View>
                   <View style={{ marginRight: spacing.sm, marginBottom: 4 }}>
-                    <Button label="Three-Line Whip" compact disabled={inPurdah} onPress={() => dispatch({ type: 'PROPOSE_BILL', billId: b.id, whipLevel: 'three-line' })} />
+                    <Button label="Three-Line Whip" compact disabled={inPurdah || orderPaperFull} onPress={() => dispatch({ type: 'PROPOSE_BILL', billId: b.id, whipLevel: 'three-line' })} />
                   </View>
                   <View style={{ marginBottom: 4 }}>
-                    <Button label="Free Vote" variant="ghost" compact disabled={inPurdah} onPress={() => dispatch({ type: 'PROPOSE_BILL', billId: b.id, whipLevel: 'free-vote' })} />
+                    <Button label="Free Vote" variant="ghost" compact disabled={inPurdah || orderPaperFull} onPress={() => dispatch({ type: 'PROPOSE_BILL', billId: b.id, whipLevel: 'free-vote' })} />
                   </View>
                 </View>
               </Card>
@@ -737,8 +747,8 @@ export default function GameScreen() {
                     key={b.id}
                     style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: colors.cardBorder }}
                   >
-                    <Text style={{ color: colors.text, flex: 1, fontSize: font.small }}>{b.name}</Text>
-                    <Text style={{ color: colors.muted, fontSize: font.tiny, marginRight: 8 }}>
+                    <Text style={{ color: colors.card, flex: 1, fontSize: font.small }}>{b.name}</Text>
+                    <Text style={{ color: colors.faint, fontSize: font.tiny, marginRight: 8 }}>
                       {b.seats} seats | {Math.round(b.weight * 100)}%
                     </Text>
                     <Text style={{ color: b.support >= 45 ? colors.success : colors.danger, fontSize: font.body, fontWeight: '700' }}>
@@ -752,13 +762,13 @@ export default function GameScreen() {
                   <View key={p.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: colors.cardBorder }}>
                     <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: p.color, marginRight: 10 }} />
                     <View style={{ flex: 1 }}>
-                      <Text style={{ color: colors.text, fontSize: font.body }} numberOfLines={1}>{p.name}</Text>
+                      <Text style={{ color: colors.card, fontSize: font.body }} numberOfLines={1}>{p.name}</Text>
                       {p.leaderPersona && (
-                        <Text style={{ color: colors.muted, fontSize: font.tiny }}>{p.leader} • {p.leaderPersona}</Text>
+                        <Text style={{ color: colors.faint, fontSize: font.tiny }}>{p.leader} • {p.leaderPersona}</Text>
                       )}
                     </View>
-                    <Text style={{ color: colors.muted, fontSize: font.small, marginRight: 12 }}>{p.currentSupport}%</Text>
-                    <Text style={{ color: colors.text, fontSize: font.body, fontWeight: '700' }}>{p.seats}</Text>
+                    <Text style={{ color: colors.faint, fontSize: font.small, marginRight: 12 }}>{p.currentSupport}%</Text>
+                    <Text style={{ color: colors.card, fontSize: font.body, fontWeight: '700' }}>{p.seats}</Text>
                   </View>
                 ))}
 
@@ -813,10 +823,10 @@ export default function GameScreen() {
                 ) : (
                   evaluatePledges(state, state.pledges ?? []).map((r) => (
                     <View key={r.pledge.id} style={{ marginTop: 6 }}>
-                      <Text style={{ color: r.kept ? colors.success : colors.text, fontSize: font.small, fontWeight: '700' }}>
+                      <Text style={{ color: r.kept ? colors.success : colors.card, fontSize: font.small, fontWeight: '700' }}>
                         {r.kept ? 'KEPT' : 'ON TRACK?'} - {r.pledge.text}
                       </Text>
-                      <Text style={{ color: colors.muted, fontSize: font.tiny }}>
+                      <Text style={{ color: colors.faint, fontSize: font.tiny, fontFamily: fileFontFamily }}>
                         now {r.current}, from {r.pledge.baseline}, target {r.pledge.target}
                       </Text>
                     </View>
@@ -826,14 +836,14 @@ export default function GameScreen() {
                 <Text style={[styles.label, { marginTop: spacing.md }]}>FLEET STREET</Text>
                 {state.headlines.map((h, i) => (
                   <Card key={`${h.paper}-${i}`}>
-                    <Text style={{ color: colors.accent, fontSize: font.tiny, fontWeight: '800', letterSpacing: 0.8 }}>{h.paper.toUpperCase()}</Text>
-                    <Text style={{ color: colors.text, fontSize: font.h3, fontWeight: '800', marginTop: 4, lineHeight: 22 }}>{h.title}</Text>
+                    <Text style={{ color: colors.accent, fontSize: font.tiny, fontWeight: '800', letterSpacing: 0.8, fontFamily: fileFontFamily }}>{h.paper.toUpperCase()}</Text>
+                    <Text style={{ color: colors.text, fontSize: font.h3, fontWeight: '800', marginTop: 4, lineHeight: 22, fontFamily: headingFontFamily }}>{h.title}</Text>
                   </Card>
                 ))}
 
                 <Text style={[styles.label, { marginTop: spacing.lg }]}>WEEK IN REVIEW</Text>
                 {state.log.slice(0, 10).map((line, i) => (
-                  <Text key={`log-${i}`} style={{ color: colors.muted, fontSize: font.small, lineHeight: 20, marginTop: 2 }}>
+                  <Text key={`log-${i}`} style={{ color: colors.faint, fontSize: font.small, lineHeight: 20, marginTop: 2, fontFamily: fileFontFamily }}>
                     - {line}
                   </Text>
                 ))}
@@ -1015,57 +1025,73 @@ export default function GameScreen() {
         )}
       </ScrollView>
 
-      {/* ================= BOTTOM NAV ================= */}
-      <View
-        style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 10,
-          elevation: 10,
-          flexDirection: 'row',
-          backgroundColor: colors.bgElevated,
-          borderTopWidth: 1,
-          borderTopColor: colors.cardBorder,
-          paddingBottom: Math.max(insets.bottom, 8),
-          paddingTop: 8,
-        }}
+      {/* ================= RED BOX SPINE + DRAWER ================= */}
+      <View style={[styles.spine, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+        <View style={styles.spineMeta}>
+          <Text style={styles.spineFile} numberOfLines={1}>
+            FILE N°0{TABS.findIndex((t) => t.key === tab) + 1}
+          </Text>
+          <Text style={styles.spineName} numberOfLines={1}>
+            {TABS.find((t) => t.key === tab)?.label}
+          </Text>
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open the red box"
+          onPress={() => setBoxOpen(true)}
+          style={styles.spineHandle}
+          testID="open-red-box"
+        >
+          <Ionicons name="file-tray-full-outline" size={18} color={colors.card} />
+          <Text style={styles.spineHandleText}>Open the box</Text>
+          {urgentCount > 0 && (
+            <View style={styles.spineBadge}>
+              <Text style={styles.spineBadgeText}>{urgentCount}</Text>
+            </View>
+          )}
+        </Pressable>
+      </View>
+
+      <Sheet
+        visible={boxOpen}
+        onClose={() => setBoxOpen(false)}
+        eyebrow="THE RED BOX"
+        title="Choose your file"
       >
-        {TABS.map((t) => {
+        {TABS.map((t, i) => {
           const active = t.key === tab;
           const badge = t.key === 'desk' ? urgentCount : 0;
           return (
             <Pressable
               key={t.key}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: active }}
+              accessibilityRole="button"
               accessibilityLabel={t.label}
-              onPress={() => setTab(t.key)}
-              style={{ flex: 1, alignItems: 'center' }}
+              accessibilityState={{ selected: active }}
+              onPress={() => {
+                setTab(t.key);
+                setBoxOpen(false);
+              }}
+              style={[styles.fileRow, active && styles.fileRowActive]}
+              testID={`nav-${t.key}`}
             >
-              <View
-                style={{
-                  width: 26,
-                  height: 26,
-                  borderRadius: 13,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: active ? colors.accentSoft : 'transparent',
-                }}
-              >
-                <Ionicons name={t.icon} size={19} color={active ? colors.accent : colors.muted} />
-                {badge > 0 && (
-                  <View style={{ position: 'absolute', right: -4, top: -4, backgroundColor: colors.danger, borderRadius: 8, minWidth: 15, height: 15, alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{badge}</Text>
-                  </View>
-                )}
-              </View>
-              <Text style={{ color: active ? colors.text : colors.muted, fontSize: 10, fontWeight: '700', marginTop: 2 }}>{t.label}</Text>
+              <Text style={styles.fileRowNo}>N°0{i + 1}</Text>
+              <Ionicons name={t.icon} size={20} color={active ? colors.gold : colors.faint} />
+              <Text style={[styles.fileRowName, active && styles.fileRowNameActive]} numberOfLines={1}>
+                {t.label}
+              </Text>
+              {badge > 0 && (
+                <View style={styles.spineBadge}>
+                  <Text style={styles.spineBadgeText}>{badge}</Text>
+                </View>
+              )}
+              {active && <Text style={styles.fileRowOpen}>OPEN</Text>}
             </Pressable>
           );
         })}
-      </View>
+        <Text style={styles.drawerFootnote}>
+          SIGNAL FROM THE PRIVATE OFFICE — CHOOSE WHERE TO DIRECT THE MACHINERY OF GOVERNMENT.
+        </Text>
+      </Sheet>
 
       {/* ================= DOSSIER SHEET ================= */}
       <Sheet
@@ -1078,12 +1104,12 @@ export default function GameScreen() {
           <View>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
               <Chip label={activeDossier.urgent ? 'urgent' : 'routine'} tone={activeDossier.urgent ? 'danger' : 'neutral'} />
-              <Text style={{ color: colors.muted, fontSize: font.tiny, marginLeft: 8 }}>
+              <Text style={{ color: colors.faint, fontSize: font.tiny, marginLeft: 8, fontFamily: fileFontFamily }}>
                 {activeDossier.weeksRemaining} month{activeDossier.weeksRemaining === 1 ? '' : 's'} left | paper {dossierIndex} of {redBox.length}
               </Text>
             </View>
-            <Text style={{ color: colors.text, fontSize: font.body, fontWeight: '700', lineHeight: 21 }}>{activeDossier.leadParagraph}</Text>
-            <Text style={{ color: colors.muted, fontSize: font.small, lineHeight: 19, marginTop: spacing.sm }}>{activeDossier.body}</Text>
+            <Text style={{ color: colors.card, fontSize: font.body, fontWeight: '700', lineHeight: 21 }}>{activeDossier.leadParagraph}</Text>
+            <Text style={{ color: colors.faint, fontSize: font.small, lineHeight: 19, marginTop: spacing.sm }}>{activeDossier.body}</Text>
             <Text style={[styles.label, { marginTop: spacing.lg }]}>YOUR DECISION</Text>
             {activeDossier.choices.map((c) => (
               <Pressable
@@ -1095,6 +1121,27 @@ export default function GameScreen() {
                 <Text style={{ color: colors.accent, fontSize: font.body, fontWeight: '700' }}>{c.label}</Text>
                 <Text style={{ color: colors.muted, fontSize: font.tiny, marginTop: 2 }}>{c.summary}</Text>
                 <EffectChips effects={c.effects as Effects} />
+                {/* Coalition impact: who gains and who loses, in party terms. */}
+                {c.effects.supportDelta && Object.values(c.effects.supportDelta).some((v) => v !== 0) ? (
+                  <View style={styles.deltaRow}>
+                    <Text style={styles.deltaLabel}>COALITION IMPACT</Text>
+                    <View style={styles.deltaChips}>
+                      {Object.entries(c.effects.supportDelta).map(([partyId, delta]) => {
+                        const p = state.parties.find((x) => x.id === partyId);
+                        if (!p || delta === 0) return null;
+                        return (
+                          <View key={partyId} style={styles.deltaItem}>
+                            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: p.color, marginRight: 6 }} />
+                            <Text style={styles.deltaText}>
+                              {p.abbreviation} {delta > 0 ? '+' : ''}
+                              {delta}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+                ) : null}
                 <Text style={{ color: colors.muted, fontSize: font.tiny, fontStyle: 'italic', marginTop: 6 }}>Adviser: {c.advice}</Text>
               </Pressable>
             ))}
@@ -1115,7 +1162,7 @@ export default function GameScreen() {
       >
         {state.pmq && (
           <View>
-            <Text style={{ color: colors.text, fontSize: font.body, lineHeight: 22 }}>{state.pmq.question}</Text>
+            <Text style={{ color: colors.card, fontSize: font.body, lineHeight: 22 }}>{state.pmq.question}</Text>
             <Text style={[styles.label, { marginTop: spacing.lg }]}>YOUR ANSWER</Text>
             {state.pmq.options.map((o) => (
               <Pressable
@@ -1241,8 +1288,8 @@ export default function GameScreen() {
         <View>
           {HELP_ROWS.map((row) => (
             <View key={row.title} style={{ marginTop: spacing.md }}>
-              <Text style={{ color: colors.text, fontSize: font.body, fontWeight: '800' }}>{row.title}</Text>
-              <Text style={{ color: colors.muted, fontSize: font.small, lineHeight: 19, marginTop: 2 }}>{row.body}</Text>
+              <Text style={{ color: colors.card, fontSize: font.body, fontWeight: '700' }}>{row.title}</Text>
+              <Text style={{ color: colors.faint, fontSize: font.small, lineHeight: 19, marginTop: 2 }}>{row.body}</Text>
             </View>
           ))}
           <Button label="Got it" onPress={() => setHelpOpen(false)} />
@@ -1254,17 +1301,17 @@ export default function GameScreen() {
         <View style={styles.centerBackdrop}>
           <View style={[styles.centerCard, { maxHeight: '90%', width: '92%' }]}>
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={{ color: colors.accent, fontSize: font.h2, fontWeight: '800', textAlign: 'center' }}>GENERAL ELECTION</Text>
-              <Text style={{ color: colors.muted, fontSize: font.small, textAlign: 'center', marginTop: 4 }}>
+              <Text style={{ color: colors.gold, fontSize: font.h2, fontWeight: '800', textAlign: 'center', fontFamily: headingFontFamily }}>GENERAL ELECTION</Text>
+              <Text style={{ color: colors.faint, fontSize: font.small, textAlign: 'center', marginTop: 4, fontFamily: fileFontFamily }}>
                 Terms won {state.termsWon} | legacy {state.legacyScore}
               </Text>
               {(() => {
                 const mySeats = state.parties.find((p) => p.id === state.player?.partyId)?.seats ?? 0;
                 const hasMajority = mySeats >= 326;
                 return (
-                  <View style={{ marginTop: spacing.sm, padding: spacing.sm, backgroundColor: colors.bgElevated, borderRadius: radius.md }}>
+                  <View style={{ marginTop: spacing.sm, padding: spacing.sm, backgroundColor: colors.bgElevated, borderRadius: radius.md, borderWidth: 1, borderColor: colors.cardBorder }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <Text style={{ color: colors.text, fontSize: font.tiny, fontWeight: '800' }}>
+                      <Text style={{ color: colors.card, fontSize: font.tiny, fontWeight: '800' }}>
                         {hasMajority ? `Working Majority (+${mySeats - 326})` : `Hung Parliament (${326 - mySeats} short of 326)`}
                       </Text>
                       <Text style={{ color: hasMajority ? colors.success : colors.warning, fontSize: font.tiny, fontWeight: '800' }}>
@@ -1281,13 +1328,13 @@ export default function GameScreen() {
                   onPress={() => setElectionViewTab('summary')}
                   style={{ flex: 1, paddingVertical: 6, alignItems: 'center', borderRadius: radius.sm, backgroundColor: electionViewTab === 'summary' ? colors.accentSoft : 'transparent' }}
                 >
-                  <Text style={{ color: electionViewTab === 'summary' ? colors.text : colors.muted, fontSize: font.tiny, fontWeight: '700' }}>National Seats</Text>
+                  <Text style={{ color: electionViewTab === 'summary' ? colors.text : colors.faint, fontSize: font.tiny, fontWeight: '700' }}>National Seats</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => setElectionViewTab('map')}
                   style={{ flex: 1, paddingVertical: 6, alignItems: 'center', borderRadius: radius.sm, backgroundColor: electionViewTab === 'map' ? colors.accentSoft : 'transparent' }}
                 >
-                  <Text style={{ color: electionViewTab === 'map' ? colors.text : colors.muted, fontSize: font.tiny, fontWeight: '700' }}>Regional Map & Councils</Text>
+                  <Text style={{ color: electionViewTab === 'map' ? colors.text : colors.faint, fontSize: font.tiny, fontWeight: '700' }}>Regional Map & Councils</Text>
                 </Pressable>
               </View>
 
@@ -1296,8 +1343,8 @@ export default function GameScreen() {
                   {rankedParties.map((p) => (
                     <View key={p.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 6 }}>
                       <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: p.color, marginRight: 10 }} />
-                      <Text style={{ color: colors.text, flex: 1, fontSize: font.body }}>{p.name}</Text>
-                      <Text style={{ color: colors.text, fontSize: font.body, fontWeight: '700' }}>{p.seats}</Text>
+                      <Text style={{ color: colors.card, flex: 1, fontSize: font.body }}>{p.name}</Text>
+                      <Text style={{ color: colors.card, fontSize: font.body, fontWeight: '700' }}>{p.seats}</Text>
                     </View>
                   ))}
                 </View>
@@ -1323,17 +1370,17 @@ export default function GameScreen() {
         <View style={styles.centerBackdrop}>
           <View style={[styles.centerCard, { borderColor: colors.danger, borderWidth: 1 }]}>
             <Text style={{ color: colors.danger, fontSize: font.h2, fontWeight: '800', textAlign: 'center' }}>PREMIERSHIP OVER</Text>
-            <Text style={{ color: colors.text, fontSize: font.body, textAlign: 'center', marginTop: spacing.md, lineHeight: 21 }}>
+            <Text style={{ color: colors.card, fontSize: font.body, textAlign: 'center', marginTop: spacing.md, lineHeight: 21 }}>
               {state.gameOver}
             </Text>
-            <Text style={{ color: colors.muted, fontSize: font.small, textAlign: 'center', marginTop: spacing.sm }}>
+            <Text style={{ color: colors.faint, fontSize: font.small, textAlign: 'center', marginTop: spacing.sm }}>
               {state.week} months in office | {state.passedLaws.length} laws passed | pledges kept{' '}
               {evaluatePledges(state, state.pledges ?? []).filter((r) => r.kept).length} of {(state.pledges ?? []).length}
             </Text>
-            <Text style={{ color: colors.muted, fontSize: font.small, textAlign: 'center', marginTop: 4 }}>
+            <Text style={{ color: colors.faint, fontSize: font.small, textAlign: 'center', marginTop: 4 }}>
               By-elections: {(state.byElections ?? []).filter((b) => !b.held).length} lost of {(state.byElections ?? []).length}
             </Text>
-            <Text style={{ color: colors.muted, fontSize: font.small, textAlign: 'center', marginTop: 4 }}>
+            <Text style={{ color: colors.faint, fontSize: font.small, textAlign: 'center', marginTop: 4 }}>
               Final legacy score {state.legacyScore}.
             </Text>
             <Button label="Return to main menu" onPress={restart} />
@@ -1364,13 +1411,144 @@ const HELP_ROWS: { title: string; body: string }[] = [
 ];
 
 const styles = {
-  label: { color: colors.muted, fontSize: font.tiny, fontWeight: '800' as const, letterSpacing: 1 },
-  hint: { color: colors.muted, fontSize: font.small, lineHeight: 19 },
+  label: { color: colors.gold, fontSize: font.tiny, fontWeight: '800' as const, letterSpacing: 1 },
+  hint: { color: colors.faint, fontSize: font.small, lineHeight: 19 },
+  spine: {
+    position: 'absolute' as const,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 10,
+    elevation: 10,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: colors.bgElevated,
+    borderTopWidth: 2,
+    borderTopColor: colors.accent,
+    paddingHorizontal: spacing.lg,
+    paddingTop: 10,
+  },
+  spineMeta: { flex: 1, marginRight: spacing.sm },
+  spineFile: {
+    color: colors.gold,
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    fontFamily: fileFontFamily,
+  },
+  spineName: {
+    color: colors.card,
+    fontSize: font.small,
+    fontWeight: '700',
+    fontFamily: headingFontFamily,
+    marginTop: 1,
+  },
+  spineHandle: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: colors.accent,
+    borderRadius: radius.sm,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    minHeight: 44,
+  },
+  spineHandleText: {
+    color: colors.card,
+    fontSize: font.small,
+    fontWeight: '800',
+    marginLeft: 8,
+  },
+  spineBadge: {
+    backgroundColor: colors.danger,
+    borderRadius: 8,
+    minWidth: 15,
+    height: 15,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    marginLeft: 8,
+    paddingHorizontal: 3,
+  },
+  spineBadgeText: { color: colors.card, fontSize: 9, fontWeight: '800' },
+  fileRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    minHeight: 56,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    marginBottom: spacing.xs,
+  },
+  fileRowActive: {
+    backgroundColor: colors.card,
+    borderColor: colors.accent,
+  },
+  fileRowNo: {
+    color: colors.gold,
+    fontSize: font.tiny,
+    fontWeight: '800',
+    letterSpacing: 1,
+    fontFamily: fileFontFamily,
+    width: 44,
+  },
+  fileRowName: {
+    color: colors.card,
+    fontSize: font.body,
+    fontWeight: '700',
+    fontFamily: headingFontFamily,
+    flex: 1,
+    marginLeft: spacing.sm,
+  },
+  fileRowNameActive: { color: colors.text },
+  fileRowOpen: {
+    color: colors.accent,
+    fontSize: font.tiny,
+    fontWeight: '800',
+    letterSpacing: 1,
+    fontFamily: fileFontFamily,
+    marginLeft: spacing.sm,
+  },
+  drawerFootnote: {
+    color: colors.faint,
+    fontSize: font.tiny,
+    lineHeight: 16,
+    letterSpacing: 1,
+    textAlign: 'center' as const,
+    fontFamily: fileFontFamily,
+    marginTop: spacing.md,
+  },
+  deltaRow: { marginTop: spacing.sm },
+  orderPaperRow: { flexDirection: 'row' as const, alignItems: 'center' as const, flexWrap: 'wrap' as const },
+  orderPaperNote: {
+    color: colors.faint,
+    fontSize: font.tiny,
+    lineHeight: 16,
+    fontFamily: fileFontFamily,
+    marginTop: spacing.xs,
+    flexBasis: '100%' as const,
+  },
+  deltaLabel: {
+    color: colors.gold,
+    fontSize: font.tiny,
+    fontWeight: '800',
+    letterSpacing: 1,
+    fontFamily: fileFontFamily,
+    marginBottom: spacing.xs,
+  },
+  deltaChips: { flexDirection: 'row' as const, flexWrap: 'wrap' as const },
+  deltaItem: { flexDirection: 'row' as const, alignItems: 'center' as const, marginRight: spacing.md, marginBottom: 2 },
+  deltaText: {
+    color: colors.text,
+    fontSize: font.tiny,
+    fontWeight: '700',
+    fontFamily: fileFontFamily,
+  },
   centerBackdrop: {
     flex: 1,
     justifyContent: 'center' as const,
     alignItems: 'center' as const,
-    backgroundColor: 'rgba(51,65,85,0.28)',
+    backgroundColor: 'rgba(23,17,13,0.75)',
     padding: spacing.xl,
   },
   centerCard: {
@@ -1381,4 +1559,4 @@ const styles = {
     padding: spacing.xl,
     width: '100%' as const,
   },
-};
+} as const;

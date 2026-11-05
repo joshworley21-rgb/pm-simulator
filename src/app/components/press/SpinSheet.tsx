@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Button, Chip, Sheet } from '../ui';
-import { colors, font, headingFontFamily, spacing } from '../../theme';
+import { colors, font, fileFontFamily, headingFontFamily, spacing } from '../../theme';
 import { BRIEFING_COOLDOWN_WEEKS, MEDIA_OUTLETS } from '../../media';
 import type { MediaState, PaperId } from '../../media';
 
@@ -104,7 +104,7 @@ export function SpinSheet({ visible, onClose, mediaState, week, onBrief }: SpinS
 
 const styles = StyleSheet.create({
   intro: {
-    color: colors.muted,
+    color: colors.faint,
     fontSize: font.small,
     lineHeight: 19,
   },
@@ -122,17 +122,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   outletName: {
-    color: colors.text,
+    color: colors.card,
     fontSize: font.h3,
-    fontWeight: '800',
+    fontWeight: '700',
     fontFamily: headingFontFamily,
     flex: 1,
     paddingRight: spacing.sm,
   },
   outletMeta: {
-    color: colors.muted,
+    color: colors.faint,
     fontSize: font.tiny,
     marginTop: 2,
+    fontFamily: fileFontFamily,
   },
   actions: {
     flexDirection: 'row',

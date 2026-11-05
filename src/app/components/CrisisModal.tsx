@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button, Chip, Divider } from './ui';
-import { colors, font, headingFontFamily, radius, spacing } from '../theme';
+import { colors, font, fileFontFamily, headingFontFamily, radius, spacing } from '../theme';
 import { useGame } from '../state';
 import { activeSwanEvent, SWAN_WINDOW_WEEKS } from '../blackSwans';
 import type { SwanKind } from '../blackSwans';
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(51,65,85,0.28)',
+    backgroundColor: 'rgba(23,17,13,0.75)',
     padding: spacing.xl,
   },
   warningCard: {
@@ -211,31 +211,33 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   title: {
-    color: colors.text,
+    color: colors.card,
     fontSize: font.h1,
-    fontWeight: '800',
+    fontWeight: '700',
     fontFamily: headingFontFamily,
     marginTop: spacing.md,
     lineHeight: 34,
   },
   body: {
-    color: colors.muted,
+    color: colors.faint,
     fontSize: font.body,
     lineHeight: 22,
     marginTop: spacing.md,
   },
   sectionLabel: {
-    color: colors.muted,
+    color: colors.gold,
     fontSize: font.tiny,
     fontWeight: '800',
     letterSpacing: 1,
     marginBottom: spacing.sm,
+    fontFamily: fileFontFamily,
+    textTransform: 'uppercase',
   },
   option: {
     marginBottom: spacing.lg,
   },
   optionLabel: {
-    color: colors.text,
+    color: colors.card,
     fontSize: font.body,
     fontWeight: '700',
     lineHeight: 21,
@@ -246,7 +248,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   footnote: {
-    color: colors.muted,
+    color: colors.faint,
     fontSize: font.tiny,
     lineHeight: 16,
     marginTop: spacing.md,
