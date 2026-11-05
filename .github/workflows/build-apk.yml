@@ -51,11 +51,11 @@ jobs:
 
       - name: Compile all Android modules against API 37.2
         run: |
-          cat >> android/build.gradle <<'EOF'
-
+          cat > /tmp/api37.gradle <<'EOF'
           // Expo SDK 58 AARs require compileSdk 37. API 37 is only published as
-          // the 37.2 minor platform, so apply it to every Android module after
-          // each module has finished configuring its Android DSL.
+          // the 37.2 minor platform, so apply it to every Android module.
+          // This must be registered before react.rootproject forces :app to
+          // evaluate (evaluationDependsOn), otherwise finalizeDsl is too late.
           allprojects { project ->
             ["com.android.application", "com.android.library"].each { pluginId ->
               project.plugins.withId(pluginId) {
@@ -67,7 +67,9 @@ jobs:
             }
           }
           EOF
-          tail -18 android/build.gradle
+          cat /tmp/api37.gradle android/build.gradle > /tmp/build.gradle
+          mv /tmp/build.gradle android/build.gradle
+          head -20 android/build.gradle
 
       # ADDED (not in the original spec): point Gradle at the runner's SDK.
       - name: Write local.properties
