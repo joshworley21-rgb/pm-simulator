@@ -32,30 +32,38 @@ jobs:
           java-version: '17'
           cache: gradle
 
-      # ADDED (not in the original spec). RN 0.88's version catalog defaults to
-      # compileSdk 37 / build-tools 37.0.0, but **API 37 is not published**: the
-      # package id `platforms;android-37` does not exist on any channel. The only
-      # API-37 artifacts are previews (`platforms;android-37.2`, `37.2-beta3`,
-      # `platform-canary-*.zip`), which is why sdkmanager reports
-      # "Failed to find package 'platforms;android-37'".
-      #
-      # Pin to the newest STABLE platform instead: API 36 + build-tools 36.0.0 are
-      # both present in the stable manifest (repository2-1.xml), as is the NDK.
-      - name: Pin Android SDK versions to the latest stable (API 37 is unpublished)
+      # Expo SDK 58's modules declare minCompileSdk 37, but the final API 37
+      # platform is not published on the stable channel. Keep the library modules
+      # on stable API 36, then compile the app itself against API 37.2 via the
+      # canary-only platform and AGP's minor SDK support.
+      - name: Pin Android SDK versions
         run: |
           CATALOG=node_modules/react-native/gradle/libs.versions.toml
           sed -i 's/^compileSdk = "37"/compileSdk = "36"/' "$CATALOG"
-          sed -i 's/^buildTools = "37.0.0"/buildTools = "36.0.0"/' "$CATALOG"
           grep -E '^(minSdk|targetSdk|compileSdk|buildTools|ndkVersion)' "$CATALOG"
 
-      # ADDED (not in the original spec): install exactly the components the build
-      # now needs. RN 0.88 pins CMake 3.30.5 for its native build, so install it
-      # explicitly instead of relying on AGP's SDK auto-download.
       - name: Install required Android SDK components
         run: |
           SDKMANAGER="$(command -v sdkmanager || echo "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager")"
           yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
-          "$SDKMANAGER" "platform-tools" "platforms;android-36" "build-tools;36.0.0" "ndk;27.1.12297006" "cmake;3.30.5"
+          "$SDKMANAGER" "platform-tools" "platforms;android-36" "build-tools;37.0.0" "ndk;27.1.12297006" "cmake;3.30.5"
+          "$SDKMANAGER" --channel=3 "platforms;android-37.2"
+          test -f "${ANDROID_HOME}/platforms/android-37.2/android.jar"
+
+      - name: Compile the app against API 37.2
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('android/app/build.gradle')
+          source = path.read_text()
+          old = '    compileSdk rootProject.ext.compileSdkVersion\n'
+          new = '    compileSdk 37\n    compileSdkMinor 2\n'
+          if old not in source:
+              raise SystemExit('compileSdk line not found in android/app/build.gradle')
+          path.write_text(source.replace(old, new, 1))
+          PY
+          grep -nE 'compileSdk' android/app/build.gradle
 
       # ADDED (not in the original spec): point Gradle at the runner's SDK.
       - name: Write local.properties
