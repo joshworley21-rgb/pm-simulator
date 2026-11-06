@@ -1,14 +1,17 @@
 import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Chip, EmptyState, Card, Meter, SectionTitle, StatTile } from '../components/ui';
+import { Button, Chip, EmptyState, Card, Meter, SectionTitle, Sheet, StatTile } from '../components/ui';
 import { MotionRow, WHIP_LABEL } from '../components/division/MotionRow';
 import { useGame } from '../state';
 import { colors, font, fileFontFamily, headingFontFamily, spacing } from '../theme';
 import { BILL_POOL } from '../bills';
 import { BILL_POOL_2 } from '../bills2';
 import { createDefaultWhips } from '../modules/whips';
-import { TURNS_PER_SESSION, DIVISION_SLOTS_PER_SESSION } from '../parliament';
+import { TURNS_PER_SESSION, DIVISION_SLOTS_PER_SESSION, PARLIAMENT_ACT_LIMIT_PER_TERM } from '../parliament';
 import { PURDAH_TURNS } from '../calendar';
+import { CommonsChamber } from '../components/CommonsChamber';
+import { pendingVotes, recentVotes, divisionStamp } from '../parliamentaryVotes';
+import { backbenchBody } from '../westminster';
 import type { WhipLevel } from '../types';
 import type { BillProgress } from '../parliament';
 
@@ -36,6 +39,8 @@ export default function DivisionLobbyScreen({ embedded = false }: DivisionLobbyS
 
   const whips = state.whips ?? createDefaultWhips();
   const parliament = state.parliamentState;
+  const party = state.parties.find((p) => p.id === state.player?.partyId);
+  const backbench = backbenchBody(party);
 
   const ownSeats = state.parties.find((p) => p.id === state.player?.partyId)?.seats ?? 0;
   const partnerSeats =
@@ -63,6 +68,7 @@ export default function DivisionLobbyScreen({ embedded = false }: DivisionLobbyS
   );
 
   const [whipChoice, setWhipChoice] = useState<Record<string, WhipLevel>>({});
+  const [resultOpen, setResultOpen] = useState(false);
   const whipFor = (billId: string): WhipLevel => whipChoice[billId] ?? 'two-line';
 
   const sessionWeek = ((state.week - 1) % TURNS_PER_SESSION) + 1;
@@ -70,16 +76,37 @@ export default function DivisionLobbyScreen({ embedded = false }: DivisionLobbyS
   const inPurdah = state.phase === 'playing' && state.turnsUntilElection <= PURDAH_TURNS;
   // Commons time is a resource: every bill before the House holds a division slot.
   const orderPaperFull = activeBills.length >= DIVISION_SLOTS_PER_SESSION;
+  const scheduledVotes = pendingVotes(parliament?.votes);
+  const lastDivision = recentVotes(parliament?.votes)[0];
+  const lastDivisionStamp = divisionStamp(lastDivision?.result);
 
   const body = (
     <>
-      <Text style={styles.eyebrow}>THE HOUSE OF COMMONS</Text>
-      <Text style={styles.title}>Division Lobby</Text>
-      <Text style={styles.subtitle}>
-        Session week {sessionWeek}/{TURNS_PER_SESSION} · Month {state.week}
-      </Text>
+      {!embedded && (
+        <>
+          <Text style={styles.eyebrow}>DIVISION RECORD</Text>
+          <Text style={styles.title}>The House</Text>
+          <Text style={styles.subtitle}>
+            Session month {sessionWeek}/{TURNS_PER_SESSION} · Month {state.week}
+          </Text>
+        </>
+      )}
 
-      <SectionTitle title="The Numbers" hint="Your majority, your whips, and the letters meter." />
+      <CommonsChamber
+        parties={state.parties}
+        playerPartyId={state.player?.partyId}
+        result={lastDivision?.result}
+      />
+
+      {state.budgetVoteDefeated || state.noConfidenceImminent ? (
+        <Card tone="danger">
+          <Text style={styles.budgetWarning}>
+            BUDGET DEFEATED — a vote of no confidence is imminent.
+          </Text>
+        </Card>
+      ) : null}
+
+      <SectionTitle title="The Numbers" hint="Your majority, your whips and party pressure." />
       <Card tone={majorityDelta >= 0 ? 'success' : 'danger'}>
         <View style={styles.meterRow}>
           <Text style={styles.meterLabel}>Working Majority</Text>
@@ -101,23 +128,25 @@ export default function DivisionLobbyScreen({ embedded = false }: DivisionLobbyS
       <View style={styles.statRow}>
         <View style={styles.statTile}>
           <StatTile
-            label="Whip Strength"
+            label="Whip"
             value={Math.round(whips.whipStrength)}
+            hint="strength"
             tone={whips.whipStrength >= 60 ? 'success' : whips.whipStrength >= 35 ? 'warning' : 'danger'}
           />
         </View>
         <View style={styles.statTile}>
           <StatTile
-            label="Rebel Pressure"
+            label="Rebellion"
             value={Math.round(whips.rebelPressure)}
             tone={whips.rebellionImminent ? 'danger' : whips.rebelPressure >= 40 ? 'warning' : 'success'}
-            hint={whips.rebellionImminent ? 'imminent' : undefined}
+            hint={whips.rebellionImminent ? 'imminent' : 'pressure'}
           />
         </View>
         <View style={styles.statTile}>
           <StatTile
-            label="Payroll Votes"
+            label="Payroll"
             value={whips.payrollVotes}
+            hint="vote"
             tone={whips.payrollVotes > 0 ? 'success' : 'default'}
           />
         </View>
@@ -125,7 +154,7 @@ export default function DivisionLobbyScreen({ embedded = false }: DivisionLobbyS
 
       <Card tone={whips.rebellionImminent ? 'danger' : 'default'}>
         <View style={styles.meterRow}>
-          <Text style={styles.meterLabel}>Letters of No Confidence</Text>
+          <Text style={styles.meterLabel}>{backbench.pressureLabel}</Text>
           <Text style={styles.meterValue}>
             {letters}/{lettersThreshold}
           </Text>
@@ -138,14 +167,50 @@ export default function DivisionLobbyScreen({ embedded = false }: DivisionLobbyS
         <Text style={styles.meterSub}>
           {letters >= lettersThreshold
             ? 'Threshold reached — a confidence vote is due.'
-            : `${Math.max(0, lettersThreshold - letters)} more letter(s) to the threshold.`}
+            : `${Math.max(0, lettersThreshold - letters)} more ${backbench.pressureUnit}${Math.max(0, lettersThreshold - letters) === 1 ? '' : 's'} to the threshold.`}
         </Text>
-        <Text style={[styles.meterLabel, styles.secondMeter]}>Rebel Pressure</Text>
+        <Text style={[styles.meterLabel, styles.secondMeter]}>Rebellion pressure</Text>
         <Meter
           value={whips.rebelPressure}
           color={whips.rebellionImminent ? colors.danger : colors.warning}
         />
       </Card>
+
+      {lastDivision?.result ? (
+        <Card tone={lastDivision.result.passed ? 'success' : 'danger'}>
+          <View style={styles.meterRow}>
+            <Text style={styles.meterLabel}>Last division</Text>
+            <Chip
+              label={lastDivision.result.passed ? 'CARRIED' : 'DEFEATED'}
+              tone={lastDivision.result.passed ? 'success' : 'danger'}
+            />
+          </View>
+          <Text style={styles.lastDivisionTitle} numberOfLines={2}>{lastDivision.title}</Text>
+          <View style={styles.divisionTally}>
+            <View style={styles.divisionTallyItem}>
+              <Text style={styles.divisionTallyValue}>{lastDivision.result.ayes}</Text>
+              <Text style={styles.divisionTallyLabel}>AYES</Text>
+            </View>
+            <View style={styles.divisionTallyItem}>
+              <Text style={styles.divisionTallyValue}>{lastDivision.result.noes}</Text>
+              <Text style={styles.divisionTallyLabel}>NOES</Text>
+            </View>
+            <View style={styles.divisionTallyItem}>
+              <Text style={styles.divisionTallyValue}>{lastDivision.result.rebels}</Text>
+              <Text style={styles.divisionTallyLabel}>REBELS</Text>
+            </View>
+          </View>
+          <View style={styles.lastDivisionAction}>
+            <Button
+              label="View division result"
+              variant="secondary"
+              compact
+              onPress={() => setResultOpen(true)}
+              testID="open-division-result"
+            />
+          </View>
+        </Card>
+      ) : null}
 
       <SectionTitle title="Active Legislation" hint="Bills already before Parliament." />
       {activeBills.length === 0 ? (
@@ -156,6 +221,8 @@ export default function DivisionLobbyScreen({ embedded = false }: DivisionLobbyS
       ) : (
         activeBills.map((bill) => {
           const progress = progressByBillId[bill.id];
+          const parliamentActLeft =
+            (parliament?.parliamentActUses ?? 0) < PARLIAMENT_ACT_LIMIT_PER_TERM;
           return (
             <MotionRow
               key={bill.id}
@@ -165,6 +232,10 @@ export default function DivisionLobbyScreen({ embedded = false }: DivisionLobbyS
               stage={progress?.stage}
               weeksToDivision={bill.weeksToPass}
               whipLevel={bill.whipLevel ?? 'two-line'}
+              secondaryActionLabel={parliamentActLeft ? 'Force through the Lords (Parliament Act)' : 'Parliament Act used this term'}
+              onSecondaryAction={() => dispatch({ type: 'INVOKE_PARLIAMENT_ACT', billId: bill.id })}
+              secondaryActionDisabled={inPurdah || !parliamentActLeft}
+              secondaryTestID={`parliament-act-${bill.id}`}
               testID={`active-${bill.id}`}
             />
           );
@@ -178,7 +249,7 @@ export default function DivisionLobbyScreen({ embedded = false }: DivisionLobbyS
       {/* Commons time: the Order Paper has fixed division slots. */}
       <View style={styles.orderPaperRow}>
         <Chip
-          label={`ORDER PAPER ${activeBills.length}/${DIVISION_SLOTS_PER_SESSION} SLOTS`}
+          label={`ORDER PAPER · ${activeBills.length} OF ${DIVISION_SLOTS_PER_SESSION} SLOTS`}
           tone={orderPaperFull ? 'danger' : 'neutral'}
         />
         {orderPaperFull && (
@@ -187,6 +258,25 @@ export default function DivisionLobbyScreen({ embedded = false }: DivisionLobbyS
           </Text>
         )}
       </View>
+      {scheduledVotes.length > 0 ? (
+        <View style={styles.scheduledList}>
+          <Text style={styles.scheduledHeading}>SCHEDULED</Text>
+          {scheduledVotes.map((vote) => (
+            <View key={vote.id} style={styles.scheduledRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.scheduledTitle} numberOfLines={1}>{vote.title}</Text>
+                <Text style={styles.scheduledMeta}>
+                  {vote.kind === 'government-bill' ? 'Government bill' : 'Opposition motion'} · Month {vote.scheduledWeek}
+                </Text>
+              </View>
+              <Chip
+                label={vote.kind === 'government-bill' ? 'BILL' : 'MOTION'}
+                tone={vote.kind === 'government-bill' ? 'accent' : 'danger'}
+              />
+            </View>
+          ))}
+        </View>
+      ) : null}
       {upcoming.length === 0 ? (
         <EmptyState title="No bills left" body="Every available bill has already been introduced." />
       ) : (
@@ -210,11 +300,71 @@ export default function DivisionLobbyScreen({ embedded = false }: DivisionLobbyS
           />
         ))
       )}
+
+      <Sheet
+        visible={resultOpen && !!lastDivision?.result}
+        onClose={() => setResultOpen(false)}
+        eyebrow="DIVISION RESULT"
+        title={lastDivision?.title ?? ''}
+      >
+        {lastDivision?.result ? (
+          <View>
+            <View style={styles.resultHead}>
+              <Chip
+                label={lastDivisionStamp ?? (lastDivision.result.passed ? 'CARRIED' : 'DEFEATED')}
+                tone={
+                  lastDivisionStamp === 'AMENDED'
+                    ? 'warning'
+                    : lastDivision.result.passed
+                      ? 'success'
+                      : 'danger'
+                }
+              />
+              <Text style={styles.resultDate}>
+                Month {lastDivision.result.castWeek} · {lastDivision.kind === 'government-bill' ? 'Government bill' : 'Opposition motion'}
+              </Text>
+            </View>
+            <View style={styles.resultTally}>
+              <View style={styles.resultTallyItem}>
+                <Text style={styles.resultTallyValue}>{lastDivision.result.ayes}</Text>
+                <Text style={styles.resultTallyLabel}>AYES</Text>
+              </View>
+              <View style={styles.resultTallyItem}>
+                <Text style={styles.resultTallyValue}>{lastDivision.result.noes}</Text>
+                <Text style={styles.resultTallyLabel}>NOES</Text>
+              </View>
+            </View>
+            <Text style={styles.resultBody}>
+              {lastDivision.result.rebels > 0
+                ? `${lastDivision.result.rebels} government MP${lastDivision.result.rebels === 1 ? '' : 's'} rebelled in the division.`
+                : 'No government MPs rebelled in the division.'}
+            </Text>
+            {lastDivision.result.backbenchRebels ? (
+              <Text style={styles.resultBody}>
+                Backbench rebels: {lastDivision.result.backbenchRebels}.
+              </Text>
+            ) : null}
+            {lastDivision.result.rebelNames && lastDivision.result.rebelNames.length > 0 ? (
+              <Text style={styles.resultBody}>
+                Coalition ministers in the No lobby: {lastDivision.result.rebelNames.join(', ')}.
+              </Text>
+            ) : null}
+            {lastDivision.result.defections ? (
+              <Text style={styles.resultBody}>
+                Government defections: {lastDivision.result.defections}.
+              </Text>
+            ) : null}
+            <Text style={styles.resultFootnote}>
+              Ayes and Noes are the recorded lobby totals. The result is entered in the Official Record.
+            </Text>
+          </View>
+        ) : null}
+      </Sheet>
     </>
   );
 
   return embedded ? (
-    <View style={styles.content}>{body}</View>
+    <View style={[styles.content, styles.embeddedContent]}>{body}</View>
   ) : (
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       {body}
@@ -223,12 +373,70 @@ export default function DivisionLobbyScreen({ embedded = false }: DivisionLobbyS
 }
 
 const styles = StyleSheet.create({
+  lastDivisionTitle: {
+    marginTop: spacing.xs,
+    color: colors.text,
+    fontFamily: headingFontFamily,
+    fontSize: font.h3,
+    fontWeight: '700',
+    lineHeight: 21,
+  },
+  divisionTally: {
+    flexDirection: 'row',
+    marginTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.cardBorderLight,
+    paddingTop: spacing.sm,
+  },
+  divisionTallyItem: { flex: 1, alignItems: 'center' },
+  divisionTallyValue: {
+    color: colors.text,
+    fontFamily: fileFontFamily,
+    fontSize: font.h2,
+    fontWeight: '800',
+  },
+  divisionTallyLabel: {
+    color: colors.muted,
+    fontFamily: fileFontFamily,
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: .8,
+  },
+  lastDivisionAction: { flexDirection: 'row', marginTop: spacing.sm },
+  resultHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+  resultDate: { color: colors.faint, fontFamily: fileFontFamily, fontSize: 9 },
+  resultTally: {
+    flexDirection: 'row',
+    marginTop: spacing.lg,
+    paddingVertical: spacing.md,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.cardBorderLight,
+  },
+  resultTallyItem: { flex: 1, alignItems: 'center' },
+  resultTallyValue: {
+    color: colors.text,
+    fontFamily: headingFontFamily,
+    fontSize: 34,
+    fontWeight: '700',
+    lineHeight: 38,
+  },
+  resultTallyLabel: {
+    color: colors.muted,
+    fontFamily: fileFontFamily,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  resultBody: { marginTop: spacing.sm, color: colors.text, fontSize: font.body, lineHeight: 21 },
+  resultFootnote: { marginTop: spacing.lg, color: colors.faint, fontSize: font.tiny, lineHeight: 17 },
   content: {
     padding: spacing.lg,
     backgroundColor: colors.bg,
   },
+  embeddedContent: { padding: 0, backgroundColor: 'transparent' },
   eyebrow: {
-    color: colors.gold,
+    color: colors.accent,
     fontSize: font.tiny,
     fontWeight: '700',
     fontFamily: fileFontFamily,
@@ -236,7 +444,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   title: {
-    color: colors.card,
+    color: colors.text,
     fontSize: font.h1,
     fontWeight: '700',
     fontFamily: headingFontFamily,
@@ -271,6 +479,13 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     lineHeight: 16,
   },
+  budgetWarning: {
+    color: colors.danger,
+    fontFamily: fileFontFamily,
+    fontSize: font.small,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
   secondMeter: {
     marginTop: spacing.md,
   },
@@ -288,6 +503,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexWrap: 'wrap',
     marginTop: spacing.xs,
+  },
+  scheduledList: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.cardBorderLight,
+  },
+  scheduledHeading: {
+    marginTop: spacing.xs,
+    color: colors.muted,
+    fontFamily: fileFontFamily,
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  scheduledRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.cardBorderLight,
+  },
+  scheduledTitle: {
+    color: colors.text,
+    fontSize: font.small,
+    fontWeight: '700',
+  },
+  scheduledMeta: {
+    marginTop: 2,
+    color: colors.faint,
+    fontFamily: fileFontFamily,
+    fontSize: 8,
+    letterSpacing: .2,
   },
   orderPaperNote: {
     color: colors.faint,

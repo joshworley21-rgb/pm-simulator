@@ -303,7 +303,7 @@ export const PMQ_TEMPLATES: PmqTemplate[] = [
     preferredAsker: 'loto',
     relevance: (s) => (s.metrics.partyConfidence < 40 || s.stats.lettersOfNoConfidence > 20 ? 9 : 1),
     question: (s) =>
-      `The Prime Minister’s backbenchers are in open mutiny, letters are flying into the 1922 Committee, and they cannot even get their legislation through the lobbies. When will they admit they have lost control of their own party?`,
+      `The Prime Minister’s backbenchers are in open mutiny, the party is openly discussing a leadership challenge, and they cannot even get their legislation through the lobbies. When will they admit they have lost control of their own party?`,
     options: [
       { id: 'defend', label: 'Insist the government is united and focused on delivery', effects: { approval: -1, partyConfidence: 2 } },
       { id: 'own', label: 'Acknowledge vigorous parliamentary debate within a broad church party', effects: { approval: 1, partyConfidence: 1 } },

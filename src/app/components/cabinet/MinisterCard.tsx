@@ -61,20 +61,20 @@ export function MinisterCard({
         <Text
           style={[
             styles.meterValue,
-            { color: lTone === 'danger' ? colors.accent : lTone === 'warning' ? colors.warning : colors.success },
+            { color: lTone === 'danger' ? colors.danger : lTone === 'warning' ? colors.warning : colors.success },
           ]}
         >
           {Math.round(minister.loyalty)}
         </Text>
       </View>
-      <Meter value={minister.loyalty} color={lTone === 'danger' ? colors.accent : lTone === 'warning' ? colors.warning : colors.success} />
+      <Meter value={minister.loyalty} color={lTone === 'danger' ? colors.danger : lTone === 'warning' ? colors.warning : colors.success} />
 
       <View style={[styles.meterRow, styles.secondMeter]}>
         <Text style={styles.meterLabel}>Efficacy</Text>
         <Text
           style={[
             styles.meterValue,
-            { color: cTone === 'danger' ? colors.accent : cTone === 'warning' ? colors.warning : colors.success },
+            { color: cTone === 'danger' ? colors.danger : cTone === 'warning' ? colors.warning : colors.success },
           ]}
         >
           {Math.round(minister.competence)}
@@ -82,7 +82,7 @@ export function MinisterCard({
       </View>
       <Meter
         value={minister.competence}
-        color={cTone === 'danger' ? colors.accent : cTone === 'warning' ? colors.warning : colors.success}
+        color={cTone === 'danger' ? colors.danger : cTone === 'warning' ? colors.warning : colors.success}
       />
 
       <Button label="Manage" variant="secondary" onPress={onPress} testID={testID} />

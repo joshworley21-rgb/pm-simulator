@@ -45,16 +45,16 @@ export function SpinSheet({ visible, onClose, mediaState, week, onBrief }: SpinS
   const ready = weeksRemaining <= 0;
 
   return (
-    <Sheet visible={visible} onClose={onClose} eyebrow="FLEET STREET" title="Lobby Briefing">
+    <Sheet visible={visible} onClose={onClose} eyebrow="PRESS GALLERY" title="Lobby briefing">
       <Text style={styles.intro}>
         {ready
           ? 'Choose an outlet and an angle. A briefing always carries a whiff of manipulation.'
-          : `No briefings for another ${weeksRemaining} week(s). The lobby is watching.`}
+          : `No briefings for another ${weeksRemaining} month${weeksRemaining === 1 ? '' : 's'}. The lobby is watching.`}
       </Text>
 
       <View style={styles.cooldownRow}>
         <Chip
-          label={ready ? 'BRIEFING READY' : `COOLDOWN: ${weeksRemaining} WEEK(S)`}
+          label={ready ? 'BRIEFING READY' : `COOLDOWN: ${weeksRemaining} MONTH${weeksRemaining === 1 ? '' : 'S'}`}
           tone={ready ? 'success' : 'warning'}
         />
         <Chip label={`Hostility ${Math.round(mediaState.hostility)}`} tone="neutral" />
@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   outletName: {
-    color: colors.card,
+    color: colors.text,
     fontSize: font.h3,
     fontWeight: '700',
     fontFamily: headingFontFamily,

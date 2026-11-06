@@ -48,8 +48,8 @@ export default function CreateScreen() {
       contentContainerStyle={{ padding: spacing.lg, paddingTop: insets.top + spacing.lg, paddingBottom: spacing.xxl }}
       keyboardShouldPersistTaps="handled"
     >
-      <Text style={{ color: colors.card, fontSize: font.h1, fontWeight: '700', fontFamily: headingFontFamily }}>Create your Prime Minister</Text>
-      <Text style={{ color: colors.faint, fontSize: font.body, marginTop: 4, fontFamily: fileFontFamily }}>Pick a name, a party and a past.</Text>
+      <Text style={{ color: colors.text, fontSize: font.h1, fontWeight: '700', fontFamily: headingFontFamily }}>Establish your ministry</Text>
+      <Text style={{ color: colors.faint, fontSize: font.body, marginTop: 4, fontFamily: fileFontFamily }}>Your name, party and political background enter the record.</Text>
 
       <SectionTitle title="Name" />
       <TextInput
@@ -205,7 +205,7 @@ export default function CreateScreen() {
         </Text>
       </Card>
 
-      <Button label="Enter Number 10" onPress={start} disabled={!canStart} />
+      <Button label="Begin the premiership" onPress={start} disabled={!canStart} />
       {!canStart && (
         <Text style={{ color: colors.faint, fontSize: font.tiny, textAlign: 'center', marginTop: spacing.sm, fontFamily: fileFontFamily }}>
           Add a first and last name to begin.

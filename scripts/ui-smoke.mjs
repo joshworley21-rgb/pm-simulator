@@ -87,7 +87,10 @@ async function run() {
   startExpo();
   await waitForServer();
 
-  browser = await chromium.launch({ args: ['--no-sandbox'] });
+  browser = await chromium.launch({
+    executablePath: process.env.CHROME_PATH || undefined,
+    args: ['--no-sandbox'],
+  });
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
     deviceScaleFactor: 2,
@@ -100,36 +103,82 @@ async function run() {
 
   console.log(`→ opening ${BASE_URL}`);
   await page.goto(BASE_URL, { waitUntil: 'networkidle', timeout: 120_000 });
-  await expectText(page, 'PM Simulator', 120_000);
-  await expectText(page, 'Start a new game');
+  await expectText(page, 'House of Commons', 120_000);
+  await expectText(page, 'Open a new record');
   await page.screenshot({ path: path.join(OUT_DIR, '01-menu.png'), fullPage: true });
   console.log('   ✓ menu renders');
 
-  await page.getByText('Start a new game', { exact: true }).click();
-  await expectText(page, 'Create your Prime Minister');
+  await page.getByText('Open a new record', { exact: true }).click();
+  await expectText(page, 'Establish your ministry');
   await assertNoTextOverlap(page, 'Conservative Party', '24% base', 'party card');
-  await assertHitTarget(page.getByRole('button', { name: 'Enter Number 10' }), 'start game button');
+  await assertHitTarget(page.getByRole('button', { name: 'Begin the premiership' }), 'start game button');
   await page.screenshot({ path: path.join(OUT_DIR, '02-create.png'), fullPage: true });
   console.log('   ✓ create screen renders; party card text does not overlap');
 
   await page.getByPlaceholder('First name').fill('Jane');
   await page.getByPlaceholder('Last name').fill('Hartley');
-  await page.getByText('Enter Number 10', { exact: true }).click();
+  await page.getByText('Begin the premiership', { exact: true }).click();
 
   await expectText(page, 'State of the Nation', 120_000);
-  await expectText(page, 'Advance');
+  await expectText(page, 'Next month');
 
-  // The red box drawer replaces the tab bar: open it, switch files, switch back.
-  await page.getByTestId('open-red-box').click();
-  await expectText(page, 'Choose your file');
-  await page.getByTestId('nav-govern').click();
+  // The institutional index stays visible: exercise the four record sections.
+  await page.getByTestId('tab-papers').click();
   await expectText(page, 'Legislative agenda');
-  await page.getByTestId('open-red-box').click();
-  await page.getByTestId('nav-desk').click();
+  await page.screenshot({ path: path.join(OUT_DIR, '04-papers.png'), fullPage: true });
+  await page.getByTestId('tab-divisions').click();
+  await expectText(page, 'The House');
+  await page.screenshot({ path: path.join(OUT_DIR, '05-divisions.png'), fullPage: true });
+  await page.getByTestId('tab-office').click();
+  await expectText(page, 'Cabinet Cohesion');
+  await page.screenshot({ path: path.join(OUT_DIR, '06-office-cabinet.png'), fullPage: true });
+  for (const [section, text, filename] of [
+    ['Treasury', 'HM Treasury', '07-office-treasury.png'],
+    ['Nation', 'The Nation', '08-office-nation.png'],
+    ['World', 'Abroad and the economy', '09-office-world.png'],
+    ['Press', 'Press Gallery', '10-office-press.png'],
+  ]) {
+    await page.getByRole('tab', { name: section, exact: true }).click();
+    await expectText(page, text);
+    await page.screenshot({ path: path.join(OUT_DIR, filename), fullPage: true });
+  }
+  await page.getByTestId('tab-record').click();
   await expectText(page, 'State of the Nation');
 
   await page.screenshot({ path: path.join(OUT_DIR, '03-game.png'), fullPage: true });
   console.log('   ✓ first-run flow reaches the game shell');
+
+  // Scheduled vote -> division result, end to end.
+  await page.getByTestId('tab-papers').click();
+  await expectText(page, 'Legislative agenda');
+  await page.getByTestId('propose-bill-windfall-tax-two-line').click();
+  await page.getByTestId('tab-divisions').click();
+  await expectText(page, 'SCHEDULED');
+  await expectText(page, 'Windfall Tax on Energy Giants');
+  await page.screenshot({ path: path.join(OUT_DIR, '11-scheduled-vote.png'), fullPage: true });
+  console.log('   ✓ bill appears in the scheduled division list');
+
+  for (let i = 0; i < 6; i++) {
+    if ((await page.getByText('Last division', { exact: true }).count()) > 0) break;
+    const skip = page.getByText('Skip this session', { exact: true });
+    if ((await skip.count()) > 0) await skip.first().click();
+    await page.getByTestId('advance-week').click();
+    await page.getByTestId('confirm-advance-week').click();
+    await page.waitForTimeout(900);
+  }
+  await page.getByTestId('tab-divisions').click();
+  await expectText(page, 'Last division');
+  await page.getByTestId('open-division-result').click();
+  await expectText(page, 'AYES');
+  await expectText(page, 'NOES');
+  await page.screenshot({ path: path.join(OUT_DIR, '12-division-result.png'), fullPage: false });
+  await page.getByLabel('Close').first().click();
+  console.log('   ✓ division result sheet shows Ayes and Noes');
+
+  await page.getByTestId('tab-record').click();
+  await expectText(page, 'Recent divisions');
+  await page.screenshot({ path: path.join(OUT_DIR, '13-recent-divisions.png'), fullPage: true });
+  console.log('   ✓ recent divisions appear in the Official Record');
 
   if (pageErrors.length > 0) {
     throw new Error(`unhandled page exceptions:\n${pageErrors.join('\n')}`);

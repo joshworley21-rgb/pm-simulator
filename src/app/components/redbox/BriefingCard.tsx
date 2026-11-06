@@ -1,5 +1,6 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ArrowRight } from 'lucide-react-native';
 import { colors, font, fileFontFamily, headingFontFamily, spacing } from '../../theme';
 
 export interface BriefingCardProps {
@@ -22,9 +23,25 @@ export function BriefingCard({
   onPress,
 }: BriefingCardProps) {
   const urgent = tone === 'danger';
+  const entrance = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(entrance, {
+      toValue: 1,
+      duration: 220,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+  }, [entrance]);
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress}>
-      <View style={[styles.file, urgent && styles.fileUrgent, tone === 'warning' && styles.fileWarning]}>
+      <Animated.View
+        style={[
+          styles.file,
+          urgent && styles.fileUrgent,
+          tone === 'warning' && styles.fileWarning,
+          { opacity: entrance, transform: [{ translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [5, 0] }) }] },
+        ]}
+      >
         <View style={styles.meta}>
           <Text style={styles.department} numberOfLines={1}>
             {eyebrow.toUpperCase()}
@@ -38,10 +55,10 @@ export function BriefingCard({
           {body}
         </Text>
         <View style={styles.footer}>
-          <Text style={styles.footerHint}>{(actionLabel ?? 'OPEN FILE').toUpperCase()}</Text>
-          <Text style={styles.stamp}>{urgent ? 'REQUIRES ACTION' : 'FOR REVIEW'}</Text>
+          <Text style={styles.footerHint}>{actionLabel ?? 'Open file'}</Text>
+          <ArrowRight size={17} color={colors.accent} strokeWidth={1.8} />
         </View>
-      </View>
+      </Animated.View>
     </Pressable>
   );
 }
@@ -53,18 +70,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.cardBorderLight,
-    borderRadius: 2,
+    borderRadius: 0,
     padding: spacing.md,
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    shadowOffset: { width: 1, height: 2 },
-    elevation: 3,
   },
   fileUrgent: {
-    borderColor: colors.accent,
+    borderColor: colors.danger,
     borderLeftWidth: 5,
-    borderLeftColor: colors.accent,
+    borderLeftColor: colors.danger,
   },
   fileWarning: {
     borderLeftWidth: 5,
@@ -79,7 +91,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   department: {
-    color: colors.muted,
+    color: colors.accent,
     fontSize: font.tiny,
     fontFamily: fileFontFamily,
     letterSpacing: 1,
@@ -92,7 +104,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   deadlineUrgent: {
-    color: colors.accent,
+    color: colors.danger,
     fontWeight: '800',
   },
   title: {
@@ -118,22 +130,8 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   footerHint: {
-    color: colors.textOnPaper,
-    fontSize: font.tiny,
+    color: colors.accent,
+    fontSize: font.small,
     fontWeight: '700',
-    letterSpacing: 1,
-  },
-  stamp: {
-    color: colors.stamp,
-    fontSize: 9,
-    fontFamily: fileFontFamily,
-    letterSpacing: 1.2,
-    borderWidth: 1,
-    borderColor: colors.stamp,
-    borderRadius: 2,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    transform: [{ rotate: '-4deg' }],
-    opacity: 0.85,
   },
 });

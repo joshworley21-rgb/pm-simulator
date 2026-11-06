@@ -1,3 +1,5 @@
+import type { Effects } from '../types';
+
 export interface Investigation {
   id: string;
   severity: number;
@@ -59,6 +61,32 @@ export function beginInvestigation(
         weeksRemaining: INVESTIGATION_MATURITY_WEEKS,
       },
     ],
+  };
+}
+
+/**
+ * Come clean: drop the investigation now and take a bounded hit, rather than
+ * letting it mature (or covering it up and risking the deferred damage).
+ */
+export function admitInvestigation(
+  ethics: EthicsState,
+  investigationId: string,
+): { state: EthicsState; effects: Effects } {
+  const investigation = ethics.activeInvestigations.find((i) => i.id === investigationId);
+  if (!investigation) return { state: ethics, effects: {} };
+  const severity = clamp(investigation.severity, 0, 100);
+  return {
+    state: {
+      ...ethics,
+      activeInvestigations: ethics.activeInvestigations.filter((i) => i.id !== investigationId),
+      standardsRisk: clamp(ethics.standardsRisk - 2, 0, 100),
+      coverUpActive: false,
+    },
+    effects: {
+      approval: -Math.max(1, Math.round(severity * 0.25)),
+      mediaAttention: Math.max(1, Math.round(severity * 0.5)),
+      lettersDelta: severity >= 40 ? 1 : 0,
+    },
   };
 }
 

@@ -1,5 +1,6 @@
-import React from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { X } from 'lucide-react-native';
 import { colors, font, fileFontFamily, headingFontFamily, radius, spacing } from '../theme';
 import type { Effects } from '../types';
 
@@ -18,7 +19,7 @@ export function Card({
 }) {
   const border =
     tone === 'danger'
-      ? colors.accent
+      ? colors.danger
       : tone === 'success'
         ? colors.success
         : tone === 'accent'
@@ -77,18 +78,28 @@ export function Button({
       : variant === 'secondary'
         ? colors.accentSoft
         : variant === 'danger'
-          ? colors.accentDeep
+          ? colors.danger
           : 'transparent';
   /* Ghost = stamped ink on whatever surface it sits on. */
-  const textColor = variant === 'ghost' ? colors.muted : variant === 'secondary' ? colors.accent : colors.card;
+  const textColor =
+    variant === 'ghost' || variant === 'secondary' ? colors.accent : colors.onAccent;
   const border =
-    variant === 'danger' || variant === 'ghost' ? colors.accent : variant === 'secondary' ? colors.cardBorderLight : 'transparent';
+    variant === 'danger'
+      ? colors.danger
+      : variant === 'ghost'
+        ? colors.accent
+        : variant === 'secondary'
+          ? colors.accentSoft
+          : 'transparent';
 
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={{ disabled: !!disabled }}
+      disabled={disabled}
       onPress={onPress}
+      testID={testID}
       style={({ pressed }) => [
         styles.button,
         compact && styles.buttonCompact,
@@ -116,18 +127,18 @@ export function Chip({
 }) {
   const color =
     tone === 'danger'
-      ? colors.accent
+      ? colors.danger
       : tone === 'warning'
         ? colors.warning
         : tone === 'success'
           ? colors.success
           : tone === 'accent'
-            ? colors.gold
+            ? colors.accent
             : colors.textOnPaper;
   const body = (
     <View style={[styles.chip, { borderColor: color }]}>
       <Text style={[styles.chipText, { color }]} numberOfLines={1}>
-        {label}
+        {label}{onPress ? ' ›' : ''}
       </Text>
     </View>
   );
@@ -155,19 +166,32 @@ export function StatTile({
   tone?: 'default' | 'danger' | 'warning' | 'success';
   hint?: string;
 }) {
+  const pulse = useRef(new Animated.Value(1)).current;
+  const previousValue = useRef(value);
   const color =
     tone === 'danger'
-      ? colors.accent
+      ? colors.danger
       : tone === 'warning'
         ? colors.warning
         : tone === 'success'
           ? colors.success
           : colors.text;
+  useEffect(() => {
+    if (Object.is(previousValue.current, value)) return;
+    previousValue.current = value;
+    pulse.setValue(1.06);
+    Animated.spring(pulse, {
+      toValue: 1,
+      speed: 24,
+      bounciness: 4,
+      useNativeDriver: true,
+    }).start();
+  }, [pulse, value]);
   return (
     <View style={styles.statTile}>
-      <Text style={[styles.statValue, { color }]} numberOfLines={1}>
+      <Animated.Text style={[styles.statValue, { color, transform: [{ scale: pulse }] }]} numberOfLines={1}>
         {value}
-      </Text>
+      </Animated.Text>
       <Text style={styles.statLabel} numberOfLines={1}>
         {label}
       </Text>
@@ -192,9 +216,19 @@ export function Meter({
   height?: number;
 }) {
   const pct = Math.max(0, Math.min(100, (value / max) * 100));
+  const progress = useRef(new Animated.Value(pct)).current;
+  useEffect(() => {
+    Animated.timing(progress, {
+      toValue: pct,
+      duration: 320,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [pct, progress]);
+  const width = progress.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] });
   return (
     <View style={[styles.meter, { height }]}>
-      <View style={[styles.meterFill, { width: `${pct}%`, backgroundColor: color ?? colors.accent }]} />
+      <Animated.View style={[styles.meterFill, { width, backgroundColor: color ?? colors.accent }]} />
     </View>
   );
 }
@@ -215,10 +249,20 @@ export function MandateBar({
 }) {
   const pct = Math.max(0, Math.min(100, approval));
   const markerPct = Math.max(0, Math.min(100, marker));
-  const color = approval >= marker ? colors.success : approval >= marker - 10 ? colors.warning : colors.accent;
+  const progress = useRef(new Animated.Value(pct)).current;
+  useEffect(() => {
+    Animated.timing(progress, {
+      toValue: pct,
+      duration: 420,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [pct, progress]);
+  const width = progress.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] });
+  const color = approval >= marker ? colors.success : approval >= marker - 10 ? colors.warning : colors.danger;
   return (
     <View style={[styles.mandate, { height }]}>
-      <View style={[styles.mandateFill, { width: `${pct}%`, backgroundColor: color }]} />
+      <Animated.View style={[styles.mandateFill, { width, backgroundColor: color }]} />
       <View style={[styles.mandateMarker, { left: `${markerPct}%` }]} />
     </View>
   );
@@ -240,7 +284,7 @@ const EFFECT_META: { key: keyof Effects; label: string; kind: EffectKind }[] = [
   { key: 'unemployment', label: 'Unemployment', kind: 'pct' },
   { key: 'nhsWaitingList', label: 'NHS wait', kind: 'm' },
   { key: 'netMigration', label: 'Migration', kind: 'k' },
-  { key: 'lettersDelta', label: '1922 letters', kind: 'score' },
+  { key: 'lettersDelta', label: 'Leadership pressure', kind: 'score' },
 ];
 
 const LOWER_IS_BETTER = new Set<keyof Effects>([
@@ -342,7 +386,7 @@ export function Sheet({
               {title ? <Text style={styles.sheetTitle}>{title}</Text> : null}
             </View>
             <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} style={styles.close}>
-              <Text style={styles.closeText}>✕</Text>
+              <X size={20} color={colors.muted} strokeWidth={1.8} />
             </Pressable>
           </View>
           <ScrollView style={styles.sheetBody} showsVerticalScrollIndicator={false}>
@@ -367,38 +411,34 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.card,
     borderWidth: 1,
-    borderRadius: radius.md,
+    borderColor: colors.cardBorderLight,
+    borderRadius: 2,
     padding: spacing.lg,
     marginTop: spacing.md,
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 3,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 2,
   },
   section: {
     marginTop: spacing.xl,
     marginBottom: spacing.sm,
   },
   sectionBar: {
-    height: 2,
-    width: 40,
-    backgroundColor: colors.accent,
-    marginBottom: spacing.sm,
+    height: 1,
+    width: '100%',
+    backgroundColor: colors.ink,
+    marginBottom: spacing.xs,
   },
   sectionTitle: {
-    color: colors.card,
-    fontSize: font.h3,
+    color: colors.text,
+    fontSize: 18,
     fontWeight: '700',
     fontFamily: headingFontFamily,
-    letterSpacing: 0.4,
+    letterSpacing: 0,
   },
-  hint: { color: colors.faint, fontSize: font.small, lineHeight: 18, marginTop: 4 },
+  hint: { color: colors.muted, fontSize: font.small, lineHeight: 18, marginTop: 4 },
   divider: { height: 1, backgroundColor: colors.cardBorderLight, marginVertical: spacing.md },
   grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -spacing.xs, marginTop: spacing.sm },
   gridItem: { width: '50%', paddingHorizontal: spacing.xs, marginBottom: spacing.sm },
   button: {
-    borderRadius: radius.sm,
+    borderRadius: 2,
     paddingVertical: 12,
     paddingHorizontal: 16,
     minHeight: 44,
@@ -407,13 +447,13 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     borderWidth: 1,
   },
-  buttonPressed: { opacity: 0.9, transform: [{ scale: 0.98 }] },
+  buttonPressed: { opacity: 0.82 },
   buttonCompact: { paddingVertical: 8, paddingHorizontal: 12, minHeight: 32, marginTop: 0 },
   buttonText: { fontSize: font.body, fontWeight: '700', letterSpacing: 0.3 },
   buttonTextCompact: { fontSize: font.small, letterSpacing: 0.2 },
   chip: {
     borderWidth: 1,
-    borderRadius: radius.pill,
+    borderRadius: 2,
     backgroundColor: colors.cardAlt,
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -423,20 +463,11 @@ const styles = StyleSheet.create({
   },
   chipText: { fontSize: font.tiny, fontWeight: '700', letterSpacing: 0.3 },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', marginTop: spacing.sm },
-  effectChip: {
-    borderWidth: 1,
-    borderRadius: radius.sm,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    marginRight: spacing.xs,
-    marginBottom: spacing.xs,
-  },
-  effectChipText: { fontSize: font.tiny, fontWeight: '600' },
   statTile: {
     backgroundColor: colors.cardAlt,
     borderWidth: 1,
     borderColor: colors.cardBorderLight,
-    borderRadius: radius.sm,
+    borderRadius: 1,
     paddingVertical: 10,
     paddingHorizontal: 6,
     marginHorizontal: 2,
@@ -445,7 +476,7 @@ const styles = StyleSheet.create({
   },
   statValue: { fontSize: font.h3, fontWeight: '800', fontFamily: fileFontFamily },
   statLabel: { color: colors.muted, fontSize: font.tiny, marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.5 },
-  statHint: { color: colors.faint, fontSize: 9, marginTop: 1 },
+  statHint: { color: colors.faint, fontSize: 11, marginTop: 1 },
   meter: {
     height: 5,
     backgroundColor: colors.cardBorderLight,
@@ -470,8 +501,8 @@ const styles = StyleSheet.create({
   segmented: {
     flexDirection: 'row',
     borderWidth: 1,
-    borderColor: colors.cardBorderLight,
-    borderRadius: radius.sm,
+    borderColor: colors.ink,
+    borderRadius: 0,
     backgroundColor: colors.cardAlt,
     marginTop: spacing.md,
     overflow: 'hidden',
@@ -479,7 +510,7 @@ const styles = StyleSheet.create({
   segment: { flex: 1, paddingVertical: 10, alignItems: 'center' },
   segmentActive: { backgroundColor: colors.leather },
   segmentText: { fontSize: font.small, color: colors.textOnPaper, fontWeight: '600' },
-  segmentTextActive: { color: colors.card, fontWeight: '800' },
+  segmentTextActive: { color: colors.onAccent, fontWeight: '800' },
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(23,17,13,0.7)',
@@ -489,18 +520,18 @@ const styles = StyleSheet.create({
   sheet: {
     backgroundColor: colors.bgElevated,
     borderTopWidth: 2,
-    borderTopColor: colors.accent,
+    borderTopColor: colors.ink,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.xxl,
-    maxHeight: '85%',
+    maxHeight: '90%',
   },
   sheetHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: spacing.md,
   },
-  sheetTitle: { color: colors.card, fontSize: font.h2, fontWeight: '700', fontFamily: headingFontFamily },
+  sheetTitle: { color: colors.text, fontSize: font.h2, fontWeight: '700', fontFamily: headingFontFamily },
   eyebrow: {
     color: colors.gold,
     fontSize: font.tiny,
@@ -511,12 +542,11 @@ const styles = StyleSheet.create({
   },
   sheetBody: { flex: 1 },
   close: { padding: 4 },
-  closeText: { color: colors.faint, fontSize: 16 },
+  closeText: { color: colors.muted, fontSize: 16 },
   empty: {
     borderWidth: 1,
     borderColor: colors.cardBorderLight,
-    borderStyle: 'dashed',
-    borderRadius: radius.sm,
+    borderRadius: 0,
     padding: spacing.lg,
     marginTop: spacing.md,
     backgroundColor: colors.cardAlt,

@@ -4,12 +4,17 @@ import { Button, Chip, Divider } from './ui';
 import { colors, font, fileFontFamily, headingFontFamily, radius, spacing } from '../theme';
 import { useGame } from '../state';
 import { activeSwanEvent, SWAN_WINDOW_WEEKS } from '../blackSwans';
+import { backbenchBody } from '../westminster';
 import type { SwanKind } from '../blackSwans';
 
 /** Party confidence at or below this reads as existential collapse risk. */
 const CONFIDENCE_EXISTENTIAL_THRESHOLD = 15;
 /** A tabled no-confidence division within this many weeks is "looming". */
 const NO_CONFIDENCE_LOOMING_WEEKS = 4;
+
+function months(value: number): string {
+  return `${value} month${value === 1 ? '' : 's'}`;
+}
 
 const KIND_LABEL: Record<SwanKind, string> = {
   natural: 'NATURAL DISASTER',
@@ -59,7 +64,7 @@ export default function CrisisModal() {
             <View style={styles.badgeRow}>
               <Chip label={severity.label} tone={severity.tone} />
               <Chip label={KIND_LABEL[event.kind]} tone="warning" />
-              <Chip label={`${swan.active.weeksRemaining} week(s) to respond`} tone="neutral" />
+              <Chip label={`${months(swan.active.weeksRemaining)} to respond`} tone="neutral" />
             </View>
 
             <Text style={styles.title}>{event.name}</Text>
@@ -85,7 +90,7 @@ export default function CrisisModal() {
             ))}
 
             <Text style={styles.footnote}>
-              Decision window is {SWAN_WINDOW_WEEKS} weeks. An unanswered shock expires and is recorded.
+              Decision window is {SWAN_WINDOW_WEEKS} months. An unanswered shock expires and is recorded.
             </Text>
           </ScrollView>
         </View>
@@ -117,6 +122,7 @@ export default function CrisisModal() {
   const sponsor = motion
     ? (state.parties.find((p) => p.id === motion.sponsorPartyId)?.name ?? 'the opposition')
     : null;
+  const backbench = backbenchBody(state.parties.find((party) => party.id === state.player?.partyId));
 
   return (
     <Modal
@@ -129,14 +135,14 @@ export default function CrisisModal() {
         <View style={styles.warningCard}>
           <Text style={styles.eyebrowWarning}>CONFIDENCE ALERT</Text>
           <Text style={styles.title}>
-            {motionLooming ? 'Motion of no confidence' : 'Government confidence critical'}
+            {motionLooming ? 'Motion of no confidence' : 'Party confidence critical'}
           </Text>
 
           <View style={styles.badgeRow}>
             {motionLooming ? (
-              <Chip label={`Division in ${weeksToDivision} week(s)`} tone="danger" />
+              <Chip label={`Division in ${months(weeksToDivision ?? 0)}`} tone="danger" />
             ) : null}
-            <Chip label={`Letters ${letters}/${lettersThreshold}`} tone={lettersAtThreshold ? 'danger' : 'warning'} />
+            <Chip label={`${backbench.pressureShort} ${letters}/${lettersThreshold}`} tone={lettersAtThreshold ? 'danger' : 'warning'} />
             <Chip
               label={`Party confidence ${Math.round(state.metrics.partyConfidence)}`}
               tone={confidenceCritical ? 'danger' : 'warning'}
@@ -147,7 +153,7 @@ export default function CrisisModal() {
             {motionLooming
               ? `${sponsor} has tabled a motion of no confidence. Without 326 votes or a confidence-and-supply partner, the numbers decide it.`
               : lettersAtThreshold
-                ? 'Enough letters have reached the 1922 Committee: a confidence ballot among your own MPs is due.'
+                ? `${backbench.pressureLabel} have reached the threshold: a ${backbench.ballotLabel} among your own MPs is due.`
                 : 'Party confidence has fallen to the collapse line. A leadership challenge becomes likely.'}
           </Text>
 
@@ -160,7 +166,7 @@ export default function CrisisModal() {
             testID="crisis-acknowledge"
           />
           <Text style={styles.footnote}>
-            Open the Politics tab for the 1922 Committee meter and confidence-and-supply options.
+            {`Open Divisions for the ${backbench.full} meter and confidence-and-supply options.`}
           </Text>
         </View>
       </View>
@@ -211,7 +217,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   title: {
-    color: colors.card,
+    color: colors.text,
     fontSize: font.h1,
     fontWeight: '700',
     fontFamily: headingFontFamily,
@@ -237,7 +243,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   optionLabel: {
-    color: colors.card,
+    color: colors.text,
     fontSize: font.body,
     fontWeight: '700',
     lineHeight: 21,

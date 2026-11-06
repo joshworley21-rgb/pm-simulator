@@ -1,23 +1,25 @@
 {
   "expo": {
-    "name": "pm-sim-app",
-    "slug": "pm-sim-app",
+    "name": "The Red Box",
+    "slug": "the-red-box",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.joshworley21.theredbox"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#1B5E3F",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.joshworley21.pmsim"
+      "package": "com.joshworley21.theredbox",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png"

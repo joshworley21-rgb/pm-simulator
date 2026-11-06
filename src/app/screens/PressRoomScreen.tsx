@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { HeadlineFeed } from '../components/press/HeadlineFeed';
+import { NewsTicker } from '../components/press/NewsTicker';
 import { SpinSheet } from '../components/press/SpinSheet';
 import type { SpinAngle } from '../components/press/SpinSheet';
 import { Button, Card, Chip, EmptyState, Meter, SectionTitle } from '../components/ui';
@@ -48,11 +48,17 @@ export default function PressRoomScreen({ embedded = false }: PressRoomScreenPro
 
   const body = (
     <>
-      <Text style={styles.eyebrow}>FLEET STREET</Text>
-      <Text style={styles.title}>Press Room</Text>
-      <Text style={styles.subtitle}>Month {state.week} · {state.headlines.length} line(s) on the record</Text>
+      {!embedded && (
+        <>
+          <Text style={styles.eyebrow}>PRESS GALLERY</Text>
+          <Text style={styles.title}>The Press Record</Text>
+          <Text style={styles.subtitle}>
+            Month {state.week} · {state.headlines.length} line(s) on the record
+          </Text>
+        </>
+      )}
 
-<SectionTitle title="Fleet Street" hint="Three papers, three stances. Warm them or face the consequences." />
+      <SectionTitle title="Press Gallery" hint="Three outlets, three stances. Warm them or face the consequences." />
       {MEDIA_OUTLETS.map((o) => {
         const mood = media.pressMood[o.id] ?? 50;
         const leaning = mood >= 60 ? 'warm' : mood >= 40 ? 'neutral' : 'cold';
@@ -71,7 +77,7 @@ export default function PressRoomScreen({ embedded = false }: PressRoomScreenPro
               </View>
               <Chip label={leaning.toUpperCase()} tone={leaningTone} />
             </View>
-            <Meter value={mood} color={mood >= 55 ? colors.success : mood >= 40 ? colors.warning : colors.accent} />
+            <Meter value={mood} color={mood >= 55 ? colors.success : mood >= 40 ? colors.warning : colors.danger} />
           </Card>
         );
       })}
@@ -88,7 +94,7 @@ export default function PressRoomScreen({ embedded = false }: PressRoomScreenPro
         <Text style={[styles.meterLabel, styles.secondMeter]}>HOSTILITY</Text>
         <Meter
           value={hostility}
-          color={hostility >= MEDIA_HOSTILITY_FLOOR ? colors.accent : colors.warning}
+          color={hostility >= MEDIA_HOSTILITY_FLOOR ? colors.danger : colors.warning}
         />
         <Text style={styles.meterSub}>
           {approval < PRESS_APPROVAL_FLOOR
@@ -104,11 +110,11 @@ export default function PressRoomScreen({ embedded = false }: PressRoomScreenPro
         testID="open-spin-sheet"
       />
 
-      <SectionTitle title="Recent Headlines" hint="The most recent lines, newest first." />
+      <SectionTitle title="The Wire" hint="Rolling coverage from the press gallery, newest first." />
       {state.headlines.length === 0 ? (
-        <EmptyState title="No coverage yet" body="Advance the calendar and Fleet Street will weigh in." />
+        <EmptyState title="No coverage yet" body="Advance the calendar and the press gallery will enter the record." />
       ) : (
-        <HeadlineFeed headlines={state.headlines} limit={6} />
+        <NewsTicker headlines={state.headlines} limit={6} />
       )}
 
       <SpinSheet
@@ -122,7 +128,7 @@ export default function PressRoomScreen({ embedded = false }: PressRoomScreenPro
   );
 
   return embedded ? (
-    <View style={styles.content}>{body}</View>
+    <View style={[styles.content, styles.embeddedContent]}>{body}</View>
   ) : (
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       {body}
@@ -135,8 +141,9 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     backgroundColor: colors.bg,
   },
+  embeddedContent: { padding: 0, backgroundColor: 'transparent' },
   eyebrow: {
-    color: colors.gold,
+    color: colors.accent,
     fontSize: font.tiny,
     fontWeight: '700',
     fontFamily: fileFontFamily,
@@ -144,7 +151,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   title: {
-    color: colors.card,
+    color: colors.text,
     fontSize: font.h1,
     fontWeight: '700',
     fontFamily: headingFontFamily,

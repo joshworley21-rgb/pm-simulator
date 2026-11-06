@@ -2,22 +2,16 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BriefingCard, type BriefingCardProps } from '../components/redbox/BriefingCard';
 import { Card, Chip, EmptyState, MandateBar, SectionTitle } from '../components/ui';
+import { TensionBand } from '../components/record/TensionBand';
 import { useGame } from '../state';
 import { colors, font, fileFontFamily, headingFontFamily, spacing } from '../theme';
 import { activeSwanEvent } from '../blackSwans';
 import { TURNS_PER_SESSION, WASH_UP_WEEKS } from '../parliament';
-import type { BlocSupport } from '../voterBlocs';
-
-/** Bloc mood → chip tone. */
-const BLOC_TONE: Record<BlocSupport['mood'], 'danger' | 'warning' | 'neutral' | 'success'> = {
-  hostile: 'danger',
-  restless: 'warning',
-  content: 'neutral',
-  loyal: 'success',
-};
+import { isCabinetMeetingDue } from '../cabinetMeeting';
+import { recentVotes } from '../parliamentaryVotes';
 
 /**
- * Red Box dashboard — the landing surface.
+ * Official Record — the landing surface.
  *
  * Reads live engine state via useGame(). Every number shown here is derived
  * from an existing field; nothing is recomputed or invented, so the dashboard
@@ -53,6 +47,8 @@ export default function RedBoxScreen({ embedded = false, onNavigate }: RedBoxScr
   const obrHeadroom = state.obrHeadroom ?? 0;
   const giltYield = state.stats.giltYield;
   const daysInOffice = state.week * 30;
+  const proceedings = state.log.slice(0, 5).reverse();
+  const voteHistory = recentVotes(state.parliamentState?.votes).slice(0, 3);
 
   const playerName = state.player
     ? `${state.player.firstName} ${state.player.lastName}`.trim()
@@ -68,7 +64,7 @@ export default function RedBoxScreen({ embedded = false, onNavigate }: RedBoxScr
       eyebrow: 'BLACK SWAN',
       title: event?.name ?? 'Active national crisis',
       body: event?.brief ?? 'A national crisis demands an immediate decision.',
-      meta: `${swan.active.weeksRemaining} month(s) left to respond`,
+      meta: `${swan.active.weeksRemaining} month${swan.active.weeksRemaining === 1 ? '' : 's'} left to respond`,
       tone: 'danger',
       actionLabel: 'Respond',
       onPress: () => onNavigate?.('desk'),
@@ -83,10 +79,35 @@ export default function RedBoxScreen({ embedded = false, onNavigate }: RedBoxScr
       eyebrow: 'WASH-UP',
       title: 'Session ending — bills at risk',
       body: `${n} bill${n === 1 ? '' : 's'} still in Parliament will be lost unless they clear before wash-up.`,
-      meta: `${weeksToWashUp} month(s) to wash-up`,
+      meta: `${weeksToWashUp} month${weeksToWashUp === 1 ? '' : 's'} to wash-up`,
       tone: 'warning',
       actionLabel: 'Review',
       onPress: () => onNavigate?.('politics', 'westminster'),
+    });
+  }
+
+  const investigations = state.ethics?.activeInvestigations.length ?? 0;
+  if (investigations > 0) {
+    briefings.push({
+      eyebrow: 'STANDARDS',
+      title: 'Investigation on your desk',
+      body: `${investigations} investigation${investigations === 1 ? '' : 's'} will publish soon. Admit the finding now, or contain it.`,
+      meta: state.ethics?.coverUpActive ? 'Cover-up active' : 'Decision required',
+      tone: 'danger',
+      actionLabel: 'Decide',
+      onPress: () => onNavigate?.('nation'),
+    });
+  }
+
+  if (isCabinetMeetingDue(state)) {
+    briefings.push({
+      eyebrow: 'CABINET',
+      title: 'Cabinet meeting due',
+      body: 'The Cabinet Secretary has circulated the agenda. Every minister and the senior officials are waiting in the Cabinet Room.',
+      meta: `Month ${state.week} · agenda ready`,
+      tone: 'warning',
+      actionLabel: 'Convene',
+      onPress: () => onNavigate?.('politics', 'cabinet'),
     });
   }
 
@@ -107,12 +128,11 @@ export default function RedBoxScreen({ embedded = false, onNavigate }: RedBoxScr
 
   const body = (
     <>
-      {/* Standalone view keeps its own masthead; embedded, the GameScreen tab
-          shell already carries the 10 Downing Street header, so skip it. */}
+      {/* Standalone view keeps its own masthead; embedded, the record shell supplies it. */}
       {!embedded && (
         <>
-          <Text style={styles.eyebrow}>10 DOWNING STREET — PRIVATE OFFICE</Text>
-          <Text style={styles.title}>The Dispatch Box</Text>
+          <Text style={styles.eyebrow}>THE RED BOX · OFFICIAL RECORD</Text>
+          <Text style={styles.title}>House of Commons</Text>
           <Text style={styles.subtitle}>
             {playerName} · Month {state.week} · Day {daysInOffice}
           </Text>
@@ -120,51 +140,99 @@ export default function RedBoxScreen({ embedded = false, onNavigate }: RedBoxScr
         </>
       )}
 
-      <SectionTitle title="State of the Nation" hint="One bar decides your future: the line marks 50%." />
-      <Card>
-        <View style={styles.mandateRow}>
-          <Text style={styles.mandateValue}>{Math.round(approval)}%</Text>
-          <Text style={styles.mandateLabel}>PUBLIC APPROVAL</Text>
+      <TensionBand state={state} />
+
+      <SectionTitle title="Proceedings" hint={`Recent entries in the record · Month ${state.week}.`} />
+      {proceedings.length === 0 ? (
+        <EmptyState title="No entries yet" body="The first decisions of this ministry will appear here." />
+      ) : (
+        <View style={styles.recordList}>
+          {proceedings.map((entry, index) => (
+            <View key={`${state.week}-${index}`} style={styles.recordEntry}>
+              <View style={styles.recordMarker} />
+              <View style={styles.recordCopy}>
+                <Text style={styles.recordFolio}>
+                  MONTH {state.week} · ENTRY {String(index + 1).padStart(2, '0')}
+                </Text>
+                <Text style={styles.recordText} numberOfLines={3}>{entry}</Text>
+              </View>
+            </View>
+          ))}
         </View>
-        <MandateBar approval={approval} />
-        <Text style={styles.ledger} numberOfLines={1}>
-          Party {Math.round(partyConfidence)} · Press {Math.round(pressMood)} · Headroom{' '}
-          {obrHeadroom >= 0 ? '+' : '-'}£{Math.abs(obrHeadroom).toFixed(1)}bn · Gilts {giltYield.toFixed(2)}% · In
-          office {daysInOffice}d
-        </Text>
-      </Card>
+      )}
 
-      <SectionTitle title="The Country" hint="Five blocs decide your majority. Govern for the ones that matter." />
-      {(state.blocs ?? []).map((bloc) => (
-        <Card key={bloc.id}>
-          <View style={styles.blocHeader}>
-            <Text style={styles.blocName} numberOfLines={1}>
-              {bloc.name}
-            </Text>
-            <Chip label={bloc.mood.toUpperCase()} tone={BLOC_TONE[bloc.mood]} />
+      {voteHistory.length > 0 ? (
+        <>
+          <SectionTitle title="Recent divisions" hint="Ayes and Noes from the division lobbies." />
+          <View style={styles.voteList}>
+            {voteHistory.map((vote) => (
+              <View key={vote.id} style={styles.voteRow}>
+                <View style={{ flex: 1, marginRight: spacing.sm }}>
+                  <Text style={styles.voteTitle} numberOfLines={2}>{vote.title}</Text>
+                  <Text style={styles.voteMeta}>
+                    {vote.kind === 'government-bill' ? 'Government bill' : 'Opposition motion'} · Month {vote.scheduledWeek}
+                  </Text>
+                </View>
+                <View style={styles.voteResult}>
+                  <Text style={styles.voteNumbers}>
+                    {vote.result?.ayes ?? 0}–{vote.result?.noes ?? 0}
+                  </Text>
+                  <Text style={[styles.voteOutcome, { color: vote.result?.passed ? colors.success : colors.danger }]}>
+                    {vote.result?.passed ? 'CARRIED' : 'DEFEATED'}
+                  </Text>
+                </View>
+              </View>
+            ))}
           </View>
-          <View style={styles.blocRow}>
-            <Text style={styles.blocDriver} numberOfLines={1}>
-              {bloc.driver}
-            </Text>
-            <Text style={[styles.blocSupport, { color: bloc.support >= 45 ? colors.success : colors.accent }]}>
-              {Math.round(bloc.support)}%
-            </Text>
-          </View>
-        </Card>
-      ))}
+        </>
+      ) : null}
 
-      <SectionTitle title="Urgent Briefings" hint="Items needing your attention this month." />
+      <SectionTitle title="Notices for decision" hint="Time-sensitive matters awaiting a ministerial answer." />
       {briefings.length === 0 ? (
-        <EmptyState title="All quiet" body="No urgent items this month. Advance the calendar to see what lands next." />
+        <EmptyState title="No urgent matters" body="The record is quiet. Advance the month to see what enters proceedings." />
       ) : (
         briefings.map((briefing, index) => <BriefingCard key={`${briefing.eyebrow}-${index}`} {...briefing} />)
       )}
+
+      <SectionTitle title="State of the Nation" hint="The approval line against the 50% mark." />
+      <Card>
+        <View style={styles.mandateRow}>
+          <View>
+            <Text style={styles.mandateLabel}>PUBLIC APPROVAL</Text>
+            <Text style={styles.mandateValue}>{Math.round(approval)}%</Text>
+          </View>
+          <Chip
+            label={approval >= 50 ? 'ABOVE THE LINE' : `${Math.round(50 - approval)} PTS TO WIN`}
+            tone={approval >= 50 ? 'success' : approval >= 40 ? 'warning' : 'danger'}
+          />
+        </View>
+        <MandateBar approval={approval} />
+        <View style={styles.ledgerRow}>
+          <View style={styles.ledgerItem}>
+            <Text style={styles.ledgerValue}>{Math.round(partyConfidence)}</Text>
+            <Text style={styles.ledgerLabel}>Party</Text>
+          </View>
+          <View style={styles.ledgerItem}>
+            <Text style={styles.ledgerValue}>{Math.round(pressMood)}</Text>
+            <Text style={styles.ledgerLabel}>Press</Text>
+          </View>
+          <View style={styles.ledgerItem}>
+            <Text style={styles.ledgerValue}>
+              {obrHeadroom >= 0 ? '+' : '-'}£{Math.abs(obrHeadroom).toFixed(1)}bn
+            </Text>
+            <Text style={styles.ledgerLabel}>Headroom</Text>
+          </View>
+          <View style={styles.ledgerItem}>
+            <Text style={styles.ledgerValue}>{giltYield.toFixed(2)}%</Text>
+            <Text style={styles.ledgerLabel}>Gilts</Text>
+          </View>
+        </View>
+      </Card>
     </>
   );
 
   return embedded ? (
-    <View style={styles.content}>{body}</View>
+    <View style={[styles.content, styles.embeddedContent]}>{body}</View>
   ) : (
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       {body}
@@ -177,8 +245,9 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     backgroundColor: colors.bg,
   },
+  embeddedContent: { padding: 0, backgroundColor: 'transparent' },
   eyebrow: {
-    color: colors.gold,
+    color: colors.accent,
     fontSize: font.tiny,
     fontWeight: '700',
     fontFamily: fileFontFamily,
@@ -186,7 +255,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   title: {
-    color: colors.card,
+    color: colors.text,
     fontSize: font.h1,
     fontWeight: '700',
     fontFamily: headingFontFamily,
@@ -205,6 +274,52 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     opacity: 0.6,
   },
+  recordList: { borderTopWidth: 1, borderTopColor: colors.ink, marginTop: spacing.sm },
+  recordEntry: { flexDirection: 'row', paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.cardBorderLight },
+  recordMarker: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent, marginTop: 5, marginRight: spacing.md },
+  recordCopy: { flex: 1 },
+  recordFolio: { color: colors.gold, fontSize: font.tiny, fontWeight: '800', letterSpacing: 1, fontFamily: fileFontFamily },
+  recordText: { color: colors.text, fontSize: font.small, lineHeight: 18, marginTop: 4 },
+  voteList: {
+    marginTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.ink,
+  },
+  voteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.cardBorderLight,
+  },
+  voteTitle: {
+    color: colors.text,
+    fontFamily: headingFontFamily,
+    fontSize: font.small,
+    fontWeight: '700',
+    lineHeight: 17,
+  },
+  voteMeta: {
+    marginTop: 2,
+    color: colors.faint,
+    fontFamily: fileFontFamily,
+    fontSize: 8,
+    letterSpacing: .3,
+  },
+  voteResult: { alignItems: 'flex-end' },
+  voteNumbers: {
+    color: colors.text,
+    fontFamily: fileFontFamily,
+    fontSize: font.body,
+    fontWeight: '800',
+  },
+  voteOutcome: {
+    marginTop: 2,
+    fontFamily: fileFontFamily,
+    fontSize: 8,
+    fontWeight: '800',
+    letterSpacing: .6,
+  },
   mandateRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
@@ -213,56 +328,35 @@ const styles = StyleSheet.create({
   },
   mandateValue: {
     color: colors.text,
-    fontSize: font.h1,
+    fontSize: 40,
+    lineHeight: 44,
     fontWeight: '700',
-    fontFamily: fileFontFamily,
+    fontFamily: headingFontFamily,
   },
   mandateLabel: {
     color: colors.muted,
     fontSize: font.tiny,
     fontWeight: '700',
-    letterSpacing: 1,
+    letterSpacing: 1.2,
     fontFamily: fileFontFamily,
   },
-  ledger: {
-    color: colors.muted,
-    fontSize: font.tiny,
-    fontFamily: fileFontFamily,
-    marginTop: spacing.sm,
-  },
-  blocHeader: {
+  ledgerRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  blocName: {
-    color: colors.text,
-    fontSize: font.body,
-    fontWeight: '700',
-    fontFamily: headingFontFamily,
-    flex: 1,
-    marginRight: spacing.sm,
-  },
-  blocRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.cardBorderLight,
-    paddingTop: spacing.sm,
   },
-  blocDriver: {
-    color: colors.muted,
-    fontSize: font.small,
-    lineHeight: 18,
-    flex: 1,
-    marginRight: spacing.sm,
-  },
-  blocSupport: {
+  ledgerItem: { flex: 1 },
+  ledgerValue: {
     color: colors.text,
-    fontSize: font.body,
+    fontSize: font.small,
     fontWeight: '700',
     fontFamily: fileFontFamily,
+  },
+  ledgerLabel: {
+    color: colors.muted,
+    fontSize: font.tiny,
+    marginTop: 1,
   },
 });

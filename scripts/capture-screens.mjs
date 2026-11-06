@@ -9,11 +9,10 @@
 //   BASE_URL=http://localhost:8081 node scripts/capture-screens.mjs
 //
 // Selector notes (why these work):
-//   * Bottom tab bar sets accessibilityLabel -> aria-label -> getByRole('tab', {name}).
-//   * Politics sub-tabs are the ui.tsx Segmented control, also role="tab".
-//     The Division Lobby sub-tab is labelled "Commons" in the UI (key 'westminster').
+//   * Primary navigation is Record / Papers / Divisions / Office.
+//   * Office has Cabinet / Treasury / Nation / World / Press index entries.
 //   * React Native Web maps testID -> data-testid, and accessibilityLabel -> aria-label.
-//   * CreateScreen needs first AND last name before "Enter Number 10" enables.
+//   * CreateScreen needs first AND last name before "Begin the premiership" enables.
 
 import { chromium, devices } from 'playwright';
 import { mkdir, readFile } from 'node:fs/promises';
@@ -100,8 +99,8 @@ async function run() {
     console.error(`   !! pageerror: ${err.message}`);
   });
 
-  // Optionally seed a deterministic save. At week 1 the Red Box has no urgent
-  // briefings at all, so their action buttons would be unreachable; the fixture
+  // Optionally seed a deterministic save. At week 1 the Record has no urgent
+  // notices at all, so their action buttons would be unreachable; the fixture
   // (scripts/make-capture-fixture.ts) forces week 49 + a bill + a restless minister.
   const fixturePath = path.resolve('artifacts/fixtures/redbox-state.json');
   let seeded = false;
@@ -121,12 +120,12 @@ async function run() {
 
   console.log(`→ opening ${BASE_URL}`);
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
-  await waitForText(page, 'PM Simulator', 120_000);
+  await waitForText(page, 'House of Commons', 120_000);
 
   // ---- reach the game shell --------------------------------------------
   let continued = false;
   if (seeded) {
-    const cont = page.getByText('Continue where you left off', { exact: true }).first();
+    const cont = page.getByText('Continue current record', { exact: true }).first();
     try {
       await cont.waitFor({ timeout: 20_000 });
       await cont.click();
@@ -136,33 +135,33 @@ async function run() {
     }
   }
   if (!continued) {
-    await page.getByText(/^(Start a new game|New game)$/).first().click();
-    await waitForText(page, 'Create your Prime Minister');
+    await page.getByText('Open a new record', { exact: true }).click();
+    await waitForText(page, 'Establish your ministry');
     await page.locator('input[placeholder="First name"]').fill('Alex');
     await page.locator('input[placeholder="Last name"]').fill('Worley');
-    await page.getByText('Enter Number 10', { exact: true }).click();
+    await page.getByText('Begin the premiership', { exact: true }).click();
   }
 
-  await page.getByRole('tab', { name: 'Red Box', exact: true }).waitFor({ timeout: 120_000 });
+  await page.getByRole('tab', { name: 'Record', exact: true }).waitFor({ timeout: 120_000 });
   await page.waitForTimeout(1200);
   console.log(`→ in game shell (${continued ? 'restored from fixture' : 'fresh game'})\n`);
 
   // =====================================================================
-  // 1. RED BOX — metrics render, then tap an active paper
+  // 1. RECORD — metrics render, then tap an active submission
   // =====================================================================
-  console.log('1) Red Box');
+  console.log('1) Official Record');
   try {
-    await waitForText(page, 'Approval Triad');
-    pass('Red Box metrics header renders', 'Approval Triad');
+    await waitForText(page, 'State of the Nation');
+    pass('Official Record metrics section renders', 'State of the Nation');
 
-    for (const tile of ['Public Approval', 'Party Confidence', 'Press Mood']) {
+    for (const tile of ['PUBLIC APPROVAL', 'Party', 'Press']) {
       const raw = await readStatTile(page, tile);
       const val = firstNumber(raw);
       if (Number.isFinite(val)) pass(`metric renders: ${tile}`, String(val));
       else fail(`metric missing: ${tile}`, String(raw));
     }
 
-    // Tap the first active paper (Red Box dossier) — proves OPEN_DOSSIER wiring.
+    // Tap the first active paper — proves OPEN_DOSSIER wiring.
     await page.getByText('Decide', { exact: true }).first().click();
     await waitForText(page, 'Adviser:');
     pass('tapped active paper -> dossier sheet opened', 'Adviser advice visible');
@@ -179,10 +178,10 @@ async function run() {
   // =====================================================================
   console.log('\n2) Cabinet Room');
   try {
-    await page.getByRole('tab', { name: 'Politics', exact: true }).first().click();
+    await page.getByRole('tab', { name: 'Office', exact: true }).click();
     await page.getByRole('tab', { name: 'Cabinet', exact: true }).first().click();
-    await waitForText(page, 'Cabinet Room');
-    pass('Cabinet Room renders');
+    await waitForText(page, 'Cabinet Cohesion');
+    pass('Cabinet record renders');
 
     const manage = page.locator('[data-testid^="manage-"]').first();
     if ((await manage.count()) === 0) throw new Error('no minister Manage button found');
@@ -222,8 +221,8 @@ async function run() {
   // =====================================================================
   console.log('\n3) Division Lobby');
   try {
-    await page.getByRole('tab', { name: 'Commons', exact: true }).first().click();
-    await waitForText(page, 'Division Lobby');
+    await page.getByRole('tab', { name: 'Divisions', exact: true }).click();
+    await waitForText(page, 'The Numbers');
     pass('Division Lobby renders');
     await waitForText(page, 'Working Majority');
     pass('parliamentary metrics render', 'Working Majority line');
@@ -256,15 +255,16 @@ async function run() {
   // =====================================================================
   console.log('\n4) Press Room');
   try {
-    await page.getByRole('tab', { name: 'Press', exact: true }).first().click();
-    await waitForText(page, 'Press Room');
-    pass('Press Room renders');
+    await page.getByRole('tab', { name: 'Office', exact: true }).click();
+    await page.getByRole('tab', { name: 'Press', exact: true }).click();
+    await waitForText(page, 'Press Gallery');
+    pass('Press record renders');
 
-    const hostilityBefore = firstNumber(await readStatTile(page, 'Hostility'));
+    const hostilityBefore = firstNumber(await readStatTile(page, 'HOSTILITY'));
     pass('hostility baseline read', String(hostilityBefore));
 
     await clickBy(page, 'open-spin-sheet', 'Call a lobby briefing');
-    await waitForText(page, 'Lobby Briefing');
+    await waitForText(page, 'Lobby briefing');
     await waitForText(page, 'BRIEFING READY');
     pass('spin sheet opened', 'BRIEFING READY');
 
@@ -273,7 +273,7 @@ async function run() {
     await page.waitForTimeout(900);
     pass('fired boost briefing (BRIEF_PRESS)', 'national-standard');
 
-    const hostilityAfter = firstNumber(await readStatTile(page, 'Hostility'));
+    const hostilityAfter = firstNumber(await readStatTile(page, 'HOSTILITY'));
     if (Number.isFinite(hostilityAfter) && hostilityAfter > hostilityBefore) {
       pass('engine round-trip: hostility rose', `${hostilityBefore} -> ${hostilityAfter}`);
     } else {
@@ -295,10 +295,10 @@ async function run() {
   // =====================================================================
   // 5. RED BOX BRIEFING ACTIONS — the tab-navigation wiring
   // =====================================================================
-  console.log('\n5) Red Box briefing actions');
+  console.log('\n5) Record notice actions');
   try {
-    await page.getByRole('tab', { name: 'Red Box', exact: true }).first().click();
-    await waitForText(page, 'Urgent Briefings');
+    await page.getByRole('tab', { name: 'Record', exact: true }).click();
+    await waitForText(page, 'Notices for decision');
     pass('urgent briefings section renders');
 
     const review = page.getByRole('button', { name: 'Review', exact: true }).first();
@@ -322,17 +322,17 @@ async function run() {
     await snap(page, '05_red_box_briefing_actions.png');
     pass('captured 05_red_box_briefing_actions.png');
 
-    // Manage -> Politics > Cabinet
+    // Manage -> Office > Cabinet
     await manage.click();
-    await waitForText(page, 'Cabinet Room');
-    pass('Manage -> navigated to Politics > Cabinet');
+    await waitForText(page, 'Cabinet Cohesion');
+    pass('Manage -> navigated to Office > Cabinet');
 
-    // back to the desk, then Review -> Politics > Commons (Division Lobby)
-    await page.getByRole('tab', { name: 'Red Box', exact: true }).first().click();
-    await waitForText(page, 'Urgent Briefings');
+    // Back to the record, then Review -> Divisions.
+    await page.getByRole('tab', { name: 'Record', exact: true }).click();
+    await waitForText(page, 'Notices for decision');
     await review.click();
-    await waitForText(page, 'Division Lobby');
-    pass('Review -> navigated to Politics > Commons');
+    await waitForText(page, 'The Numbers');
+    pass('Review -> navigated to Divisions');
   } catch (err) {
     fail('Red Box briefing actions', err.message.split('\n')[0]);
   }

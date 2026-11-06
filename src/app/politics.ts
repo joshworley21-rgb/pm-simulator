@@ -12,12 +12,18 @@ export const BACKBENCHERS: Backbencher[] = [
 
 /** Initial cabinet for a Labour PM (the default starting majority). */
 export const DEFAULT_CABINET: Minister[] = [
-  { name: 'Aisha Rahman', post: 'Chancellor of the Exchequer', partyId: 'reform', loyalty: 78, competence: 85, faction: 'Soft Left' },
-  { name: 'Tom Calloway', post: 'Home Secretary', partyId: 'reform', loyalty: 88, competence: 72, faction: 'Centrist' },
-  { name: 'Grace O\u2019Donnell', post: 'Health Secretary', partyId: 'reform', loyalty: 70, competence: 80, faction: 'Left' },
-  { name: 'James Whitfield', post: 'Education Secretary', partyId: 'reform', loyalty: 82, competence: 74, faction: 'Soft Left' },
-  { name: 'Priya Nair', post: 'Business Secretary', partyId: 'reform', loyalty: 75, competence: 88, faction: 'Centrist' },
-  { name: 'Oliver Stanmore', post: 'Defence Secretary', partyId: 'reform', loyalty: 80, competence: 68, faction: 'Centrist' },
+  { name: 'Aisha Rahman', post: 'Chancellor of the Exchequer', partyId: 'reform', loyalty: 78, competence: 85, faction: 'Soft Left', publicProfile: 82 },
+  { name: 'Tom Calloway', post: 'Home Secretary', partyId: 'reform', loyalty: 88, competence: 72, faction: 'Centrist', publicProfile: 74 },
+  { name: 'Grace O\u2019Donnell', post: 'Health Secretary', partyId: 'reform', loyalty: 70, competence: 80, faction: 'Left', publicProfile: 79 },
+  { name: 'James Whitfield', post: 'Education Secretary', partyId: 'reform', loyalty: 82, competence: 74, faction: 'Soft Left', publicProfile: 66 },
+  { name: 'Priya Nair', post: 'Business Secretary', partyId: 'reform', loyalty: 75, competence: 88, faction: 'Centrist', publicProfile: 71 },
+  { name: 'Nadia Okonkwo', post: 'Foreign Secretary', partyId: 'reform', loyalty: 74, competence: 83, faction: 'Centrist', publicProfile: 86, ambition: 66 },
+  { name: 'Oliver Stanmore', post: 'Defence Secretary', partyId: 'reform', loyalty: 80, competence: 68, faction: 'Centrist', publicProfile: 69 },
+  { name: 'Ruth Adeyemi', post: 'Justice Secretary', partyId: 'reform', loyalty: 76, competence: 81, faction: 'Soft Left', publicProfile: 72 },
+  { name: 'Callum Fraser', post: 'Work and Pensions Secretary', partyId: 'reform', loyalty: 72, competence: 70, faction: 'Centrist', publicProfile: 58 },
+  { name: 'Meera Shah', post: 'Transport Secretary', partyId: 'reform', loyalty: 84, competence: 76, faction: 'Left', publicProfile: 63 },
+  { name: 'Edward Bryce', post: 'Environment Secretary', partyId: 'reform', loyalty: 68, competence: 73, faction: 'Soft Left', publicProfile: 61 },
+  { name: 'Lydia Marsh', post: 'Culture Secretary', partyId: 'reform', loyalty: 79, competence: 69, faction: 'Centrist', publicProfile: 77 },
 ];
 
 /** Foreign issues the PM can confront, each with a full choice set. */

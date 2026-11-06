@@ -43,6 +43,7 @@ import {
   calculateBlindsideRisk,
   NINETEEN_TWENTY_TWO_RULES,
 } from './leadershipChallenge';
+import { backbenchBody, leadershipThreshold } from './westminster';
 import {
   advanceCabinet,
   createDefaultCabinetState,
@@ -50,6 +51,11 @@ import {
   applyRemoval,
   CABINET_COHESION_FLOOR,
 } from './cabinet';
+import {
+  buildCabinetMeeting,
+  isCabinetMeetingDue,
+  resolveCabinetMeeting,
+} from './cabinetMeeting';
 import {
   advanceMedia,
   createDefaultMediaState,
@@ -61,11 +67,19 @@ import {
   lobbyBriefing,
   type PaperId,
 } from './media';
-import { advanceImmigration, createDefaultImmigrationState } from './immigration';
+import {
+  advanceImmigration,
+  createDefaultImmigrationState,
+  removalFlight,
+  setCaseworkerCapacity,
+  setRemovalsBlocked,
+} from './immigration';
 import {
   advanceLocalGovernment,
   createDefaultLocalGovernmentState,
   deliveryDiscount,
+  emergencyGrant,
+  sendCommissioners,
 } from './localGovernment';
 import {
   advanceParliament,
@@ -73,15 +87,28 @@ import {
   sessionWeekFor,
   startBill,
   markLordsDelay,
+  invokeParliamentAct,
   LORDS_STAGE_WEEKS,
-  commonsRebelLoss,
-  runCommonsDivision,
 } from './parliament';
+import {
+  billVote,
+  billVoteId,
+  motionVote,
+  motionVoteId,
+  pendingVotes,
+  recordVoteResult,
+  rescheduleVote,
+  resolveBillVote,
+  resolveBudgetVote,
+  resolveConfidenceVote,
+  scheduleVote,
+} from './parliamentaryVotes';
 import {
   advanceLobbying,
   createDefaultLobbyingState,
   committeeDelayWeeks,
   hostileCommittees,
+  lobbyGroup,
 } from './lobbying';
 import {
   advanceBlackSwans,
@@ -99,7 +126,7 @@ import {
   credibilityPremium,
   leanOnTheBank,
 } from './centralBank';
-import { advanceDevolution, createDefaultDevolutionState } from './devolution';
+import { advanceDevolution, createDefaultDevolutionState, denySewelConsent } from './devolution';
 import { DOSSIER_POOL_2 } from './dossiers2';
 import { DOSSIER_POOL_3 } from './dossiers3';
 import { applyScenario } from './scenarios';
@@ -124,7 +151,20 @@ import {
 import { computeBlocs, blocAverage } from './voterBlocs';
 import { projectSeats } from './electionProjection';
 import { advanceWhips, createDefaultWhips, divisionDisciplineModifier, patronageEffect } from './modules/whips';
-import { advanceEthics, createDefaultEthics, beginInvestigation } from './modules/ethics';
+import {
+  DEFAULT_TREASURY_RESERVES,
+  applyMonthlyNationalDrift,
+  flagshipRebellionRiskDelta,
+  ministerialLoyaltyRisk,
+} from './nationalMetrics';
+import {
+  advanceEthics,
+  createDefaultEthics,
+  beginInvestigation,
+  startCoverUp,
+  endCoverUp,
+  admitInvestigation,
+} from './modules/ethics';
 
 /** Placeholder partner ministers; enough variety to staff a coalition. */
 const COALITION_NAMES = [
@@ -233,6 +273,80 @@ function applyBudgetDeliveryAssessment(
   return applyChancellorDepartureShock(next);
 }
 
+/**
+ * A major Budget is a confidence issue even when no motion is on the paper.
+ * If the government loses the division, flag the defeat and table an imminent
+ * no-confidence motion. Autumn Statements are not treated as confidence votes.
+ */
+function applyBudgetDivision(s: GameState, eventKind: 'budget' | 'autumn' | null): GameState {
+  if (eventKind !== 'budget' || s.gameOver) return s;
+
+  const ownSeats = s.parties.find((p) => p.id === s.player?.partyId)?.seats ?? 0;
+  const partnerSeats = s.supplyPartnerId
+    ? s.parties.find((p) => p.id === s.supplyPartnerId)?.seats ?? 0
+    : 0;
+  const totalSeats = s.parties.reduce((sum, p) => sum + p.seats, 0) || 650;
+  const outcome = resolveBudgetVote({
+    ownSeats,
+    partnerSeats,
+    totalSeats,
+    publicApproval: s.metrics.approval,
+    partyConfidence: s.metrics.partyConfidence,
+  });
+  if (outcome.passed) return s;
+
+  const sponsor =
+    [...s.parties]
+      .filter((p) => p.id !== s.player?.partyId)
+      .sort((a, b) => b.seats - a.seats)[0] ?? null;
+  const scheduledWeek = s.week + 1;
+  const pipeline = s.parliamentState ?? createDefaultParliamentState();
+  const motion =
+    s.oppositionMotion ??
+    (sponsor
+      ? { sponsorPartyId: sponsor.id, tabledWeek: s.week, scheduledWeek }
+      : undefined);
+
+  let next: GameState = {
+    ...s,
+    budgetVoteDefeated: true,
+    noConfidenceImminent: true,
+    oppositionMotion: motion,
+    metrics: {
+      ...s.metrics,
+      approval: clamp(s.metrics.approval - 3, 0, 100),
+      partyConfidence: clamp(s.metrics.partyConfidence - 4, 0, 100),
+    },
+    log: [
+      `BUDGET DEFEATED: the Commons rejects the Budget ${outcome.ayes}-${outcome.noes}. A vote of no confidence is imminent.`,
+      ...s.log,
+    ].slice(0, 50),
+    headlines: [
+      { paper: 'The Courier', title: 'BUDGET DEFEATED: GOVERNMENT ON THE BRINK', stance: 'right' as const },
+      ...s.headlines,
+    ].slice(0, 4),
+  };
+
+  if (sponsor && !s.oppositionMotion) {
+    next = {
+      ...next,
+      parliamentState: {
+        ...pipeline,
+        votes: scheduleVote(
+          pipeline.votes,
+          motionVote({
+            sponsorPartyId: sponsor.id,
+            sponsorName: sponsor.name,
+            scheduledWeek,
+          }),
+        ),
+      },
+    };
+  }
+
+  return next;
+}
+
 function monthlyRateToWeekly(monthlyRate: number): number {
   return 1 - Math.pow(1 - monthlyRate, 1 / TURNS_PER_MONTH);
 }
@@ -266,8 +380,8 @@ const GILT_MEAN_REVERSION_MONTHLY_RATE = 0.2;
 const POTENTIAL_GDP_GROWTH = 1.2;
 const OKUN_COEFFICIENT = 0.4;
 
-export function resignationThreshold(seats: number): number {
-  return Math.max(15, Math.round(seats * 0.15));
+export function resignationThreshold(seats: number, partyId?: string): number {
+  return leadershipThreshold(seats, partyId ? { id: partyId } : undefined);
 }
 
 /** Deterministic LCG PRNG. */
@@ -300,6 +414,7 @@ export function createInitialState(): GameState {
       budgetBalance: -75,
     },
     nominalGdp: DEFAULT_NOMINAL_GDP,
+    treasuryReserves: DEFAULT_TREASURY_RESERVES,
     week: 1,
     turnsUntilElection: DEFAULT_TERM_LENGTH,
     isElection: false,
@@ -344,9 +459,12 @@ export function createInitialState(): GameState {
     pledges: [],
     blocs: [],
     oppositionMotion: undefined,
+    budgetVoteDefeated: false,
+    noConfidenceImminent: false,
     coalition: false,
     coalitionPosts: [],
     lastReshuffleWeek: undefined,
+    lastCabinetMeetingWeek: undefined,
     reshuffleDisciplineBonus: undefined,
     confidenceWarningShown: false,
     escalatedDossierIds: [],
@@ -416,7 +534,7 @@ function runElection(s: GameState): GameState {
     ...s,
     parties,
     metrics: { ...s.metrics, approval },
-    stats: { ...s.stats, lettersOfNoConfidence: 0, lettersThreshold: resignationThreshold(playerSeats) },
+    stats: { ...s.stats, lettersOfNoConfidence: 0, lettersThreshold: resignationThreshold(playerSeats, s.player?.partyId) },
     turnsUntilElection: s.termLength || DEFAULT_TERM_LENGTH,
     isElection: true,
     legacyScore,
@@ -865,81 +983,39 @@ function resolveBill(s: GameState, bill: Bill, rng: () => number): GameState {
   // in the division even while the agreement formally holds.
   const rebels = s.cabinet.filter((m) => m.coalition && m.loyalty < 45 && (m.ambition ?? 50) >= 55);
   const rebelLoss = rebels.length * 15;
-  const seats = ownSeats + (partner?.seats ?? 0) - rebelLoss;
   const whip = bill.whipLevel ?? 'two-line';
   const modifier = divisionDisciplineModifier(s.whips ?? createDefaultWhips(), whip);
-  const adjustedRebellionRisk = Math.max(0, bill.rebellionRisk + modifier.rebellionRiskDelta);
-  // A TRUE COMMONS DIVISION: backbench rebels are deducted from the government's lobby.
-  // commonsRebelLoss() is exactly 0 for a bill with no rebellion risk, so the golden bill
-  // checks -- and therefore the Idle archetype -- stay arithmetically untouched.
-  const rebelLossFromBackbenches = commonsRebelLoss({
-    rebellionRisk: adjustedRebellionRisk,
+  // An explicit low-discipline surcharge on flagship bills. Zero at the default
+  // whip state, so existing divisions are unchanged until discipline erodes.
+  const disciplineSurcharge = flagshipRebellionRiskDelta(s, bill);
+  const vote = resolveBillVote({
     ownSeats,
+    partnerSeats: partner?.seats ?? 0,
+    totalSeats: s.parties.reduce((sum, p) => sum + p.seats, 0) || 650,
     whipLevel: whip,
+    rebellionRisk: bill.rebellionRisk + disciplineSurcharge,
+    whipRebellionDelta: modifier.rebellionRiskDelta,
+    voteSwing: modifier.voteSwing,
+    publicApproval: s.metrics.approval,
+    cabinetCohesion: s.cabinetState?.cohesion ?? CABINET_COHESION_FLOOR,
     rebelPressure: (s.whips ?? createDefaultWhips()).rebelPressure,
     whipStrength: (s.whips ?? createDefaultWhips()).whipStrength,
-    cohesion: (s.cabinetState ?? createDefaultCabinetState()).cohesion,
+    coalitionRebelLoss: rebelLoss,
+    hasPartner: !!partner,
+    committeeHeat: hostileCommittees(s.lobbyingState ?? createDefaultLobbyingState()) > 0,
+    currentLetters: s.stats.lettersOfNoConfidence,
+    billLettersDelta: bill.effects.lettersDelta ?? 0,
+    resentmentDelta: modifier.resentmentDelta,
+    rng,
   });
-  const adjustedDivisionSeats = seats + modifier.voteSwing - rebelLossFromBackbenches;
-
-  // ===== True Commons division =====
-  // The tally below runs ONLY once a party signal is live: cabinet cohesion below its
-  // floor, whips above their starting rebelPressure, or a hostile select committee. At
-  // default state every one of those terms is exactly zero, so the legacy threshold table
-  // runs verbatim and the golden division checks (including their exact letter counts)
-  // stay byte-identical.
-  const cohesionExcess = Math.max(0, CABINET_COHESION_FLOOR - (s.cabinetState?.cohesion ?? CABINET_COHESION_FLOOR));
-  const whipExcess = Math.max(0, (s.whips?.rebelPressure ?? 10) - 10);
-  const committeeHeat = hostileCommittees(s.lobbyingState ?? createDefaultLobbyingState()) > 0 ? 1 : 0;
-  let passed: boolean;
-  if (cohesionExcess + whipExcess + committeeHeat > 0) {
-    const division = runCommonsDivision({
-      ownSeats,
-      partnerSeats: partner?.seats ?? 0,
-      totalSeats: s.parties.reduce((sum, p) => sum + p.seats, 0) || 650,
-      whipLevel: whip,
-      rebellionRisk: adjustedRebellionRisk,
-      voteSwing: modifier.voteSwing,
-      cabinetCohesion: s.cabinetState?.cohesion ?? CABINET_COHESION_FLOOR,
-      rebelPressure: s.whips?.rebelPressure ?? 10,
-    });
-    passed = division.passed;
-  } else if (whip === 'three-line') {
-    // Three-line whip: maximum attendance and discipline (+15 virtual votes in lobbies)
-    const effectiveSeats = adjustedDivisionSeats + 15;
-    if (effectiveSeats >= 355) passed = true;
-    else if (effectiveSeats >= 326) passed = rng() < 0.96;
-    else if (effectiveSeats >= 300) passed = rng() < (partner ? 0.75 : 0.40);
-    else passed = false;
-  } else if (whip === 'free-vote') {
-    // Free vote: MPs vote on conscience without party coercion
-    if (adjustedDivisionSeats >= 360) passed = rng() < 0.88;
-    else if (adjustedDivisionSeats >= 326) passed = rng() < 0.75;
-    else if (adjustedDivisionSeats >= 300) passed = rng() < 0.50;
-    else passed = rng() < 0.25;
-  } else {
-    // Standard two-line whip (existing baseline)
-    if (adjustedDivisionSeats >= 360) passed = true;
-    else if (adjustedDivisionSeats >= 326) passed = rng() < 0.92;
-    else if (adjustedDivisionSeats >= 300) passed = rng() < (partner ? 0.6 : 0.25);
-    else passed = false;
-  }
-
-  // Letters accumulation from backbench rebellion:
-  let letters = s.stats.lettersOfNoConfidence + (bill.effects.lettersDelta ?? 0);
-  if (whip === 'free-vote') {
-    // Free vote: zero mutiny letters added because MPs are free to vote their conscience!
-    letters += 0;
-  } else if (whip === 'three-line') {
-    // Strict three-line whip: heavy-handedness increases backbench resentment
-    letters += Math.round(adjustedRebellionRisk / 20);
-  } else {
-    letters += Math.round(adjustedRebellionRisk / 24);
-  }
-  letters += modifier.resentmentDelta;
+  // The lobby arithmetic lives in ./parliamentaryVotes; the engine only applies
+  // the political consequences.
+  const passed = vote.passed;
+  const adjustedRebellionRisk = vote.adjustedRebellionRisk;
+  const letters = vote.lettersOfNoConfidence;
 
   const logMessage = passed
-    ? `LAW PASSED: ${bill.title} (${whip === 'three-line' ? 'three-line whip' : whip === 'free-vote' ? 'free vote' : 'standard whip'})`
+    ? `LAW PASSED: ${bill.title} (${whip === 'three-line' ? 'three-line whip' : whip === 'free-vote' ? 'free vote' : 'two-line whip'})`
     : partner || ownSeats >= 326
       ? `BILL DEFEATED: ${bill.title} was voted down in the Commons.`
       : `BILL DEFEATED: ${bill.title} fell for want of a majority in the Commons.`;
@@ -967,7 +1043,6 @@ function resolveBill(s: GameState, bill: Bill, rng: () => number): GameState {
     // A carried bill is a genuine governing success: it buys party unity and
     // removes at most one active letter of no confidence.
     next = applyEffects(next, { partyConfidence: whip === 'three-line' && adjustedRebellionRisk > 30 ? 3 : 5 });
-    letters = clamp(letters - 1, 0, 99);
     next = {
       ...next,
       stats: { ...next.stats, budgetBalance: r1(next.stats.budgetBalance - bill.fiscalCost) },
@@ -979,7 +1054,6 @@ function resolveBill(s: GameState, bill: Bill, rng: () => number): GameState {
     // Defeat on a free vote does not damage party unity!
     if (whip !== 'free-vote') {
       next = applyEffects(next, { approval: -2, partyConfidence: -2 });
-      letters += Math.round(bill.rebellionRisk / (whip === 'three-line' ? 10 : 12));
       // PLAYER-ATTRIBUTABLE FAILURE: a bill the government chose to push has been defeated.
       // A passive premiership proposes no bills, so it never reaches this line. This uses the
       // FROM-CHOICE variant: a self-inflicted failure IS allowed to breach the floor.
@@ -1000,6 +1074,52 @@ function resolveBill(s: GameState, bill: Bill, rng: () => number): GameState {
   }
 
   next = { ...next, stats: { ...next.stats, lettersOfNoConfidence: clamp(letters, 0, 99) } };
+
+  // A three-line whip buys votes, but it spends goodwill: backbench pressure
+  // and cabinet loyalty both take a small hit once the division is over.
+  if (whip === 'three-line') {
+    const whips = next.whips ?? createDefaultWhips();
+    next = {
+      ...next,
+      factionUnrest: clamp(next.factionUnrest + 3, 0, 100),
+      whips: {
+        ...whips,
+        rebelPressure: clamp(whips.rebelPressure + 2, 0, 100),
+      },
+      cabinet: next.cabinet.map((minister) =>
+        minister.coalition
+          ? minister
+          : { ...minister, loyalty: clamp(minister.loyalty - 1, 0, 100) },
+      ),
+    };
+  }
+
+  const pipeline = s.parliamentState ?? createDefaultParliamentState();
+  const progress = pipeline.inProgress.find((entry) => entry.billId === bill.id);
+  const lordsAmended = (progress?.lordsAmendments ?? 0) > 0;
+  const scheduled =
+    pendingVotes(pipeline.votes).find((entry) => entry.id === billVoteId(bill.id)) ??
+    billVote(bill, s.week);
+  const recordedVote = {
+    ...scheduled,
+    result: {
+      ayes: vote.ayes,
+      noes: vote.noes,
+      rebels: vote.rebels,
+      backbenchRebels: vote.backbenchRebels,
+      rebelNames: rebels.map((minister) => minister.name),
+      passed,
+      amended: passed && lordsAmended,
+      castWeek: s.week,
+    },
+  };
+  next = {
+    ...next,
+    parliamentState: {
+      ...(next.parliamentState ?? pipeline),
+      votes: recordVoteResult(pipeline.votes, recordedVote),
+    },
+  };
   const resolved: GameState & { billResolutions: BillResolutionMap } = {
     ...next,
     billResolutions: {
@@ -1331,6 +1451,17 @@ export function advanceWeek(s: GameState): GameState {
   for (const bill of uniqueBills.values()) {
     if (isBillDue(bill)) {
       next = resolveBill(next, bill, rng);
+      // The bill has left the floor (passed or fell); clear its pipeline entry.
+      const resolvedPipeline = next.parliamentState ?? createDefaultParliamentState();
+      if (resolvedPipeline.inProgress.some((p) => p.billId === bill.id)) {
+        next = {
+          ...next,
+          parliamentState: {
+            ...resolvedPipeline,
+            inProgress: resolvedPipeline.inProgress.filter((p) => p.billId !== bill.id),
+          },
+        };
+      }
       continue;
     }
     // Parliament as process: a government bill still travelling picks up the Lords
@@ -1341,17 +1472,23 @@ export function advanceWeek(s: GameState): GameState {
     if (progress && !progress.lordsDelayApplied) {
       // Committee scrutiny rides on the same one-time charge; it is zero until the
       // committee has actually turned hostile, so a calm house costs a bill nothing.
-      stillActive.push({
-        ...bill,
-        weeksToPass:
-          bill.weeksToPass -
-          1 +
-          LORDS_STAGE_WEEKS +
-          committeeDelayWeeks(bill, next.lobbyingState ?? createDefaultLobbyingState()),
-      });
+      const delayedWeeks =
+        bill.weeksToPass -
+        1 +
+        LORDS_STAGE_WEEKS +
+        committeeDelayWeeks(bill, next.lobbyingState ?? createDefaultLobbyingState());
+      stillActive.push({ ...bill, weeksToPass: delayedWeeks });
+      const rescheduled = {
+        ...pipeline,
+        votes: rescheduleVote(
+          pipeline.votes,
+          billVoteId(bill.id),
+          next.week + Math.max(1, delayedWeeks),
+        ),
+      };
       next = {
         ...next,
-        parliamentState: markLordsDelay(pipeline, bill.id),
+        parliamentState: markLordsDelay(rescheduled, bill.id),
         log: [
           `LORDS: ${bill.title} enters the second chamber; expect a two-week delay.`,
           ...(next.log ?? []),
@@ -1365,6 +1502,11 @@ export function advanceWeek(s: GameState): GameState {
 
   // 3. Economy & polling.
   next = weeklyEconomy(next);
+  // Monthly debt -> inflation pressure. Applied once per month, after the
+  // weekly economy has settled, so the drift is visible and accumulates.
+  if (next.week % TURNS_PER_MONTH === 0) {
+    next = applyMonthlyNationalDrift(next);
+  }
   next = driftPolling(next, rng);
 
   // 3a. Diplomacy: strong alliances cool without upkeep (relationEngine adapter).
@@ -1409,9 +1551,22 @@ export function advanceWeek(s: GameState): GameState {
         .filter((p) => p.id !== next.player?.partyId)
         .sort((a, b) => b.seats - a.seats)[0];
       if (sponsor) {
+        const motionWeek = next.week + 1;
+        const pipeline = next.parliamentState ?? createDefaultParliamentState();
         next = {
           ...next,
-          oppositionMotion: { sponsorPartyId: sponsor.id, tabledWeek: next.week, scheduledWeek: next.week + 1 },
+          oppositionMotion: { sponsorPartyId: sponsor.id, tabledWeek: next.week, scheduledWeek: motionWeek },
+          parliamentState: {
+            ...pipeline,
+            votes: scheduleVote(
+              pipeline.votes,
+              motionVote({
+                sponsorPartyId: sponsor.id,
+                sponsorName: sponsor.name,
+                scheduledWeek: motionWeek,
+              }),
+            ),
+          },
           log: [`OPPOSITION DAY: ${sponsor.name} tables a motion of no confidence, to be voted on next month.`, ...next.log].slice(0, 50),
         };
         // Guaranteed, one-time warning for a minority with no supply deal, so
@@ -1426,31 +1581,65 @@ export function advanceWeek(s: GameState): GameState {
 
   // 3g. Division on the motion.
   if (next.oppositionMotion && next.week >= next.oppositionMotion.scheduledWeek && !next.gameOver) {
+    const motion = next.oppositionMotion;
     const ownSeats = next.parties.find((p) => p.id === next.player?.partyId)?.seats ?? 0;
     const partnerSeats = next.supplyPartnerId
       ? next.parties.find((p) => p.id === next.supplyPartnerId)?.seats ?? 0
       : 0;
-    const defections = Math.round((ownSeats * Math.max(0, 40 - next.metrics.partyConfidence)) / 100);
-    const govVotes = Math.max(0, ownSeats + partnerSeats - defections);
     const totalSeats = next.parties.reduce((sum, p) => sum + p.seats, 0) || 650;
-    const oppVotes = Math.max(0, totalSeats - govVotes);
-    const sponsor = next.parties.find((p) => p.id === next.oppositionMotion?.sponsorPartyId);
+    const sponsor = next.parties.find((p) => p.id === motion.sponsorPartyId);
+    const outcome = resolveConfidenceVote({
+      ownSeats,
+      partnerSeats,
+      totalSeats,
+      partyConfidence: next.metrics.partyConfidence,
+    });
+    const pipeline = next.parliamentState ?? createDefaultParliamentState();
+    const scheduled =
+      pendingVotes(pipeline.votes).find(
+        (entry) => entry.id === motionVoteId(motion.sponsorPartyId, motion.scheduledWeek),
+      ) ??
+      motionVote({
+        sponsorPartyId: motion.sponsorPartyId,
+        sponsorName: sponsor?.name ?? 'the opposition',
+        scheduledWeek: motion.scheduledWeek,
+      });
+    const recorded = {
+      ...scheduled,
+      result: {
+        ayes: outcome.govVotes,
+        noes: outcome.oppVotes,
+        rebels: 0,
+        defections: outcome.defections,
+        passed: outcome.passed,
+        castWeek: next.week,
+      },
+    };
+    const withVote = {
+      ...next,
+      parliamentState: {
+        ...pipeline,
+        votes: recordVoteResult(pipeline.votes, recorded),
+      },
+    };
 
-    if (govVotes > oppVotes) {
+    if (outcome.passed) {
       next = {
-        ...next,
+        ...withVote,
         oppositionMotion: undefined,
-        metrics: { ...next.metrics, partyConfidence: clamp(next.metrics.partyConfidence - 2, 0, 100) },
-        log: [`CONFIDENCE MOTION: the government wins ${govVotes}-${oppVotes}.`, ...next.log].slice(0, 50),
-        headlines: [{ paper: 'The National Standard', title: `GOVERNMENT SURVIVES ${govVotes}-${oppVotes}`, stance: 'centrist' as const }, ...next.headlines].slice(0, 4),
+        noConfidenceImminent: false,
+        metrics: { ...withVote.metrics, partyConfidence: clamp(withVote.metrics.partyConfidence - 2, 0, 100) },
+        log: [`CONFIDENCE MOTION: the government wins ${outcome.govVotes}-${outcome.oppVotes}.`, ...withVote.log].slice(0, 50),
+        headlines: [{ paper: 'The National Standard', title: `GOVERNMENT SURVIVES ${outcome.govVotes}-${outcome.oppVotes}`, stance: 'centrist' as const }, ...withVote.headlines].slice(0, 4),
       };
     } else {
-      const who = next.player ? `${next.player.firstName} ${next.player.lastName}` : 'The Prime Minister';
+      const who = withVote.player ? `${withVote.player.firstName} ${withVote.player.lastName}` : 'The Prime Minister';
       next = {
-        ...next,
-        gameOver: `${who} lost a motion of no confidence ${govVotes}-${oppVotes}${sponsor ? ' to ' + sponsor.name : ''} and resigned.`,
+        ...withVote,
+        gameOver: `${who} lost a motion of no confidence ${outcome.govVotes}-${outcome.oppVotes}${sponsor ? ' to ' + sponsor.name : ''} and resigned.`,
         oppositionMotion: undefined,
-        log: [`CONFIDENCE MOTION: the government is defeated ${govVotes}-${oppVotes}.`, ...next.log].slice(0, 50),
+        noConfidenceImminent: false,
+        log: [`CONFIDENCE MOTION: the government is defeated ${outcome.govVotes}-${outcome.oppVotes}.`, ...withVote.log].slice(0, 50),
       };
     }
   }
@@ -1723,10 +1912,9 @@ export function advanceWeek(s: GameState): GameState {
   if (letters >= threshold && !next.gameOver && (!immunityActive || changedRulesOverride)) {
     const conf = next.metrics.partyConfidence;
     const name = next.player ? `${next.player.firstName} ${next.player.lastName}` : 'The Prime Minister';
-    const electorate = Math.max(
-      1,
-      next.parties.find((p) => p.id === next.player?.partyId)?.seats ?? 326,
-    );
+    const governingParty = next.parties.find((p) => p.id === next.player?.partyId);
+    const electorate = Math.max(1, governingParty?.seats ?? 326);
+    const rules = backbenchBody(governingParty);
     const mood = next.committeeMood;
     const restless = mood ? mood.consideringDefection + mood.readyToChallenge : 0;
 
@@ -1750,11 +1938,12 @@ export function advanceWeek(s: GameState): GameState {
     };
 
     if (greySuits) {
+      const body = backbenchBody(next.parties.find((party) => party.id === next.player?.partyId));
       next = {
         ...next,
         gameOver: `${name} was told by senior colleagues that the party had lost confidence, and resigned before a ballot could be held.`,
         lastVote: voteRecord,
-        log: [`1922 COMMITTEE: the grey suits called. ${name} resigned without a ballot.`, ...next.log].slice(0, 50),
+        log: [`${body.short}: the grey suits called. ${name} resigned without a ballot.`, ...next.log].slice(0, 50),
       };
     } else if (survived) {
       next = {
@@ -1762,16 +1951,16 @@ export function advanceWeek(s: GameState): GameState {
         lastVote: voteRecord,
         stats: { ...next.stats, lettersOfNoConfidence: Math.round(threshold * 0.2) },
         metrics: { ...next.metrics, partyConfidence: clamp(conf - 5, 0, 100) },
-        log: [`CONFIDENCE VOTE: ${name} survives ${votesFor} to ${votesAgainst}.`, ...next.log].slice(0, 50),
+        log: [`${rules.ballotLabel.toUpperCase()}: ${name} survives ${votesFor} to ${votesAgainst}.`, ...next.log].slice(0, 50),
         headlines: [{ paper: 'The National Standard', title: `PM SURVIVES ${votesFor}-${votesAgainst} BUT EMERGES WOUNDED`, stance: 'centrist' as const }, ...next.headlines].slice(0, 4),
       };
     } else {
       next = {
         ...next,
-        gameOver: `${name} lost a confidence ballot of MPs ${votesFor}-${votesAgainst} and was forced to resign.`,
+        gameOver: `${name} lost a ${rules.ballotLabel} of MPs ${votesFor}-${votesAgainst} and was forced to resign.`,
         lastVote: voteRecord,
         stats: { ...next.stats, lettersOfNoConfidence: threshold },
-        log: [`CONFIDENCE VOTE: ${name} loses ${votesFor} to ${votesAgainst} and resigns.`, ...next.log].slice(0, 50),
+        log: [`${rules.ballotLabel.toUpperCase()}: ${name} loses ${votesFor} to ${votesAgainst} and resigns.`, ...next.log].slice(0, 50),
       };
     }
   }
@@ -1783,11 +1972,13 @@ export function advanceWeek(s: GameState): GameState {
   unrest = clamp(unrest, 0, 100);
   next = { ...next, factionUnrest: unrest };
 
-  // Occasional minister leak.
+  // Occasional minister leak. A disloyal cabinet leaks more often; a healthy
+  // one leaves the baseline chance exactly as it was.
+  const loyaltyRisk = ministerialLoyaltyRisk(next.cabinet);
   if (
     next.cabinet.length > 0 &&
     !next.gameOver &&
-    rng() < monthlyChanceToWeekly(0.12)
+    rng() < monthlyChanceToWeekly(0.12 + loyaltyRisk.leakChance)
   ) {
     const idx = Math.floor(rng() * next.cabinet.length);
     const mins = next.cabinet.map((m, i) => (i === idx ? { ...m, loyalty: clamp(m.loyalty - 10, 0, 100) } : m));
@@ -1800,11 +1991,12 @@ export function advanceWeek(s: GameState): GameState {
   }
 
   // 6b. Collective responsibility: a minister who no longer believes in the
-  // direction of travel may resign rather than defend it.
+  // direction of travel may resign rather than defend it. Low cabinet loyalty
+  // raises the chance; the default cabinet leaves the baseline unchanged.
   if (
     next.cabinet.length > 0 &&
     !next.gameOver &&
-    rng() < monthlyChanceToWeekly(0.06)
+    rng() < monthlyChanceToWeekly(0.06 + loyaltyRisk.resignationChance)
   ) {
     const unhappy = next.cabinet.filter((m) => m.loyalty < 35);
     if (unhappy.length > 0) {
@@ -2230,6 +2422,10 @@ export function migrateState(saved: Partial<GameState> | null | undefined): Game
     Number.isFinite(saved.reshuffleDisciplineBonus)
       ? clamp(saved.reshuffleDisciplineBonus, 0, RESHUFFLE_DISCIPLINE_BONUS)
       : undefined;
+  const savedLastCabinetMeetingWeek =
+    typeof saved.lastCabinetMeetingWeek === 'number' && Number.isFinite(saved.lastCabinetMeetingWeek)
+      ? Math.max(0, Math.floor(saved.lastCabinetMeetingWeek))
+      : undefined;
 
   return {
     ...merged,
@@ -2263,6 +2459,11 @@ export function migrateState(saved: Partial<GameState> | null | undefined): Game
       NOMINAL_GDP_MIN,
       NOMINAL_GDP_MAX,
     ),
+    treasuryReserves: clamp(
+      safe(saved.treasuryReserves, DEFAULT_TREASURY_RESERVES),
+      0,
+      10_000,
+    ),
     turnsUntilElection: safe(merged.turnsUntilElection, base.turnsUntilElection),
     seed: safe(merged.seed, base.seed),
     fiscalDragRevenue: clamp(safe(saved.fiscalDragRevenue, 0), 0, 1_000),
@@ -2291,11 +2492,20 @@ export function migrateState(saved: Partial<GameState> | null | undefined): Game
       : nhsMetricsFromGame(merged),
     blindsideRisk: safe(saved.blindsideRisk, base.blindsideRisk ?? 10),
     lastReshuffleWeek: savedLastReshuffleWeek,
+    lastCabinetMeetingWeek: savedLastCabinetMeetingWeek,
     reshuffleDisciplineBonus: savedReshuffleBonus,
     confidenceWarningShown: saved.confidenceWarningShown === true,
+    budgetVoteDefeated: saved.budgetVoteDefeated === true,
+    noConfidenceImminent: saved.noConfidenceImminent === true,
     escalatedDossierIds: Array.isArray(saved.escalatedDossierIds)
       ? saved.escalatedDossierIds.filter((id): id is string => typeof id === 'string')
       : base.escalatedDossierIds,
+    viewedDossierIds: Array.isArray(saved.viewedDossierIds)
+      ? saved.viewedDossierIds.filter((id): id is string => typeof id === 'string')
+      : base.viewedDossierIds,
+    resolvedDossierIds: Array.isArray(saved.resolvedDossierIds)
+      ? saved.resolvedDossierIds.filter((id): id is string => typeof id === 'string')
+      : base.resolvedDossierIds,
     pmqSessionAskedIds: Array.isArray(saved.pmqSessionAskedIds) ? saved.pmqSessionAskedIds : undefined,
     pmqRecentIds: Array.isArray(saved.pmqRecentIds) ? saved.pmqRecentIds : undefined,
     personalAllowance: clamp(
@@ -2373,7 +2583,7 @@ export function reducer(state: GameState, action: Action): GameState {
 
       const fresh: GameState = {
         ...opened,
-        stats: { ...opened.stats, lettersThreshold: resignationThreshold(seatsAfter) },
+        stats: { ...opened.stats, lettersThreshold: resignationThreshold(seatsAfter, action.player.partyId) },
       };
       // Background traits are a one-off adjustment to the opening position,
       // applied after the scenario has set its absolute values.
@@ -2384,6 +2594,48 @@ export function reducer(state: GameState, action: Action): GameState {
 
     case 'START_TURN':
       return advanceWeek(state);
+
+    case 'HOLD_CABINET_MEETING': {
+      if (!isCabinetMeetingDue(state)) return state;
+      const meeting = buildCabinetMeeting(state);
+      const outcome = resolveCabinetMeeting(meeting, action.plan, state);
+      if (!outcome) return state;
+
+      const next = applyEffects(
+        {
+          ...state,
+          lastCabinetMeetingWeek: state.week,
+          lastCabinetMeeting: outcome.record,
+        },
+        outcome.effects,
+      );
+      return {
+        ...next,
+        cabinet: next.cabinet.map((minister) => ({
+          ...minister,
+          loyalty: clamp(minister.loyalty + (outcome.loyaltyByName[minister.name] ?? 0), 0, 100),
+        })),
+        cabinetState: {
+          ...(next.cabinetState ?? createDefaultCabinetState()),
+          cohesion: clamp(
+            (next.cabinetState?.cohesion ?? 65) + outcome.cohesionDelta,
+            0,
+            100,
+          ),
+        },
+        factionUnrest: clamp(next.factionUnrest + outcome.factionUnrestDelta, 0, 100),
+        lastOutcome: outcome.summary,
+        log: [...outcome.log, ...next.log].slice(0, 50),
+        headlines: [
+          {
+            paper: 'The National Standard',
+            title: 'CABINET AGREES COURSE AFTER DOWNING STREET MEETING',
+            stance: 'centrist' as const,
+          },
+          ...next.headlines,
+        ].slice(0, 4),
+      };
+    }
 
     case 'LEAN_ON_BANK': {
       // The government gets its way today; the market remembers tomorrow.
@@ -2399,6 +2651,196 @@ export function reducer(state: GameState, action: Action): GameState {
           action.kind,
         ),
       };
+
+    case 'DENY_SEWEL_CONSENT': {
+      const devolution = state.devolutionState;
+      if (!devolution) return state;
+      const next = applyEffects(
+        { ...state, devolutionState: denySewelConsent(devolution, action.nationId) },
+        { approval: -1, partyConfidence: -1 },
+      );
+      return {
+        ...next,
+        log: [`SEWEL: Westminster denied consent for ${action.nationId.toUpperCase()}.`, ...next.log].slice(0, 50),
+      };
+    }
+
+    case 'EMERGENCY_GRANT': {
+      const local = state.localGovernmentState;
+      if (!local) return state;
+      const authority = local.authorities.find((a) => a.id === action.authorityId);
+      if (!authority) return state;
+      const next = applyEffects(
+        { ...state, localGovernmentState: emergencyGrant(local, action.authorityId) },
+        { budgetBalance: -0.5, approval: 0.5, publicServices: 0.5 },
+      );
+      return {
+        ...next,
+        log: [`LOCAL GOVERNMENT: emergency grant for ${authority.name}.`, ...next.log].slice(0, 50),
+      };
+    }
+
+    case 'SEND_COMMISSIONERS': {
+      const local = state.localGovernmentState;
+      if (!local) return state;
+      const authority = local.authorities.find((a) => a.id === action.authorityId);
+      if (!authority) return state;
+      const next = applyEffects(
+        {
+          ...state,
+          localGovernmentState: sendCommissioners(local, action.authorityId, state.week),
+        },
+        { approval: -0.5 },
+      );
+      return {
+        ...next,
+        log: [`LOCAL GOVERNMENT: commissioners sent into ${authority.name}.`, ...next.log].slice(0, 50),
+      };
+    }
+
+    case 'LOBBY_GROUP': {
+      const lobbying = state.lobbyingState;
+      if (!lobbying) return state;
+      const result = lobbyGroup(lobbying, action.groupId, state.week, action.mode);
+      if (result.state === lobbying) return state;
+      const group = lobbying.groups.find((g) => g.id === action.groupId);
+      const next = applyEffects({ ...state, lobbyingState: result.state }, result.effects);
+      return {
+        ...next,
+        log: [
+          `LOBBYING: the government ${action.mode === 'court' ? 'courted' : 'snubbed'} ${group?.name ?? 'an interest group'}.`,
+          ...next.log,
+        ].slice(0, 50),
+      };
+    }
+
+    case 'SET_CASEWORKER_CAPACITY': {
+      const immigration = state.immigrationState;
+      if (!immigration) return state;
+      const capacity = clamp(action.capacity, 0, 100);
+      if (capacity === immigration.caseworkerCapacity) return state;
+      return {
+        ...state,
+        immigrationState: setCaseworkerCapacity(immigration, capacity),
+        log: [`HOME OFFICE: caseworker capacity set to ${Math.round(capacity)}%.`, ...state.log].slice(0, 50),
+      };
+    }
+
+    case 'TOGGLE_REMOVALS_BLOCKED': {
+      const immigration = state.immigrationState;
+      if (!immigration) return state;
+      const blocked = !immigration.removalsBlocked;
+      return {
+        ...state,
+        immigrationState: setRemovalsBlocked(immigration, blocked),
+        log: [
+          `HOME OFFICE: removal flights ${blocked ? 'blocked by injunction' : 'cleared to resume'}.`,
+          ...state.log,
+        ].slice(0, 50),
+      };
+    }
+
+    case 'REMOVAL_FLIGHT': {
+      const immigration = state.immigrationState;
+      if (!immigration || immigration.removalsBlocked) return state;
+      const count = Math.max(1, Math.round(action.count));
+      const updated = removalFlight(immigration, count);
+      if (updated === immigration) return state;
+      const next = applyEffects(
+        { ...state, immigrationState: updated },
+        { budgetBalance: -0.2, approval: 0.3 },
+      );
+      return {
+        ...next,
+        log: [`HOME OFFICE: removal flight deported ${count}k cases.`, ...next.log].slice(0, 50),
+      };
+    }
+
+    case 'START_COVER_UP': {
+      const ethics = state.ethics ?? createDefaultEthics();
+      if (ethics.coverUpActive || ethics.activeInvestigations.length === 0) return state;
+      return {
+        ...state,
+        ethics: startCoverUp(ethics),
+        log: ['ETHICS: the government is containing the investigation.', ...state.log].slice(0, 50),
+      };
+    }
+
+    case 'END_COVER_UP': {
+      const ethics = state.ethics ?? createDefaultEthics();
+      if (!ethics.coverUpActive) return state;
+      return {
+        ...state,
+        ethics: endCoverUp(ethics),
+        log: ['ETHICS: the cover-up has been called off.', ...state.log].slice(0, 50),
+      };
+    }
+
+    case 'ADMIT_INVESTIGATION': {
+      const ethics = state.ethics ?? createDefaultEthics();
+      const result = admitInvestigation(ethics, action.investigationId);
+      if (result.state === ethics) return state;
+      const next = applyEffects({ ...state, ethics: result.state }, result.effects);
+      return {
+        ...next,
+        log: ['ETHICS: the government admitted the finding before publication.', ...next.log].slice(0, 50),
+      };
+    }
+
+    case 'INVOKE_PARLIAMENT_ACT': {
+      if (inPurdah(state)) return state;
+      const bill = state.bills.find((b) => b.id === action.billId);
+      if (!bill) return state;
+      const pipeline = state.parliamentState ?? createDefaultParliamentState();
+      const invoked = invokeParliamentAct(pipeline, action.billId);
+      if (invoked.state === pipeline) return state;
+      const forcedPipeline = {
+        ...invoked.state,
+        votes: rescheduleVote(
+          invoked.state.votes,
+          billVoteId(action.billId),
+          state.week + 1,
+        ),
+      };
+      const next = applyEffects(
+        {
+          ...state,
+          parliamentState: forcedPipeline,
+          // Forced past the Lords: the bill is resolved at the next sitting.
+          bills: state.bills.map((b) => (b.id === action.billId ? { ...b, weeksToPass: 0 } : b)),
+        },
+        invoked.effects,
+      );
+      return {
+        ...next,
+        log: [`PARLIAMENT ACT: ${bill.title} forced onto the statute book.`, ...next.log].slice(0, 50),
+      };
+    }
+
+    case 'BY_ELECTION_RESPONSE': {
+      if (inPurdah(state)) return state;
+      const lost = [...(state.byElections ?? [])].reverse().find((b) => !b.held);
+      if (!lost) return state;
+      if (state.week - lost.week > 8) return state;
+      if (state.byElectionResponseWeek !== undefined && state.byElectionResponseWeek >= lost.week) {
+        return state;
+      }
+      const visit = action.mode === 'visit';
+      const next = applyEffects(
+        state,
+        visit
+          ? { budgetBalance: -1, approval: 1, partyConfidence: 2 }
+          : { approval: 0.5, partyConfidence: 1 },
+      );
+      return {
+        ...next,
+        byElectionResponseWeek: state.week,
+        log: [
+          `BY-ELECTION: the PM ${visit ? 'visited' : 'sent ministers to'} ${lost.regionId}; the party rallies.`,
+          ...next.log,
+        ].slice(0, 50),
+      };
+    }
 
     case 'BRIEF_PRESS': {
       const media = state.mediaState ?? createDefaultMediaState();
@@ -2461,7 +2903,13 @@ export function reducer(state: GameState, action: Action): GameState {
     }
 
     case 'OPEN_DOSSIER':
-      return { ...state, selectedDossierId: action.dossierId };
+      return {
+        ...state,
+        selectedDossierId: action.dossierId,
+        viewedDossierIds: state.viewedDossierIds?.includes(action.dossierId)
+          ? state.viewedDossierIds
+          : [...(state.viewedDossierIds ?? []), action.dossierId],
+      };
 
     case 'CLOSE_DOSSIER':
       return { ...state, selectedDossierId: null };
@@ -2513,6 +2961,9 @@ export function reducer(state: GameState, action: Action): GameState {
       next = {
         ...next,
         redBox: next.redBox.filter((d) => d.id !== action.dossierId),
+        resolvedDossierIds: next.resolvedDossierIds?.includes(action.dossierId)
+          ? next.resolvedDossierIds
+          : [...(next.resolvedDossierIds ?? []), action.dossierId],
         selectedDossierId: null,
         lastOutcome: `${dossier.title}: ${choice.label} \u2014 ${choice.summary}`,
         log: [`[${dossier.department}] ${dossier.title}: ${choice.label}`, ...next.log].slice(0, 50),
@@ -2545,7 +2996,7 @@ export function reducer(state: GameState, action: Action): GameState {
       return {
         ...state,
         bills: [...state.bills, bill],
-        parliamentState: startBill(state.parliamentState ?? createDefaultParliamentState(), bill),
+        parliamentState: startBill(state.parliamentState ?? createDefaultParliamentState(), bill, state.week),
         log: [`BILL INTRODUCED: ${bill.title} ${whipDesc} (will face a division in ${bill.weeksToPass} months)`, ...state.log].slice(0, 50),
       };
     }
@@ -2676,6 +3127,7 @@ export function reducer(state: GameState, action: Action): GameState {
     case 'DELIVER_CUSTOM_BUDGET':
     case 'DELIVER_BUDGET': {
       if (inPurdah(state) || !isFiscalWindow(state)) return state;
+      const eventKind = state.fiscalEventKind ?? null;
 
       const requestedPlan = action.type === 'DELIVER_CUSTOM_BUDGET' ? action.plan : action.customPlan;
       if (requestedPlan) {
@@ -2762,10 +3214,13 @@ export function reducer(state: GameState, action: Action): GameState {
             ...next.headlines,
           ].slice(0, 4),
         };
-        return applyBudgetDeliveryAssessment(
-          next,
-          -(result.effects.budgetBalance ?? 0),
-          result.obrHeadroom,
+        return applyBudgetDivision(
+          applyBudgetDeliveryAssessment(
+            next,
+            -(result.effects.budgetBalance ?? 0),
+            result.obrHeadroom,
+          ),
+          eventKind,
         );
       }
 
@@ -2780,10 +3235,13 @@ export function reducer(state: GameState, action: Action): GameState {
         log: [`BUDGET: ${pkg.title} delivered by the Chancellor.`, ...next.log].slice(0, 50),
         headlines: [{ paper: 'The National Standard', title: pkg.kicker, stance: 'centrist' as const }, ...next.headlines].slice(0, 4),
       };
-      return applyBudgetDeliveryAssessment(
-        next,
-        -(pkg.effects.budgetBalance ?? 0),
-        state.obrHeadroom ?? 0,
+      return applyBudgetDivision(
+        applyBudgetDeliveryAssessment(
+          next,
+          -(pkg.effects.budgetBalance ?? 0),
+          state.obrHeadroom ?? 0,
+        ),
+        eventKind,
       );
     }
 
@@ -3037,16 +3495,26 @@ export function reducer(state: GameState, action: Action): GameState {
         } else {
           updated = calculateTradeDealChange(updated, 'conclude', action.partner);
         }
-      } else {
+      } else if (action.action === 'suspend') {
+        // Legacy contract: "suspend" withdraws the deal outright.
         updated = calculateTradeDealChange(updated, 'withdraw', action.partner);
+      } else if (action.action === 'expire') {
+        updated = calculateTradeDealChange(updated, 'suspend', action.partner);
+      } else {
+        updated = calculateTradeDealChange(updated, action.action, action.partner);
       }
 
+      const positive =
+        action.action === 'pursue' ||
+        action.action === 'ratify' ||
+        action.action === 'expand' ||
+        action.action === 'conclude';
       const prevEcon = calculateTradeDealEconomics(current);
       const nextEcon = calculateTradeDealEconomics(updated);
       const gdpDelta = r1(nextEcon.gdpImpact - prevEcon.gdpImpact);
       const next = applyEffects(state, {
-        economy: action.action === 'pursue' ? 1 : -1,
-        approval: action.action === 'pursue' ? 1 : -1,
+        economy: positive ? 1 : -1,
+        approval: positive ? 1 : -1,
         gdpGrowth: Math.round(gdpDelta * 0.1 * 100) / 100,
       });
       const partnerLabel: Record<typeof action.partner, string> = {
@@ -3061,7 +3529,7 @@ export function reducer(state: GameState, action: Action): GameState {
         tradeDealStatus: updated,
         tradeGdpImpact: nextEcon.gdpImpact,
         log: [
-          `TRADE: ${action.action === 'pursue' ? 'Advanced trade agreement with' : 'Suspended trade agreement with'} ${partnerLabel[action.partner]} (GDP impact ${nextEcon.gdpImpact >= 0 ? '+' : ''}${nextEcon.gdpImpact}%).`,
+          `TRADE: ${positive ? 'Advanced' : 'Suspended'} the trade agreement with ${partnerLabel[action.partner]} (GDP impact ${nextEcon.gdpImpact >= 0 ? '+' : ''}${nextEcon.gdpImpact}%).`,
           ...next.log,
         ].slice(0, 50),
       };

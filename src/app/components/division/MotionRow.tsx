@@ -22,6 +22,11 @@ export interface MotionRowProps {
   actionLabel?: string;
   onAction?: () => void;
   actionDisabled?: boolean;
+  /** A second, usually constitutional, lever shown beneath the main action. */
+  secondaryActionLabel?: string;
+  onSecondaryAction?: () => void;
+  secondaryActionDisabled?: boolean;
+  secondaryTestID?: string;
   testID?: string;
 }
 
@@ -56,6 +61,10 @@ export function MotionRow({
   actionLabel,
   onAction,
   actionDisabled,
+  secondaryActionLabel,
+  onSecondaryAction,
+  secondaryActionDisabled,
+  secondaryTestID,
   testID,
 }: MotionRowProps) {
   const tone = riskTone(rebellionRisk);
@@ -98,6 +107,16 @@ export function MotionRow({
           onPress={onAction}
           disabled={actionDisabled}
           testID={testID}
+        />
+      ) : null}
+
+      {secondaryActionLabel && onSecondaryAction ? (
+        <Button
+          label={secondaryActionLabel}
+          variant="ghost"
+          onPress={onSecondaryAction}
+          disabled={secondaryActionDisabled}
+          testID={secondaryTestID}
         />
       ) : null}
     </Card>

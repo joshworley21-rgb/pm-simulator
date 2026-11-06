@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { margin: 0; background: #dddddd; }
+  .artboard { display: inline-block; margin: 8px; position: relative; overflow: hidden; }
+  .label { font: 12px sans-serif; color: #333; }
+</style>
+</head>
+<body>
+<div id="boards"></div>
+<script>
+const GREEN = '#1B5E3F';
+const RED = '#8C1C13';
+const RED_DARK = '#6B130B';
+const GOLD = '#C9A227';
+const GOLD_DARK = '#8A6A1F';
+
+function boxMarkup(N, opts) {
+  const scale = opts.scale;
+  const boxW = Math.round(N * scale);
+  const u = boxW / 220;
+  const h = Math.round(150 * u);
+  const left = Math.round((N - boxW) / 2);
+  const top = Math.round((N - h) / 2 - N * 0.015);
+  const simple = boxW < 90 || !!opts.simple;
+  const c = (x) => Math.round(x * u);
+  const fill = opts.mono ? '#FFFFFF' : null;
+
+  if (opts.mono) {
+    const lidR = simple ? 4 : 6;
+    return `<svg width="${N}" height="${N}" viewBox="0 0 ${N} ${N}" xmlns="http://www.w3.org/2000/svg">
+      <g transform="translate(${left},${top}) scale(${u})">
+        <defs>
+          <mask id="boxmask-${N}">
+            <rect width="220" height="150" fill="black"/>
+            <rect x="0" y="12" width="220" height="44" rx="${lidR}" fill="white"/>
+            <rect x="0" y="54" width="220" height="96" rx="${lidR}" fill="white"/>
+            <path d="M78,24 V22 a12,12 0 0 1 12,-12 h40 a12,12 0 0 1 12,12 v2" fill="none" stroke="white" stroke-width="5"/>
+            <rect x="0" y="38" width="220" height="8" fill="black"/>
+            ${simple ? '' : '<rect x="106" y="94" width="8" height="12" rx="4" fill="black"/>'}
+          </mask>
+        </defs>
+        <rect width="220" height="150" fill="white" mask="url(#boxmask-${N})"/>
+      </g>
+    </svg>`;
+  }
+
+  const handle = simple
+    ? `<div style="position:absolute;left:${c(78)}px;top:0;width:${c(64)}px;height:${c(18)}px;background:${fill || GOLD};border-radius:${c(10)}px ${c(10)}px 0 0;"></div>`
+    : `<div style="position:absolute;left:${c(78)}px;top:0;width:${c(64)}px;height:${c(22)}px;border:${c(5)}px solid ${fill || GOLD};border-bottom:none;border-radius:${c(12)}px ${c(12)}px 0 0;"></div>`;
+
+  const lid = `<div style="position:absolute;left:0;top:${c(12)}px;width:${boxW}px;height:${c(44)}px;background:${fill || RED_DARK};border-radius:${c(6)}px ${c(6)}px 0 0;"></div>`;
+  // Monochrome: leave a transparent gap where the brass band sits, and punch
+  // the keyhole through the body so the themed icon keeps its structure.
+  const band = opts.mono ? '' : `<div style="position:absolute;left:0;top:${c(38)}px;width:${boxW}px;height:${c(8)}px;background:${GOLD};"></div>`;
+  const body = `<div style="position:absolute;left:0;top:${c(54)}px;width:${boxW}px;height:${c(96)}px;background:${fill || RED};border-radius:0 0 ${c(6)}px ${c(6)}px;"></div>`;
+  const lock = simple || opts.mono ? '' :
+    `<div style="position:absolute;left:${c(97)}px;top:${c(84)}px;width:${c(26)}px;height:${c(32)}px;background:${GOLD};border-radius:${c(3)}px;"></div>`;
+  const keyhole = simple ? '' : opts.mono
+    ? `<div style="position:absolute;left:${c(106)}px;top:${c(94)}px;width:${c(8)}px;height:${c(12)}px;background:#FFFFFF;border-radius:${c(4)}px;mix-blend-mode:destination-out;"></div>`
+    : `<div style="position:absolute;left:${c(106)}px;top:${c(94)}px;width:${c(8)}px;height:${c(12)}px;background:${RED_DARK};border-radius:${c(4)}px;"></div>`;
+
+  return `<div style="position:absolute;left:${left}px;top:${top}px;width:${boxW}px;height:${h}px;">${handle}${lid}${band}${body}${lock}${keyhole}</div>`;
+}
+
+function bgMarkup(N, kind) {
+  if (kind === 'gradient') {
+    return `<div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 32%, #2A7A52 0%, ${GREEN} 55%, #113D29 100%);"></div>`;
+  }
+  if (kind === 'solid') {
+    return `<div style="position:absolute;inset:0;background:${GREEN};"></div>`;
+  }
+  return '';
+}
+
+const SPECS = [];
+function spec(id, N, bg, opts) { SPECS.push({ id, N, bg, ...opts }); }
+
+// App icon (iOS / store) + splash + favicon
+spec('icon', 1024, 'gradient', { scale: 0.62 });
+spec('splash', 1024, 'transparent', { scale: 0.5 });
+spec('fg-512', 512, 'transparent', { scale: 0.46 });
+spec('mono-512', 512, 'transparent', { scale: 0.46, mono: true });
+spec('bgsolid-512', 512, 'solid', { scale: 0 });
+for (const N of [288, 432, 576, 864, 1152]) spec(`splash-${N}`, N, 'transparent', { scale: 0.5 });
+spec('favicon', 48, 'gradient', { scale: 0.72, simple: true });
+
+// Android legacy launcher + round
+for (const N of [48, 72, 96, 144, 192]) spec(`launcher-${N}`, N, 'gradient', { scale: 0.58, simple: N < 120 });
+
+// Android adaptive layers
+for (const N of [108, 162, 216, 324, 432]) {
+  spec(`fg-${N}`, N, 'transparent', { scale: 0.46, simple: N < 150 });
+  spec(`mono-${N}`, N, 'transparent', { scale: 0.46, simple: N < 150, mono: true });
+  spec(`bgsolid-${N}`, N, 'solid', { scale: 0 });
+}
+
+const host = document.getElementById('boards');
+SPECS.forEach((sp) => {
+  const d = document.createElement('div');
+  d.className = 'artboard';
+  d.id = `board-${sp.id}`;
+  d.style.width = `${sp.N}px`;
+  d.style.height = `${sp.N}px`;
+  d.innerHTML = bgMarkup(sp.N, sp.bg) + (sp.scale ? boxMarkup(sp.N, sp) : '');
+  const label = document.createElement('div');
+  label.className = 'label';
+  label.textContent = sp.id;
+  host.appendChild(label);
+  host.appendChild(d);
+});
+</script>
+</body>
+</html>

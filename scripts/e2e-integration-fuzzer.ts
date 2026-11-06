@@ -16,7 +16,7 @@ import { applyScenario } from '../src/app/scenarios';
 import { BLACK_SWAN_CATALOGUE } from '../src/app/blackSwans';
 import { BRIEFING_COOLDOWN_WEEKS } from '../src/app/media';
 
-type FuzzerArchetype = 'Spender' | 'Hawk' | 'Reshuffler' | 'Idle' | 'Random';
+type FuzzerArchetype = 'Spender' | 'Hawk' | 'Reshuffler' | 'Idle' | 'Random' | 'Reformer';
 type GovernmentMode = 'majority' | 'hung';
 type ArchetypeLabel = `${FuzzerArchetype} [${GovernmentMode}]`;
 
@@ -35,6 +35,7 @@ const FUZZER_ARCHETYPES: FuzzerArchetype[] = [
   'Reshuffler',
   'Idle',
   'Random',
+  'Reformer',
 ];
 
 interface RunTelemetry {
@@ -291,6 +292,89 @@ function availableActions(
  * Idle: never takes a discretionary action.
  * Random: choose uniformly from all available actions.
  */
+/**
+ * Reformer: the competent active player. Resolves the Red Box, answers the
+ * House, delivers the middle-way Budget, and legislates — but never takes the
+ * extreme all-max or all-min decisions the stress archetypes use.
+ */
+function selectReformerAction(
+  state: any,
+  allBills: any[],
+  budgetPackages: any[],
+  random: () => number,
+): any | undefined {
+  const inPurdah =
+    state.phase === 'playing' && state.turnsUntilElection <= PURDAH_TURNS;
+
+  // 1. Clear the desk. Urgent first, then the choice with the best social return.
+  if ((state.redBox ?? []).length > 0) {
+    const dossier = [...state.redBox].sort(
+      (a: any, b: any) =>
+        Number(b.urgent) - Number(a.urgent) || a.weeksRemaining - b.weeksRemaining,
+    )[0];
+    const score = (choice: any) =>
+      (choice.effects?.approval ?? 0) +
+      (choice.effects?.partyConfidence ?? 0) +
+      (choice.effects?.publicServices ?? 0) +
+      Math.max(0, choice.effects?.budgetBalance ?? 0) * 0.1 -
+      Math.max(0, -(choice.effects?.budgetBalance ?? 0)) * 0.3;
+    const choice = [...(dossier.choices ?? [])].sort((a: any, b: any) => score(b) - score(a))[0];
+    if (choice) {
+      return { type: 'RESOLVE_DOSSIER', dossierId: dossier.id, choiceId: choice.id };
+    }
+  }
+
+  // 2. Answer PMQs with the most popular line.
+  if (state.pmq?.options?.length > 0) {
+    const best = [...state.pmq.options].sort(
+      (a: any, b: any) => (b.effects?.approval ?? 0) - (a.effects?.approval ?? 0),
+    )[0];
+    return { type: 'ANSWER_PMQ', optionId: best.id };
+  }
+
+  // 3. A live black swan must be answered; take the most commanding option.
+  const activeSwan = state.blackSwanState?.active;
+  if (activeSwan) {
+    const event = BLACK_SWAN_CATALOGUE.find((e) => e.id === activeSwan.eventId);
+    const best = [...(event?.options ?? [])].sort(
+      (a, b) => b.commandScore - a.commandScore,
+    )[0];
+    if (best) return { type: 'ANSWER_BLACK_SWAN', optionId: best.id };
+  }
+
+  // 4. The Middle Way at each fiscal event — restraint once the market is rattled.
+  if (!inPurdah && state.budgetDue) {
+    const debtStress = (state.stats?.debtToGdp ?? 0) >= 110 || (state.stats?.giltYield ?? 0) >= 6;
+    const preferredId = debtStress ? 'budget-restraint' : 'budget-middle';
+    const plan =
+      budgetPackages.find((pkg: any) => pkg.id === preferredId) ??
+      budgetPackages.find((pkg: any) => pkg.id === 'budget-middle') ??
+      budgetPackages[0];
+    if (plan) return { type: 'DELIVER_BUDGET', packageId: plan.id };
+  }
+
+  // 5. Legislate a popular bill every few months, while the Order Paper has room.
+  if (!inPurdah && state.week % 6 === 0 && state.bills.length < 4) {
+    const debtStress = (state.stats?.debtToGdp ?? 0) >= 110 || (state.stats?.giltYield ?? 0) >= 6;
+    const available = allBills.filter(
+      (bill: any) =>
+        !state.bills.some((active: any) => active.id === bill.id) &&
+        !state.passedLaws.includes(bill.title) &&
+        (!debtStress || (bill.fiscalCost ?? 0) <= 5),
+    );
+    const best = [...available].sort(
+      (a: any, b: any) =>
+        ((b.effects?.approval ?? 0) + (b.effects?.publicServices ?? 0) - (b.fiscalCost ?? 0) * 0.5) -
+        ((a.effects?.approval ?? 0) + (a.effects?.publicServices ?? 0) - (a.fiscalCost ?? 0) * 0.5),
+    )[0];
+    if (best) {
+      return { type: 'PROPOSE_BILL', billId: best.id, whipLevel: 'two-line' };
+    }
+  }
+
+  return undefined;
+}
+
 function selectArchetypeAction(
   archetype: FuzzerArchetype,
   state: any,
@@ -299,6 +383,9 @@ function selectArchetypeAction(
   random: () => number,
 ): any | undefined {
   if (archetype === 'Idle') return undefined;
+  if (archetype === 'Reformer') {
+    return selectReformerAction(state, allBills, budgetPackages, random);
+  }
 
   if (archetype === 'Reshuffler') {
     if (state.ministerPicker) {
@@ -1693,6 +1780,44 @@ function assertHungGovernmentCollapseOutcomes(results: TestResult[]): void {
   );
 }
 
+function medianOf(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+/**
+ * The balance contract: competent, active government must not be strictly worse
+ * than doing nothing. Reformer is the control; Idle is the floor.
+ */
+function assertReformerBalance(results: TestResult[]): void {
+  const weeksFor = (label: ArchetypeLabel): number[] =>
+    results
+      .filter((result) => result.archetype === label)
+      .map((result) => result.telemetry?.weeksSurvived ?? 0);
+  const reformer = weeksFor('Reformer [majority]');
+  const idle = weeksFor('Idle [majority]');
+  if (reformer.length === 0 || idle.length === 0) return;
+
+  const reformerMedian = medianOf(reformer);
+  const idleMedian = medianOf(idle);
+  console.log(
+    `Balance assertion: Reformer median=${reformerMedian} weeks, Idle median=${idleMedian} weeks`,
+  );
+
+  if (reformerMedian < 120) {
+    throw new Error(
+      `Balance regression: competent active government survives only ${reformerMedian} weeks (min 120)`,
+    );
+  }
+  if (reformerMedian < idleMedian * 0.6) {
+    throw new Error(
+      `Balance regression: Reformer median ${reformerMedian} is less than 60% of Idle median ${idleMedian}`,
+    );
+  }
+}
+
 async function main() {
   const archetypeHorizon = envInteger(
     'ARCHETYPE_HORIZON',
@@ -1741,6 +1866,7 @@ async function main() {
   }
 
   assertHungGovernmentCollapseOutcomes(results);
+  assertReformerBalance(results);
 
   const duration = Date.now() - startTime;
   const summary = buildSummary(results, duration);

@@ -10,7 +10,7 @@ import type { ParliamentState } from './parliament';
 import type { LobbyingState } from './lobbying';
 import type { BlackSwanState } from './blackSwans';
 import type { CentralBankState } from './centralBank';
-import type { DevolutionState } from './devolution';
+import type { DevolutionState, NationId } from './devolution';
 
 export type RootStackParamList = {
   Menu: undefined;
@@ -135,6 +135,8 @@ export interface Minister {
   loyalty: number;
   competence: number;
   faction: string;
+  /** Public recognition / standing 0-100. Older saves may omit it. */
+  publicProfile?: number;
   /** True when the minister comes from a coalition partner. */
   coalition?: boolean;
   /** Ambition 0-100: restive, ambitious ministers can rebel in a division. */
@@ -242,10 +244,16 @@ export interface GameState {
   stats: NationalStats;
   /** Nominal GDP (£bn), used to scale primary borrowing in debt dynamics. */
   nominalGdp?: number;
+  /** Liquid reserves held by the Treasury (£bn). */
+  treasuryReserves?: number;
   week: number;
   turnsUntilElection: number;
   isElection: boolean;
   redBox: Dossier[];
+  /** Dossier ids the player has opened at least once; used for onboarding. */
+  viewedDossierIds?: string[];
+  /** Dossier ids the player has actually resolved; used for onboarding. */
+  resolvedDossierIds?: string[];
   selectedDossierId: string | null;
   lastOutcome: string | null;
   bills: Bill[];
@@ -282,6 +290,10 @@ export interface GameState {
   byElections?: { regionId: string; held: boolean; week: number }[];
   /** Week of the last mid-term reshuffle, so they cannot chain. */
   lastReshuffleWeek?: number;
+  /** Month/week of the last cabinet meeting; fresh meetings unlock monthly. */
+  lastCabinetMeetingWeek?: number;
+  /** Minutes and outcome of the most recent cabinet meeting. */
+  lastCabinetMeeting?: import('./cabinetMeeting').CabinetMeetingRecord;
   /** Party-confidence points still baked in from the last qualifying reshuffle. */
   reshuffleDisciplineBonus?: number;
   /** True once the one-off minority-government confidence warning has been issued. */
@@ -295,6 +307,10 @@ export interface GameState {
   blocs?: import('./voterBlocs').BlocSupport[];
   /** Opposition motion of no confidence, if one is tabled. */
   oppositionMotion?: { sponsorPartyId: string; tabledWeek: number; scheduledWeek: number };
+  /** True after the government loses a major Budget division. */
+  budgetVoteDefeated?: boolean;
+  /** Set when a lost Budget makes a no-confidence division imminent. */
+  noConfidenceImminent?: boolean;
   /** True when the partner is in government, not merely supplying votes. */
   coalition?: boolean;
   /** Cabinet posts handed to the coalition partner. */
@@ -306,6 +322,9 @@ export interface GameState {
   supplyCostPerWeek?: number;
   /** Promises made to the partner. */
   supplyConcessions?: string[];
+
+  /** Week the government last responded to a lost by-election. */
+  byElectionResponseWeek?: number;
 
   /** Result of the most recent 1922 Committee confidence ballot. */
   lastVote?: {
@@ -398,6 +417,7 @@ export type Action =
   | { type: 'CANCEL_APPOINT' }
   | { type: 'RESOLVE_FOREIGN'; issueId: string; optionId: string }
   | { type: 'ANSWER_PMQ'; optionId: string }
+  | { type: 'HOLD_CABINET_MEETING'; plan: import('./cabinetMeeting').CabinetMeetingPlan }
   | { type: 'DISMISS_PMQ' }
   | { type: 'DELIVER_BUDGET'; packageId?: string; customPlan?: CustomBudgetPlan }
   | { type: 'DELIVER_CUSTOM_BUDGET'; plan: CustomBudgetPlan }
@@ -409,6 +429,22 @@ export type Action =
   | { type: 'NEGOTIATE_SUPPLY'; partyId: string }
   | { type: 'FORM_COALITION'; partyId: string }
   | { type: 'TOGGLE_THRESHOLD_FREEZE' }
-  | { type: 'PURSUE_TRADE_DEAL'; partner: TradePartner; action: 'pursue' | 'suspend' }
+  | {
+      type: 'PURSUE_TRADE_DEAL';
+      partner: TradePartner;
+      action: 'pursue' | 'ratify' | 'expand' | 'conclude' | 'suspend' | 'withdraw' | 'expire';
+    }
+  | { type: 'DENY_SEWEL_CONSENT'; nationId: NationId }
+  | { type: 'EMERGENCY_GRANT'; authorityId: string }
+  | { type: 'SEND_COMMISSIONERS'; authorityId: string }
+  | { type: 'LOBBY_GROUP'; groupId: string; mode: 'court' | 'snub' }
+  | { type: 'SET_CASEWORKER_CAPACITY'; capacity: number }
+  | { type: 'TOGGLE_REMOVALS_BLOCKED' }
+  | { type: 'REMOVAL_FLIGHT'; count: number }
+  | { type: 'START_COVER_UP' }
+  | { type: 'END_COVER_UP' }
+  | { type: 'ADMIT_INVESTIGATION'; investigationId: string }
+  | { type: 'INVOKE_PARLIAMENT_ACT'; billId: string }
+  | { type: 'BY_ELECTION_RESPONSE'; mode: 'visit' | 'defend' }
   | { type: 'DISMISS_ELECTION' }
   | { type: 'RESTORE'; state: GameState };

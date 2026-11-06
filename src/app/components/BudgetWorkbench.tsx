@@ -152,9 +152,9 @@ export function BudgetWorkbench({ state, onDeliver, onDefer }: BudgetWorkbenchPr
             color={result.obrHeadroom >= 0 ? colors.success : colors.danger}
           />
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
-            <Text style={{ color: colors.danger, fontSize: 9 }}>-£20bn Breach</Text>
-            <Text style={{ color: colors.muted, fontSize: 9 }}>£0bn Balance</Text>
-            <Text style={{ color: colors.success, fontSize: 9 }}>+£20bn Headroom</Text>
+            <Text style={{ color: colors.danger, fontSize: 11 }}>-£20bn Breach</Text>
+            <Text style={{ color: colors.muted, fontSize: 11 }}>£0bn Balance</Text>
+            <Text style={{ color: colors.success, fontSize: 11 }}>+£20bn Headroom</Text>
           </View>
         </View>
 
